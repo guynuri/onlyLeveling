@@ -1,7 +1,6 @@
 # openGym reference notes
 
-Source studied: `reference/openGym-main/` (the folder is `openGym-main`, not `opengym`). It is
-gitignored in this repo. Paths below are relative to that folder. Licence: **AGPL-3.0-or-later**
+Source studied: `reference/opengym/` (gitignored in this repo). Paths below are relative to that folder. Licence: **AGPL-3.0-or-later**
 (see the licence section at the end before copying any code).
 
 ## 1. Data model
