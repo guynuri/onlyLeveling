@@ -16,6 +16,7 @@ Modules:
 5. **XP** — levels, streaks and badges derived from training data.
 
 The product spec lives in `docs/SPEC.md`; the phased plan in `docs/PLAN.md`. Read them before feature work.
+**Neither file exists yet.** They are due in the next two sessions. Until then, ask before inventing product decisions.
 
 ## Stack
 - Frontend: React + TypeScript + Vite, PWA (service worker, web app manifest, offline-first).
@@ -56,9 +57,10 @@ The product spec lives in `docs/SPEC.md`; the phased plan in `docs/PLAN.md`. Rea
 ## Data sources & licences (must follow)
 | Data | Source | Licence | Obligations |
 |---|---|---|---|
-| Exercises + images (primary) | yuhonas/free-exercise-db | Unlicense (public domain) | None. Self-host images (copy into our storage), don't hotlink GitHub. |
-| Extra exercises / images | wger.de API | CC-BY-SA (per exercise) | Show author + licence per exercise; share-alike on modified images. |
-| Illustrations (optional) | everkinetic/data | CC-BY-SA | Credit Everkinetic. |
+| Exercise structure (names, muscles, equipment, level, force, mechanic) | yuhonas/free-exercise-db | Unlicense (public domain), **data only** | Its images are treated as unlicensed: never use or commit them. |
+| Exercises + images | wger.de API | CC-BY-SA 3 / 4 (per exercise and per image) | Store author + licence per image; show them on screen; share-alike on modified images. |
+| Exercises + images | everkinetic/data | CC-BY-SA 4.0 | Credit Everkinetic. Copy images into our storage; never hotlink `img.everkinetic.com`. |
+| Exercises with no licensed image | (any) | — | Show text only. Don't fill the gap with free-exercise-db photos. |
 | Generic foods | USDA FoodData Central | CC0 | None required; credit recommended. Free API key, via Worker. |
 | Packaged foods / barcodes | Open Food Facts | Data ODbL, images CC BY-SA | Attribution on every screen showing OFF data + legal page; share-alike for derived DBs; contribute back. |
 | ❌ Do not use | Gym visual media (hasaneyldrm/exercises-dataset images/GIFs, openGym demos) | © Gym visual | Not licensed to us. The dataset's MIT *text* is OK; the media is not. |
@@ -86,3 +88,7 @@ The product spec lives in `docs/SPEC.md`; the phased plan in `docs/PLAN.md`. Rea
 - Every domain-logic function is pure and covered by tests.
 - Run tests + lint + build before calling a task done. Update `docs/PLAN.md` status when a phase finishes.
 - When something in the spec is ambiguous, ask — don't invent product decisions.
+
+## Open questions (for `docs/SPEC.md`)
+- Also deload after N missed sessions in a row, in addition to the stall rule above? openGym does this;
+  our spec currently only uses the ~3-week no-e1RM-gain trigger.
