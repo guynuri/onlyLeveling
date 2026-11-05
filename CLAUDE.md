@@ -47,7 +47,7 @@ The product spec lives in `docs/SPEC.md`; the phased plan in `docs/PLAN.md`. Rea
 - **No secrets in the frontend.** All LLM and USDA calls go through the Worker; keys live in Worker
   secrets. Never commit keys or `.env` files.
 - **Provider-agnostic AI.** One OpenAI-compatible client with configurable base URL + model and a fallback
-  chain (Workers AI → Groq → Gemini → OpenRouter). Free tiers change; nothing else may depend on a provider.
+  chain (Workers AI → Gemini → Claude, per SPEC §5.2). Free tiers change; nothing else may depend on a provider.
 - **Structured AI I/O.** Send compact summaries (per-exercise trends, not raw logs). Require JSON matching a
   schema; validate; map exercise names to library IDs; reject or retry on mismatch. Cache weekly reviews.
 - **Offline first.** Everything except AI and food search works offline. AI degrades to a

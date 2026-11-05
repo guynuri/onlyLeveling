@@ -269,6 +269,8 @@ one bootstrap account. 4b: passkeys, password fallback, invite codes, recovery, 
 - Bootstrap: the first user needs a seed invite created by a script with a Worker secret. Document it.
 - Phase is large (D7). Auth and sync can fail independently; ship 4a first.
 - D1 write limits and cold starts: batch pushes per session, not per set.
+- Last write wins per session loses the earlier device's sets when one session is edited on two devices.
+  Accepted by the user (PR #3, §5 item 12). Revisit if it bites.
 - Lost passkey plus lost password plus lost invite codes = no recovery (accepted in SPEC §6.1). Tell the user in
   the UI, and in the Phase 4 PR description.
 
@@ -596,11 +598,9 @@ called PR C so it does not clash with Phase 5.
 7. **Compound/isolation mapping** from free-exercise-db `mechanic` (D10): confirm.
 8. **CLAUDE.md update** for the first-plan AI numbers (D8): confirm it lands in the Phase 7 PR.
 9. **Cloudflare and GitHub setup** (Phase 1 deploy, Phase 4 D1, Phase 7 AI secrets): user actions.
-10. **Account recovery** (SPEC §6.1): the spec says an invite code recovers an account when the password is
-    forgotten, but invite codes are single-use sign-up codes. Define the recovery path and which account it opens
-    before Phase 4b.
-11. **Provider chain** (SPEC §5.2, decided: Workers AI → Gemini → Claude, Groq and OpenRouter dropped). CLAUDE.md
-    still lists Groq and OpenRouter. Claude is not a free tier. Confirm Claude, and update CLAUDE.md with the
-    chain change.
-12. **Sync conflicts** (SPEC §6.2, decided: last write wins per whole session). Two devices editing one session
-    lose the earlier device's sets. Confirm this is acceptable, or change the unit before Phase 4a.
+10. **Account recovery**: **accepted for now** (user, PR #3). The spec's invite-code recovery path is kept as
+    written. Still to define before Phase 4b: which account an invite code reopens.
+11. **Provider chain**: **decided** (user, PR #3). Workers AI → Gemini → Claude, per SPEC §5.2. Groq and OpenRouter
+    dropped. CLAUDE.md updated to match. Claude is not a free tier; watch its cost in Phase 7.
+12. **Sync conflicts**: **accepted** (user, PR #3). Last write wins per whole session (SPEC §6.2). Two devices
+    editing one session will lose the earlier device's sets. Revisit only if this bites in use.
