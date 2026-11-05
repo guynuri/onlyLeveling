@@ -595,7 +595,7 @@ background scheduling, which is not exact.
 | 1 Scaffold, cache, CI, Pages | 1 | merged (PR #5), deployed; real-iPhone check not done |
 | 2 Exercise library | 1 | merged (PR #6); iPhone check not done |
 | 3 Settings, plans, logging, progression | 1 | merged (PR #7, #8); rest-timer iPhone check not done |
-| 4 Worker, D1, sync, auth | 1 | 4a merged (PR #9); 4a-2 app wiring merged (PR #10); Worker deploy from Actions in PR #11; end-to-end iPhone check not done; 4b (password sign-in, invites, recovery) not started |
+| 4 Worker, D1, sync, auth | 1 | 4a merged (PR #9); 4a-2 app wiring merged (PR #10); Worker deploy from Actions merged (PR #11); 4b server (password sign-in, invites, recovery, per-IP rate limits, sessions) on `phase-4b-auth`, PR pending; 4b app sign-in screen not started; end-to-end iPhone check not done |
 | Contracts freeze | 1 | in progress (this PR): registry Wave 2 ids, Worker route slots, Coach defaults in thresholds |
 | PR C Contracts freeze | 1 | not started |
 | 5 Coach rules | 2 | not started |
