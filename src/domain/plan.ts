@@ -39,18 +39,19 @@ export function activeAdjustment(plan: Plan, exerciseId: string, workouts: reado
   return logged ? null : adj.w;
 }
 
+// Replaces one exercise in every day it appears in. Its weight adjustment goes with it. Pure.
+export function replaceExercise(plan: Plan, fromId: string, toId: string, now: number): Plan {
+  return {
+    ...plan,
+    days: plan.days.map((d) => ({ ...d, exerciseIds: d.exerciseIds.map((id) => (id === fromId ? toId : id)) })),
+    adjustments: plan.adjustments.filter((a) => a.exerciseId !== fromId),
+    updatedAt: now,
+  };
+}
+
 // Applies an accepted suggestion. Pure: returns the new plan. Caller saves it.
 export function applySuggestion(plan: Plan, s: Suggestion, now: number, owned: readonly number[]): Plan {
-  if (s.action.kind === 'swap') {
-    const toId = s.action.toId;
-    const fromId = s.exerciseId;
-    return {
-      ...plan,
-      days: plan.days.map((d) => ({ ...d, exerciseIds: d.exerciseIds.map((id) => (id === fromId ? toId : id)) })),
-      adjustments: plan.adjustments.filter((a) => a.exerciseId !== fromId),
-      updatedAt: now,
-    };
-  }
+  if (s.action.kind === 'swap') return replaceExercise(plan, s.exerciseId, s.action.toId, now);
   // Weight action: snap to an owned bell, so the weight is always one the user has.
   const w = owned.length > 0 ? ownedFloor(owned, s.action.w) : s.action.w;
   const adj: Adjustment = { exerciseId: s.exerciseId, w, at: now };

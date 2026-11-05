@@ -4,7 +4,7 @@ import { createRepo } from '../../data/idb-repo';
 import type { Repo } from '../../data/repo';
 import { createOutbox, type Outbox } from '../../data/outbox';
 import { createSyncedRepo } from '../../data/synced-repo';
-import { TRAINING, REP_RANGES, TEMPLATE } from '../../config/thresholds';
+import { TRAINING, TEMPLATE } from '../../config/thresholds';
 import type { Exercise } from '../../domain/exercise';
 import type { HistorySession, ProgressionConfig } from '../../domain/progression';
 import type { Settings, Workout } from '../../domain/types';
@@ -77,10 +77,8 @@ export function defaultSettings(): Settings {
   };
 }
 
-// Rep range by exercise type (SPEC §3.1). Mechanic unknown is treated as isolation (PLAN D10).
-export function repRangeFor(ex: Exercise): { min: number; max: number } {
-  return ex.mechanic === 'compound' ? REP_RANGES.compound : REP_RANGES.isolation;
-}
+import { repRangeFor } from '../../domain/reps';
+export { repRangeFor };
 
 export function progressionConfigFor(ex: Exercise, owned: number[]): ProgressionConfig {
   const range = repRangeFor(ex);

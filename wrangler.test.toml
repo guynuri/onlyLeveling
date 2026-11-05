@@ -1,0 +1,12 @@
+# Test-only copy of wrangler.toml for the Worker tests (vitest.worker.config.ts). Same D1 binding; no [ai] binding.
+# The Workers AI binding always reaches Cloudflare, even in local runs, so the tests leave it out. Tests never call
+# the AI binding: they pass a fake provider (worker/src/routes/ai.test.ts). Keep the D1 section in sync with wrangler.toml.
+name = "onlyleveling-api"
+main = "worker/src/index.ts"
+compatibility_date = "2025-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "onlyleveling"
+database_id = "69a0743f-9cc2-47cc-a6b9-e8d342d2e181"
+migrations_dir = "worker/migrations"

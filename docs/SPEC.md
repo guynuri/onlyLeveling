@@ -48,8 +48,8 @@ Settings live in one config module with thresholds (§4.5). No thresholds are sc
 
 ### 3.1 Plans
 - **First plan**: the AI proposes a plan from the onboarding answers. Rules **validate and decide**:
-  equipment (dumbbells only), days per week, session length, exclusions, and volume. The engine sets
-  every weight, rep and set number (§5 contract). If the AI fails, see §6.3.
+  equipment (dumbbells only), days per week, session length, exclusions, and volume. The AI proposes weights,
+  reps and sets; the rules validate and correct each one (§5.4, §5.5). If the AI fails, see §5.6.
 - **Plan rotation (MVP)**: exercises stay until a coach card says stall, too easy or stale (§4).
   Weekly review (which would also propose rotations) is later. Until then, rotation is card-driven.
 - **Rotation intent recorded by the user**: "Weekly review decides", so in v1 the coach card *is* the

@@ -11,6 +11,8 @@ import PlanScreen from './modules/training/PlanScreen';
 import HistoryScreen from './modules/training/HistoryScreen';
 import SettingsScreen from './modules/training/SettingsScreen';
 import ProgressScreen from './modules/progress/ProgressScreen';
+import Onboarding from './modules/onboarding/Onboarding';
+import { getRepo } from './modules/training/data';
 
 // Shell: top bar, screen, bottom nav. Hash routing only (CLAUDE.md): no server rewrites on GitHub Pages.
 const TABS: ReadonlyArray<{ screen: Route['screen']; label: string }> = [
@@ -25,7 +27,7 @@ const TABS: ReadonlyArray<{ screen: Route['screen']; label: string }> = [
 function tabFor(route: Route): Route['screen'] {
   if (route.screen === 'exercise') return 'library';
   if (route.screen === 'credits') return 'settings';
-  if (route.screen === 'progress') return 'today';
+  if (route.screen === 'progress' || route.screen === 'onboarding') return 'today';
   return route.screen;
 }
 
@@ -47,6 +49,8 @@ function Screen({ route }: { route: Route }) {
       return <CreditsScreen />;
     case 'progress':
       return <ProgressScreen />;
+    case 'onboarding':
+      return <Onboarding />;
   }
 }
 
@@ -64,6 +68,13 @@ export default function App() {
     window.addEventListener(SYNC_EVENT, refresh);
     window.addEventListener('online', onOnline);
     refresh();
+    // First run: no finished onboarding means the interview comes first (SPEC §2).
+    getRepo()
+      .then((r) => r.getSettings())
+      .then((s) => {
+        if (!s?.onboardedAt && !window.location.hash.startsWith('#/onboarding')) window.location.hash = '#/onboarding';
+      })
+      .catch(() => undefined);
     // Pull on open: the app shows local data at once, and the server's changes arrive a moment later.
     void runSync().catch(() => undefined);
     return () => {

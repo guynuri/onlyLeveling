@@ -6,6 +6,12 @@ export interface Settings {
   daysPerWeek: number;
   restSec: number; // 0 = rest timer off
   owned: number[]; // owned dumbbell weights, kg
+  // Onboarding answers (SPEC §2). Optional: settings saved before onboarding have none of them.
+  goal?: 'build-muscle' | 'strength';
+  sessionMinutes?: number;
+  experience?: 'returning' | 'beginner' | 'intermediate';
+  avoid?: string[]; // exercise ids that never appear in plans or swaps
+  onboardedAt?: number; // set when the interview is finished
 }
 
 export interface Entry {
