@@ -16,9 +16,9 @@ These are places where the spec and the request differ, or where I picked a defa
 | D2 | **Weekly AI review timing** | Removed from Phase 7. Phase 7 = AI client + **first-plan proposal** only. Weekly review = SPEC Phase 2, after Phase 5. | SPEC §5.1 and §9 say weekly review is later. |
 | D3 | **Onboarding** | Assigned to Phase 7 (it is the only entry to the first AI plan). | No phase in your list owns it; SPEC §8.2 lists it as key screen 1. |
 | D4 | **Push notifications** | **Confirmed (PR #3): stays in Wave 2 as Phase 9**, after Phase 4, as the spec has it. | SPEC §6.4 and §10 require it for MVP, but it is not in your list. |
-| D5 | **Settings UI** | Core settings in Phase 3 (dumbbells, rest, days, units, bodyweight). Remaining settings (theme, invite codes, export, passkey, credits) in Phase 4 and 2. | Needed as data before plans work. |
+| D5 | **Settings UI** | Core settings in Phase 3 (dumbbells, rest, days, units, bodyweight). Remaining settings (theme, invite codes, export, password, credits) in Phase 4 and 2. | Needed as data before plans work. |
 | D6 | **Coach rules = MVP** | Phase 5 is MVP, as in SPEC §9. | Confirmed by SPEC. |
-| D7 | **Phase 3 and Phase 4 size** | Each is large. I recommend splitting each into two PRs (3a domain, 3b UI; 4a sync and D1 data, 4b passkeys, invites and recovery). Still one phase each. | Reviewability on a phone-first codebase. Say if you want one PR each. |
+| D7 | **Phase 3 and Phase 4 size** | Each is large. I recommend splitting each into two PRs (3a domain, 3b UI; 4a sync and D1 data, 4b password sign-in, invites and recovery). Still one phase each. | Reviewability on a phone-first codebase. Say if you want one PR each. |
 | D8 | **CLAUDE.md golden rule** | Out of this PR. Still says the engine sets all numbers. SPEC §5.4 says the AI returns weights, reps, sets for the first plan. Must be updated before Phase 7 merges (SPEC §5.4 says so). | Conflict in source docs. |
 | D9 | **Kettlebells** | Excluded from plans and swaps. `BELL_EQ` port kept for the unit model only. | SPEC §1 says dumbbells only. REFERENCE_NOTES §8 mentions kettlebells via `BELL_EQ`. |
 | D10 | **Compound vs isolation** | Derived from free-exercise-db `mechanic` field (`compound` / `isolation`); unset = isolation range. | SPEC §3.1 gives the table; this is the mapping. |
@@ -48,8 +48,7 @@ These are places where the spec and the request differ, or where I picked a defa
 - Vitest for all domain logic. ESLint (typescript-eslint, react-hooks). Prettier optional.
 - `idb` (tiny IndexedDB wrapper). Do not hand-roll the IDB API.
 - Worker: Wrangler; D1; `@cloudflare/vitest-pool-workers` for Worker tests (Phase 4).
-- WebAuthn: `@simplewebauthn/server` and `@simplewebauthn/browser` (Phase 4). Do not hand-roll passkey
-  verification.
+- Password hashing: Web Crypto PBKDF2 or scrypt, no auth library (Phase 4). No passkeys (decided, PR #3).
 - CI: GitHub Actions. Node version pinned in `.nvmrc` and `engines`.
 
 ---
@@ -61,7 +60,7 @@ Order: 1 → 2 → 3 → 4 → **Contracts freeze (PR C)**. Each phase must merg
 ## Phase 1: Scaffold, IndexedDB cache and outbox, CI, Pages deploy, installable
 
 **Goal.** An installable PWA shell with an offline-capable local store and a finished outbox API (no remote
-yet). CI gates every PR. Deploys to Cloudflare Pages.
+yet). CI gates every PR. Deploys the frontend to GitHub Pages (decided, PR #3).
 
 **Files (create).**
 - `package.json`, `tsconfig.json`, `vite.config.ts` (with `vite-plugin-pwa`), `vitest.config.ts`,
@@ -73,7 +72,7 @@ yet). CI gates every PR. Deploys to Cloudflare Pages.
 - `src/modules/registry.ts`: module registration. See §3.
 - `src/config/thresholds.ts`: one section per module, empty for now, with a `// ponytail:` note if needed.
 - `.github/workflows/ci.yml`: on every PR, install, test, lint, typecheck, build.
-- `.github/workflows/deploy.yml`: on push to `main`, build and `wrangler pages deploy dist`.
+- `.github/workflows/deploy.yml`: on push to `main`, build and publish `dist` with GitHub Pages (`actions/deploy-pages`).
 
 **Data model and migrations.**
 - No D1 yet. IndexedDB v1 stores: `meta` (key/value: `lastSyncedAt`), `outbox` (`{id, op, payload, createdAt,
@@ -95,7 +94,8 @@ yet). CI gates every PR. Deploys to Cloudflare Pages.
 **Risks.**
 - iOS PWA behaviour needs a real iPhone. The dev machine is Windows, no Mac. Manual check in standalone mode is
   required before the phase is called done.
-- Pages deploy needs the user's Cloudflare account and two GitHub secrets (`CLOUDFLARE_API_TOKEN`,
+- GitHub Pages must be enabled for the repo (Settings → Pages, source: GitHub Actions). **User action.** The
+  Worker still needs the user's Cloudflare account and two GitHub secrets (`CLOUDFLARE_API_TOKEN`,
   `CLOUDFLARE_ACCOUNT_ID`). **User action.**
 - Service worker caching can serve a stale build. Use `registerType: 'prompt'` or autoUpdate, and say which.
 
@@ -217,16 +217,16 @@ rules-based template, one-handed logging with rest timer, double progression, e1
 
 ## Phase 4: Worker, D1, sync and auth
 
-**Goal.** Cloudflare D1 becomes the source of truth. Outbox pushes on change. App pulls on open. Passkey sign-in
-with password fallback. Invite-only sign-up with recovery. Full JSON export. Scoped by `userId`.
+**Goal.** Cloudflare D1 becomes the source of truth. Outbox pushes on change. App pulls on open. Password
+sign-in (no passkeys, decided in PR #3). Invite-only sign-up with recovery. Full JSON export. Scoped by `userId`.
 
 **Recommended split (D7).** 4a: Worker, D1 schema, sync (push/pull), last-synced, export, with sign-in by
-one bootstrap account. 4b: passkeys, password fallback, invite codes, recovery, rate limit. Both still one phase.
+one bootstrap account. 4b: password sign-in, invite codes, recovery, rate limit. Both still one phase.
 
 **Files (create).**
 - `worker/src/index.ts`: router. Each module's routes come from a reserved slot (§3.4).
 - `worker/src/sync.ts`: `POST /api/sync/push` (idempotent per op id), `GET /api/sync/pull?since=`.
-- `worker/src/auth/webauthn.ts` (4b), `worker/src/auth/password.ts` (4b, PBKDF2 or scrypt via Web Crypto),
+- `worker/src/auth/password.ts` (4b, PBKDF2 or scrypt via Web Crypto),
   `worker/src/auth/invites.ts` (4b: codes stored as hashes, ≥128-bit random, single-use, IP rate limit).
 - `worker/src/export.ts`: `GET /api/export` (full account JSON).
 - `worker/migrations/0001_core.sql`: all Wave 1 tables (§4).
@@ -237,7 +237,7 @@ one bootstrap account. 4b: passkeys, password fallback, invite codes, recovery, 
   last-synced indicator, Credits link.
 
 **Data model and migrations.**
-- D1 `0001_core.sql` mirrors SPEC §7 plus: `users`, `passkeys`, `passwords` (hash only), `invites` (`code_hash`,
+- D1 `0001_core.sql` mirrors SPEC §7 plus: `users`, `passwords` (hash only), `invites` (`code_hash`,
   `issued_by`, `used_by`, `used_at`), `sessions`, `ops_applied` (idempotency: op id → applied).
 - Conflicts: **last write wins per workout session.** Push replaces the whole session row (`updated_at` set by
   the client; server keeps latest). Spec §6.2.
@@ -257,21 +257,22 @@ one bootstrap account. 4b: passkeys, password fallback, invite codes, recovery, 
 **Acceptance (SPEC §10).**
 - A new user cannot register without a valid, unused invite code.
 - A user cannot read another user's workouts or settings (two accounts).
-- Passkey sign-in works on iPhone Safari standalone (manual).
+- Password sign-in works on iPhone Safari in standalone mode (manual).
 - Offline logging works; the record appears in D1 after reconnect.
 - A failed push shows an error and retries; it never disappears silently.
 - Last-synced time updates after each successful sync.
 - JSON export contains every record of the account.
 
 **Risks.**
-- **WebAuthn RP ID is tied to the domain.** Pick the production domain (and any custom domain) before 4b. Changing
-  it later invalidates every passkey. **User decision needed.**
+- **Hosting and sign-in decided (PR #3): GitHub Pages, password-only.** GitHub Pages cannot bind passkeys
+  (github.io is a public suffix). SPEC §6.1 still requires passkeys, and CLAUDE.md still says Cloudflare Pages.
+  Both need updating before Phase 4 merges. Not changed in this PR.
 - Bootstrap: the first user needs a seed invite created by a script with a Worker secret. Document it.
 - Phase is large (D7). Auth and sync can fail independently; ship 4a first.
 - D1 write limits and cold starts: batch pushes per session, not per set.
 - Last write wins per session loses the earlier device's sets when one session is edited on two devices.
   Accepted by the user (PR #3, §5 item 12). Revisit if it bites.
-- Lost passkey plus lost password plus lost invite codes = no recovery (accepted in SPEC §6.1). Tell the user in
+- Lost password plus lost invite codes = no recovery (accepted in SPEC §6.1). Tell the user in
   the UI, and in the Phase 4 PR description.
 
 ---
@@ -336,7 +337,7 @@ Pre-assigned migrations (one file per phase; no renumbering):
 
 | Migration | Owner | Contents |
 |---|---|---|
-| `0001_core.sql` | Phase 4 | users, passkeys, passwords, invites, sessions, ops_applied, settings, plans, workouts (incl. entries and sets as JSON or child tables, decided in Phase 4), bodyweight |
+| `0001_core.sql` | Phase 4 | users, passwords, invites, sessions, ops_applied, settings, plans, workouts (incl. entries and sets as JSON or child tables, decided in Phase 4), bodyweight |
 | `0010_coach.sql` | Phase 5 | `suggestions` |
 | `0020_xp.sql` | Phase 6 | `badges` (XP and ranks are derived, not stored) |
 | `0030_ai.sql` | Phase 7 | `ai_usage` (daily counter), `plan_proposals` (audit: prompt hash, provider, result status) |
@@ -589,7 +590,8 @@ called PR C so it does not clash with Phase 5.
 # 5. Open questions (blocking or shaping)
 
 1. **Confirm D1 to D10** in §0. Especially D1 (nutrition later) and D2 (weekly review later).
-2. **Production domain** (for WebAuthn RP ID). Blocks Phase 4b.
+2. **Sign-in and hosting**: **decided** (PR #3). Password-only sign-in, GitHub Pages hosting. SPEC §6.1 and
+   CLAUDE.md need updating to match before Phase 4 merges (follow-up, not in this PR).
 3. **SPEC §11 items 11 and 12** (strength-standard table and XP numbers). Blocks the Phase 6 B-rank acceptance test,
    not the mechanism.
 4. **Onboarding questions** (SPEC §11 item 14). Blocks the Phase 7 onboarding UI.
