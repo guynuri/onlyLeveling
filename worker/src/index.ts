@@ -4,6 +4,7 @@ import { authenticate } from './auth';
 import { corsHeaders } from './cors';
 import { applyPush, exportAll, parseOps, pull, ValidationError } from './sync';
 import { routeSlots } from './routes';
+import { handleAuthRoutes } from './routes/auth-routes';
 
 const MAX_BODY_BYTES = 1_000_000;
 
@@ -29,7 +30,12 @@ export default {
       return json({ error: 'not found' }, 404, origin);
     }
 
-    const principal = authenticate(req, env);
+    const now = Date.now();
+    // Sign-up, sign-in and recovery need no token. They handle their own errors.
+    const authRoute = await handleAuthRoutes(req, env, now);
+    if (authRoute) return authRoute;
+
+    const principal = await authenticate(req, env, now);
     if (!principal) {
       return json({ error: 'unauthorized' }, 401, origin);
     }
