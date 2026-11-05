@@ -15,7 +15,7 @@ These are places where the spec and the request differ, or where I picked a defa
 | D1 | **Nutrition timing** | Moved **out of Wave 2** to *Later / Phase 3* (blueprint only, §8). | SPEC §1 and §9 put nutrition in a later phase. Your rule was "unless the spec changes the order". The spec does. |
 | D2 | **Weekly AI review timing** | Removed from Phase 7. Phase 7 = AI client + **first-plan proposal** only. Weekly review = SPEC Phase 2, after Phase 5. | SPEC §5.1 and §9 say weekly review is later. |
 | D3 | **Onboarding** | Assigned to Phase 7 (it is the only entry to the first AI plan). | No phase in your list owns it; SPEC §8.2 lists it as key screen 1. |
-| D4 | **Push notifications** | Moved to Wave 2 as Phase 9 (after Phase 4, needs the Worker). | SPEC §6.4 and §10 require it for MVP, but it is not in your list. |
+| D4 | **Push notifications** | **Confirmed (PR #3): stays in Wave 2 as Phase 9**, after Phase 4, as the spec has it. | SPEC §6.4 and §10 require it for MVP, but it is not in your list. |
 | D5 | **Settings UI** | Core settings in Phase 3 (dumbbells, rest, days, units, bodyweight). Remaining settings (theme, invite codes, export, passkey, credits) in Phase 4 and 2. | Needed as data before plans work. |
 | D6 | **Coach rules = MVP** | Phase 5 is MVP, as in SPEC §9. | Confirmed by SPEC. |
 | D7 | **Phase 3 and Phase 4 size** | Each is large. I recommend splitting each into two PRs (3a domain, 3b UI; 4a sync and D1 data, 4b passkeys, invites and recovery). Still one phase each. | Reviewability on a phone-first codebase. Say if you want one PR each. |
