@@ -164,6 +164,8 @@ SS, SSS. A 12-week plan should land around **B**, not SSS. Top ranks need streng
 
 A rank-up needs the threshold met on **2 separate sessions**. This blocks a single lucky set. Bodyweight
 is a settings field and is logged over time, so ratios use the bodyweight on the day of the lift.
+**Without a bodyweight entry, no rank-up happens**: the app asks for bodyweight and the muscle's rank stays
+where it was (decided in PR #2).
 
 **Streaks (weekly).** A week runs Monday 00:00 to Sunday 23:59 in the user's local time zone (default; a
 setting can change the start day later). A week counts when the planned sessions for that week are
