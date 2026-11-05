@@ -7,6 +7,7 @@ import type { Settings, Workout, Entry } from '../../domain/types';
 import { TEMPLATE } from '../../config/thresholds';
 import { startRest, remainingMs, type RestTimer } from './rest-timer';
 import { getRepo, defaultSettings, historyFor, progressionConfigFor } from './data';
+import { parseSetInput, todayFromTemplate } from './validate';
 
 interface ExercisePlan {
   exerciseId: string;
@@ -26,8 +27,9 @@ export default function WorkoutScreen() {
   const [rest, setRest] = useState<RestTimer | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [status, setStatus] = useState('');
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Load settings, history and today's day.
+  // Load settings, history and today's day. Any failure is shown, never left as a silent "Loading…".
   useEffect(() => {
     (async () => {
       const repo = await getRepo();
@@ -39,7 +41,11 @@ export default function WorkoutScreen() {
         avoid: [],
         catalogue: listExercises(),
       });
-      const today = template.days[ws.length % template.days.length];
+      const today = todayFromTemplate(template, ws.length);
+      if (!today) {
+        setLoadError('No plan days yet. Check the days per week in Settings.');
+        return;
+      }
       setSettings(s);
       setWorkouts(ws);
       setDay(today);
@@ -51,7 +57,7 @@ export default function WorkoutScreen() {
         }),
       );
       setStart(Date.now());
-    })();
+    })().catch(() => setLoadError('Could not load today’s session. Reload the page to try again.'));
   }, []);
 
   // Tick once a second while a rest runs, so the countdown shows (wall-clock based, see rest-timer.ts).
@@ -61,17 +67,20 @@ export default function WorkoutScreen() {
     return () => clearInterval(t);
   }, [rest]);
 
+  if (loadError) return <p className="muted">{loadError}</p>;
   if (!settings || !day) return <p className="muted">Loading…</p>;
 
   function logSet(index: number) {
+    const ex = exercises[index];
+    const parsed = parseSetInput(ex.weight, ex.reps);
+    if (!parsed.ok) {
+      setStatus(parsed.error); // refused: nothing is logged as done
+      return;
+    }
+    setStatus('');
     const at = Date.now();
-    setExercises((prev) =>
-      prev.map((ex, i) => {
-        if (i !== index) return ex;
-        const row: SetRow = { w: Number(ex.weight), r: Number(ex.reps), done: true, phase: 'work', at };
-        return { ...ex, sets: [...ex.sets, row] };
-      }),
-    );
+    const row: SetRow = { w: parsed.value.w, r: parsed.value.r, done: true, phase: 'work', at };
+    setExercises((prev) => prev.map((e, i) => (i === index ? { ...e, sets: [...e.sets, row] } : e)));
     setRest(startRest(at, settings!.restSec));
     setNow(at);
   }

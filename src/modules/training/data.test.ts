@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { historyFor, progressionConfigFor, repRangeFor } from './data';
+import { createRepoCache, historyFor, progressionConfigFor, repRangeFor } from './data';
 import type { Workout } from '../../domain/types';
 import type { Exercise } from '../../domain/exercise';
 
@@ -41,6 +41,31 @@ describe('historyFor', () => {
   it('keeps only sessions with this exercise, oldest first', () => {
     const ws = [W('w3', 300, 'fx_a'), W('w1', 100, 'fx_a'), W('w2', 200, 'fx_b')];
     expect(historyFor(ws, 'fx_a').map((h) => h.date)).toEqual([100, 300]);
+  });
+});
+
+describe('repo handle cache', () => {
+  it('a failed open is not cached: the next call tries again', async () => {
+    let attempts = 0;
+    const { get } = createRepoCache(async () => {
+      attempts++;
+      if (attempts === 1) throw new Error('transient');
+      return {} as never;
+    });
+    await expect(get()).rejects.toThrow('transient');
+    await expect(get()).resolves.toBeDefined();
+    expect(attempts).toBe(2);
+  });
+
+  it('a successful open is cached and reused', async () => {
+    let attempts = 0;
+    const { get } = createRepoCache(async () => {
+      attempts++;
+      return {} as never;
+    });
+    await get();
+    await get();
+    expect(attempts).toBe(1);
   });
 });
 

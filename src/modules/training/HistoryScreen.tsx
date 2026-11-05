@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getExercise } from '../../data/exercises';
 import type { BodyweightEntry, Workout } from '../../domain/types';
 import { getRepo } from './data';
+import { isIsoDate } from './validate';
 
 // Past sessions, plus the bodyweight log (SPEC §2: bodyweight is logged over time).
 export default function HistoryScreen() {
@@ -20,15 +21,23 @@ export default function HistoryScreen() {
 
   async function addBw() {
     const value = Number(kg);
+    if (!isIsoDate(date)) {
+      setStatus('Enter a date.');
+      return;
+    }
     if (!(value > 0)) {
       setStatus('Enter a weight in kg.');
       return;
     }
-    const repo = await getRepo();
-    await repo.addBodyweight(date, value);
-    setBw(await repo.listBodyweight());
-    setKg('');
-    setStatus('Saved on this device.');
+    try {
+      const repo = await getRepo();
+      await repo.addBodyweight(date, value);
+      setBw(await repo.listBodyweight());
+      setKg('');
+      setStatus('Saved on this device.');
+    } catch {
+      setStatus('Could not save. Try again.');
+    }
   }
 
   return (

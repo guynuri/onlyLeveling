@@ -7,16 +7,30 @@ import type { Exercise } from '../../domain/exercise';
 import type { HistorySession, ProgressionConfig } from '../../domain/progression';
 import type { Settings, Workout } from '../../domain/types';
 
-// One shared handle. If another tab upgrades the database, this connection is closed: drop the handle so
-// the next call reopens it on the current schema.
-let repoPromise: Promise<Repo> | null = null;
-export function getRepo(): Promise<Repo> {
-  repoPromise ??= openAppDb(undefined, {
-    onVersionChange: () => {
-      repoPromise = null;
+// Caches one open handle. A failed open is not cached, so the next call retries. reset() drops the handle,
+// for when another tab upgrades the database and this connection is closed.
+export function createRepoCache(open: () => Promise<Repo>): { get(): Promise<Repo>; reset(): void } {
+  let pending: Promise<Repo> | null = null;
+  return {
+    get() {
+      pending ??= open().catch((e: unknown) => {
+        pending = null;
+        throw e;
+      });
+      return pending;
     },
-  }).then(createRepo);
-  return repoPromise;
+    reset() {
+      pending = null;
+    },
+  };
+}
+
+const cache = createRepoCache(() =>
+  openAppDb(undefined, { onVersionChange: () => cache.reset() }).then(createRepo),
+);
+
+export function getRepo(): Promise<Repo> {
+  return cache.get();
 }
 
 export function defaultSettings(): Settings {
