@@ -1,14 +1,14 @@
 // Hash routing only (CLAUDE.md): GitHub Pages has no server rewrites. Pure, so it is tested.
 export type Route =
   | { screen: 'today' }
+  | { screen: 'plan' }
   | { screen: 'library' }
   | { screen: 'exercise'; id: string }
   | { screen: 'history' }
-  | { screen: 'progress' }
   | { screen: 'settings' }
   | { screen: 'credits' };
 
-const TABS = ['today', 'library', 'history', 'progress', 'settings'] as const satisfies readonly Route['screen'][];
+const TABS = ['today', 'plan', 'library', 'history', 'settings'] as const satisfies readonly Route['screen'][];
 
 function safeDecode(s: string): string | null {
   try {

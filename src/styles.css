@@ -60,3 +60,21 @@ html, body {
 .credit h2 { font-size: 1.1rem; margin: 0 0 4px; }
 .credit a { color: var(--accent); }
 a { color: var(--accent); }
+
+/* Training */
+.field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.field input, .field textarea, .row input {
+  background: var(--bar); color: var(--fg); border: 1px solid var(--muted); border-radius: 8px;
+  padding: 10px; font-size: 1.05rem; width: 100%;
+}
+.row { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.row label { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 80px; }
+button { background: var(--accent); color: #111418; border: 0; border-radius: 10px; padding: 12px 16px; font-size: 1rem; font-weight: 600; }
+.exercise-card { border-bottom: 1px solid var(--bar); padding: 12px 0; }
+.exercise-card h2 { font-size: 1.1rem; margin: 0 0 4px; }
+.log { min-height: 48px; flex: 1; }
+.rest { font-size: 1.6rem; font-weight: 600; text-align: center; padding: 12px; margin: 8px 0; background: var(--bar); border-radius: 12px; }
+.routine { color: var(--muted); }
+.history { list-style: none; padding: 0; }
+.history li { padding: 8px 0; border-bottom: 1px solid var(--bar); }
+.plan-day { border-bottom: 1px solid var(--bar); padding-bottom: 12px; margin-bottom: 12px; }
