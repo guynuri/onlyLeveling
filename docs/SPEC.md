@@ -101,13 +101,15 @@ Suggestions appear as **cards on the Home screen**. Each card shows the reason w
 
 | Rule | Trigger (defaults, in config) | Suggestion |
 |---|---|---|
-| Too easy | Logged RIR ≥ 3 at top of range for **2 consecutive sessions** | Bigger jump (next-but-one owned weight) or one extra set |
+| Too easy | Logged RIR ≥ 3 at top of range for **2 consecutive sessions**. RIR is optional per set; if it is not logged, this rule does not fire. | Bigger jump (next-but-one owned weight) or one extra set |
 | Stalled | **No e1RM gain over 2 weeks** of sessions (changed from 3 weeks) | Deload (factor 0.9, §4.1) or swap |
 | Stale | Same exercise **8+ weeks** | Variation (swap with same pattern, muscle and equipment) |
 
 Stall is measured as: a session is a stall step if its best e1RM at that weight does not beat the best
 e1RM from before the current 14-day window. Stall fires when no session in the last 14 days beat the
-best e1RM from before that window. Ported mechanism, changed trigger (`REFERENCE_NOTES.md` §2).
+best e1RM from before that window. **Stall needs at least 2 sessions in the 14-day window and at least one
+session before it**; with fewer, the rule does not fire. Ported mechanism, changed trigger
+(`REFERENCE_NOTES.md` §2).
 
 **Swaps**: same movement pattern, same target muscle, owned equipment, preferring exercises not used
 recently. Movement pattern needs a labelling pass (`DATA_SOURCES.md` §7 item 3).
@@ -160,10 +162,12 @@ SS, SSS. A 12-week plan should land around **B**, not SSS. Top ranks need streng
 A rank-up needs the threshold met on **2 separate sessions**. This blocks a single lucky set. Bodyweight
 is a settings field and is logged over time, so ratios use the bodyweight on the day of the lift.
 
-**Streaks (weekly).** A week counts when the planned sessions for that week are completed (3 of 3 on a
-3-day plan). Streak = consecutive counted weeks. A missed week resets it.
+**Streaks (weekly).** A week runs Monday 00:00 to Sunday 23:59 in the user's local time zone (default; a
+setting can change the start day later). A week counts when the planned sessions for that week are
+completed (3 of 3 on a 3-day plan). Streak = consecutive counted weeks. A missed week resets it.
 
-**Badges.** Two kinds, each earned once:
+**Badges.** Two kinds, each earned once and never revoked, even if a session is later edited. Ranks and
+XP are recomputed from history; badges are not.
 - Milestones: first session, 10 and 100 sessions, first PR, first rank-up on any muscle.
 - Achievements: per muscle and per lift, tied to the rank system (e.g. "Chest reached C",
   "Benchmark lift at 1.0× bodyweight").
@@ -216,6 +220,9 @@ computes every number.
 }
 ```
 
+`reason` and `note` are plain text only. The app renders them as text: no HTML, no Markdown, no links.
+Length limits are enforced in validation (§5.5).
+
 The AI never returns weights, reps, sets or rest. The engine adds those from config and history.
 
 ### 5.5 Validation (every response)
@@ -244,7 +251,8 @@ The AI never returns weights, reps, sets or rest. The engine adds those from con
 ### 6.1 Auth and accounts
 - **Passkeys (WebAuthn)** for sign-in. A **password** is the fallback if WebAuthn does not work on a device.
 - **Sign-up requires an invite code.** Every user can issue codes from settings. Codes are single-use
-  (proposal, §11).
+  (proposal, §11). Each code is random with at least 128 bits of entropy, and redemption attempts are
+  rate-limited per IP address.
 - Multi-user: every record has `userId`. Every query is scoped to the authenticated user.
 
 ### 6.2 Sync and conflicts
@@ -370,7 +378,8 @@ Credits screen lists text licence per exercise, each image's author and licence,
 - Offline logging works; the record appears in D1 after reconnect.
 - A failed push shows an error and retries; it never disappears silently.
 - Last-synced time updates after each successful sync.
-- JSON export contains all user data and re-imports with no loss (manual check in v1).
+- JSON export contains every record of the account: the row count per table in the export matches the
+  app's count (manual check in v1). Re-import is not in v1 (§6.3).
 
 **Push**
 - Rest-timer alert fires when the app is installed and backgrounded.
