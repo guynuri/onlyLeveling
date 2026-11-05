@@ -419,9 +419,10 @@ Credits screen lists text licence per exercise, each image's author and licence,
 4. **Copy-paste fallback**: **decided**, kept as a manual option (§5.6).
 5. **Invite codes**: **decided**, every user can issue them. Single-use is still the proposal.
 6. **Rules-based template**: **decided**, always available as a starting point (§5.6).
-7. **Movement pattern labels**: **open**. You are not a trainer, so you cannot label exercises by hand.
-   Options to choose from: (a) the AI proposes the labels and you approve from the names only; (b) derive
-   them from free-exercise-db fields automatically, with unknowns marked; (c) I label them and you spot-check.
+7. **Movement pattern labels**: **decided**, option (b): derive them from free-exercise-db fields
+   automatically, with unknowns marked. Those fields (`force`, `mechanic`, `equipment`, primary muscles) can
+   give push, pull and static, but not squat versus hinge. Those exercises stay "unknown" and are not
+   used for swaps until labelled. Swaps (§4) need a known pattern.
 8. **Provider chain**: **decided**, Workers AI → Gemini → Claude.
 9. **Settings deferred to onboarding**: **confirmed**, onboarding is the only place they are asked.
 10. **Weekly review timing and content**: decided at implementation time, when that feature is built.
