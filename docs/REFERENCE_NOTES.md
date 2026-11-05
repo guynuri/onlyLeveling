@@ -50,10 +50,14 @@ edit of sets/reps can be told apart from a progression.
   (issue #233). **Port the principle.**
 - **Deloads (our trigger):** openGym deloads after `DELOAD_AFTER` consecutive missed sessions
   (`linear: 3, greyskull: 1, double: 3, triple: 3, time: 3`). **We deload on a stall instead:** no
-  e1RM improvement over about 3 weeks of sessions (CLAUDE.md). Port `stallCount` as the counting
-  mechanism (line ~407): it resets on a weight change, on a plan change (`planned` differs), and
-  under double/triple when the session beats the best of its run at that weight. Whether to also
-  deload after N missed sessions is an open question for the spec (section 12).
+  e1RM gain over about 3 weeks of sessions (CLAUDE.md). We make that a fixed 21-day window, not a
+  session count. Port the reset rules of `stallCount` (line ~407, which is a count of missed sessions
+  in openGym): a weight change, a plan change (`planned` differs), and under double/triple a session
+  that beats the best of its run at that weight all end the streak. What we replace is its `ok` test
+  (a missed session) with "no e1RM gain". A session is a stall step if its best e1RM at that weight
+  does not beat the best e1RM from earlier sessions at that weight. The deload fires when no session in
+  the last 21 days beat the best e1RM from before that window. Whether to also deload after N missed
+  sessions is an open question for the spec (section 12).
 - **Deload size**: `DELOAD_FACTOR = 0.9` (allowed 0.5 to 0.95, per profile). For reps work,
   `selectDeloadCandidate` (line ~161) picks a load/reps pair from the loadable grid by a fixed
   lexicographic order: closest estimated 1RM, then fewer rep changes, then heavier load.

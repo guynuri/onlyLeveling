@@ -47,10 +47,13 @@ Format: `exercises.json` (293 entries), plus `map.json`. Fields per entry: `id`,
 
 Quality issues to clean on import:
 - Typos in muscle names: `gluts`, `forerm`, `bicpes`, `should`, `hamstring` (singular).
-- Comma-joined values: `triceps, biceps`, `shoulders, lats`, `neck extensors, neck flexors`.
-- Generic values: `arms`, `back`, `core`. Map them or drop them, and say which in the import log.
-- Dumbbell spelling varies: `dumbbell` (67), `dumbbells` (23), `dumbell` (2), and `barbell or
-  dumbbell` (1). Normalised dumbbell count: **93**, of which **91 have images**.
+- Comma-joined values: `triceps, biceps`, `shoulders, lats`, `neck extensors, neck flexors`. Split
+  on commas, then map each part.
+- Generic values: `arms`, `back`, `core`. Dropped, and each drop is written to the import log.
+- Dumbbell spelling varies: `dumbbell` (67), `dumbbells` (23), `dumbell` (2). Normalised dumbbell
+  count: **92** unambiguous, of which **90 have images**. One row, `barbell or dumbbell`, is ambiguous
+  and is counted separately: with it, the total is **93** and **91 have images**. Its equipment is
+  held for review.
 
 ## 3. wger exercise API (images and text, CC-BY-SA)
 
@@ -65,8 +68,20 @@ name}]`), `license` (`{id, full_name, short_name, url}`), `license_author`, `ima
 `translations[]`.
 
 Image fields: `id`, `uuid`, `image` (URL), `thumbnails`, `is_main`, `style`, `license` (**integer
-id**: 1 = CC-BY-SA 3, 2 = CC-BY-SA 4), `license_title`, `license_object_url`, `license_author`,
-`license_author_url`, `license_derivative_source_url`, `author_history`, `is_ai_generated`.
+id**), `license_title`, `license_object_url`, `license_author`, `license_author_url`,
+`license_derivative_source_url`, `author_history`, `is_ai_generated`.
+
+Image licence ids, from `/api/v2/license/`:
+
+| id | licence |
+|---|---|
+| 1 | CC-BY-SA 3 |
+| 2 | CC-BY-SA 4 |
+| 3 | CC0 |
+| 4 | CC-BY 4 |
+| 5 | ODbL |
+
+An id outside this list stops the import, the same rule as for muscles and equipment.
 
 - Store each image's `license`, `author` and `sourceUrl` (from `license_object_url` /
   `license_author_url`).
@@ -75,7 +90,7 @@ id**: 1 = CC-BY-SA 3, 2 = CC-BY-SA 4), `license_title`, `license_object_url`, `l
 
 Translations: pick English by the `language` id (2 in the sample; confirm via `/api/v2/language/`).
 
-Muscle `name_en` values and equipment names: see mapping in section 6.
+Muscle and equipment mapping: see section 6.
 
 Coverage for dumbbells (equipment id 3, 147 exercises): **54 have images**, 75 images in total.
 
@@ -84,7 +99,7 @@ Coverage for dumbbells (equipment id 3, 147 exercises): **54 have images**, 75 i
 Docs: `fdc.nal.usda.gov/api-guide/`. Endpoints: `GET|POST /foods/search` (`query`, `dataType`
 array, `sortBy`, `sortOrder`), `GET /food/{fdcId}`, `GET /foods` (by ids), `GET /foods/list`.
 
-- **Licence: CC0 1.0.** Attribution is requested, not required. Credit FoodData Central.
+- **Licence: CC0.** Attribution is requested, not required. Credit FoodData Central.
 - **API key required** (data.gov). Limit 1,000 req/hour per IP. `DEMO_KEY` is for trying it out
   only (30/hour, 50/day). The key lives in a Worker secret, never in the client.
 - `dataType` values: `Foundation`, `SR Legacy`, `Survey (FNDDS)`, `Branded`, `Experimental`.
@@ -104,7 +119,8 @@ scope. Nothing in the current model is designed around it.
 
 ## 6. Target model
 
-Field names follow CLAUDE.md: `source`, `license`, `author`, `sourceUrl`.
+Field names follow CLAUDE.md: `source`, `license`, `author`, `sourceUrl`. One record can mix sources:
+the text and each image keep their own provenance.
 
 ```ts
 Exercise {
@@ -122,16 +138,18 @@ Exercise {
                                   // horizontal_pull, vertical_pull, carry, rotation, isolation
   instructions: string[]
   images: Image[]                 // empty = text only
-  source: 'free-exercise-db'|'wger'|'everkinetic'|'custom'
-  license: string                 // 'Unlicense' | 'CC-BY-SA 3' | 'CC-BY-SA 4' | 'CC0' | 'custom'
-  author: string | null
-  sourceUrl: string | null
+  source: 'free-exercise-db'|'wger'|'everkinetic'|'custom'   // where the record was created from
+  textSource: 'free-exercise-db'|'wger'|'everkinetic'|'custom' // where name, muscles, equipment, instructions came from
+  license: string                 // licence of the TEXT (from textSource): 'Unlicense' | 'CC-BY-SA 3' | 'CC-BY-SA 4' | 'CC0' | 'custom'
+  author: string | null           // author of the text
+  sourceUrl: string | null        // page the text came from
 }
+// The Credits screen lists the text licence and the licence of every image.
 
 Image {
   path: string                    // our storage, never the upstream URL
   source: 'wger'|'everkinetic'
-  license: string
+  license: string                 // from the table in section 3, or 'CC-BY-SA 4' for Everkinetic
   author: string | null
   sourceUrl: string | null
 }
@@ -141,7 +159,7 @@ Food {
   name: string                    // English
   nameHe: string | null           // ours, written by us (decision 6)
   source: 'usda-fdc'|'custom'
-  license: 'CC0-1.0' | 'custom'
+  license: 'CC0' | 'custom'
   author: null
   sourceUrl: string               // fdc.nal.usda.gov link for the fdcId
   fdcId: number | null
@@ -151,43 +169,74 @@ Food {
 }
 ```
 
-**Canonical muscles and mapping.**
+**Canonical muscles.** `Muscle` is this list and nothing else:
 
-| Canonical | free-exercise-db | wger `name_en` | Everkinetic (after cleaning) |
+quadriceps, hamstrings, glutes, calves, adductors, abductors, abdominals, obliques, lower back,
+middle back, lats, traps, chest, shoulders, biceps, triceps, forearms, neck (18).
+
+**Mapping.** Each row lists every source value that maps to the canonical muscle. A source value with
+no row fails the import. A canonical muscle with no value in a source is simply absent from that
+source's exercises.
+
+| Canonical | free-exercise-db | wger (`name_en`, else `name`) | Everkinetic (after cleaning) |
 |---|---|---|---|
 | quadriceps | `quadriceps` | `Quads` | `quadriceps` |
 | hamstrings | `hamstrings` | `Hamstrings` | `hamstrings`, `hamstring` |
 | glutes | `glutes` | `Glutes` | `gluts`, `glutes` |
+| calves | `calves` | `Calves` (Gastrocnemius) | `calves` |
+| adductors | `adductors` | — (none) | — (none seen) |
+| abductors | `abductors` | — (none) | `hip abductors` |
 | abdominals | `abdominals` | `Abs` | `abdominals`, `lower abdominals` |
-| lats | `lats` | `Lats` (check) | `lats` |
-| lower back | `lower back` | `Lower back` (check) | `lower back` |
-| shoulders | `shoulders` | `Shoulders` | `shoulders`, `lateral deltoid`, `rear deltoid`, `posterior deltoid` |
-| chest | `chest` | `Chest` | `chest` |
-| biceps | `biceps` | `Biceps` | `biceps`, `bicpes` |
-| triceps | `triceps` | `Triceps` | `triceps` |
+| obliques | — (none) | `Obliquus externus abdominis` | `obliques` |
+| lower back | `lower back` | — (none) | `lower back` |
+| middle back | `middle back` | — (none) | `middle back` |
+| lats | `lats` | `Lats` (Latissimus dorsi) | `lats` |
+| traps | `traps` | `Trapezius` | `trapezius` |
+| chest | `chest` | `Chest` (Pectoralis major) | `chest` |
+| shoulders | `shoulders` | `Shoulders` (Anterior deltoid) | `shoulders`, `should`, `lateral deltoid`, `rear deltoid`, `posterior deltoid` |
+| biceps | `biceps` | `Biceps` (Biceps brachii) | `biceps`, `bicpes` |
+| triceps | `triceps` | `Triceps` (Triceps brachii) | `triceps` |
+| forearms | `forearms` | — (none) | `forearm`, `forerm` |
+| neck | `neck` | — (none) | `neck extensors`, `neck flexors`, `neck side flexors` |
 
-Still to map: Everkinetic `forerm`/`forearm` → forearms, `trapezius` → traps, `obliques` →
-abdominals (check), `neck *` → neck, `calves`, `hip abductors` → abductors. Unmapped values fail the
-import loudly, they are not dropped.
+Values the table drops on purpose, written to the import log: Everkinetic `arms`, `back`, `core`.
 
-**Equipment.** free-exercise-db `kettlebells` → `kettlebell`, `body only` → `bodyweight`, `bands` →
-`band`, `e-z curl bar` → `barbell`, `exercise ball` → `other`. Everkinetic `bench`, `flat bench`,
-`incline bench` and similar are benches, not equipment to track. wger equipment ids: 1 barbell, 2
-SZ-bar, 3 dumbbell, 4 gym mat, 5 Swiss ball, 6 pull-up bar, 7 bodyweight, 8 bench, 9 incline bench,
-10 kettlebell, 11 resistance band, 12 cable machine.
+wger muscles with no canonical row, marked "not tracked" and not an error: `Brachialis`, `Serratus
+anterior`, `Soleus`.
+
+**Equipment.** The same fail-loudly rule applies. Any value not in the list below stops the import.
+
+| Source value | Canonical |
+|---|---|
+| free-exercise-db `barbell`, `e-z curl bar` | `barbell` |
+| free-exercise-db `dumbbell`; Everkinetic `dumbbell`, `dumbbells`, `dumbell` | `dumbbell` |
+| free-exercise-db `kettlebells`; wger `Kettlebell`; Everkinetic `kettlebell` | `kettlebell` |
+| free-exercise-db `cable`; Everkinetic `cable`, `cable machine` | `cable` |
+| free-exercise-db `machine`; Everkinetic `machine`, `smith machine`, `t-bar machine`, `butterfly machine`, `chest machine`, `bench press machine` | `machine` |
+| free-exercise-db `body only`; Everkinetic `body` | `bodyweight` |
+| free-exercise-db `bands`; Everkinetic `band`, `bands`, `exercise band` | `band` |
+| free-exercise-db `medicine ball`, `exercise ball`, `foam roll`, `other`; Everkinetic `swiss ball`, `exercise ball`, `stability ball`, `bosu ball`, `balance board`, `medicine ball`, `v-bar`, `parallel bars`, `weight plate`, `weight`, `bar` | `other` |
+| Everkinetic `bench`, `flat bench`, `incline bench`, `decline bench`, `hyperextension bench` | not equipment: "not tracked" |
+| Everkinetic `barbell or dumbbell` | held for review (section 2) |
+| free-exercise-db null; Everkinetic empty | `unknown` |
+
+wger equipment ids: 1 barbell, 2 SZ-bar, 3 dumbbell, 4 gym mat, 5 Swiss ball, 6 pull-up bar,
+7 bodyweight, 8 bench, 9 incline bench, 10 kettlebell, 11 resistance band, 12 cable machine.
+Map them the same way: `SZ-bar` → `barbell`, `gym mat` / `pull-up bar` → `other`, `bench` /
+`incline bench` → not tracked, `resistance band` → `band`.
 
 ## 7. Gaps and what we must add ourselves
 
 1. **Dumbbell images.** Dumbbells are covered: 91 of 93 normalised Everkinetic dumbbell exercises
-   have images, plus 54 of 147 on wger. Overlap between them is unknown until we match names. The
-   free-exercise-db dumbbell photos are no longer a source.
+   have images (90 of 92 unambiguous), plus 54 of 147 on wger. Overlap between them is unknown until we
+   match names. The free-exercise-db dumbbell photos are no longer a source.
 2. **Image quality.** Everkinetic image URLs need to be copied to our storage. wger has 6 AI-generated
    images in the dumbbell sample; decide the policy before import.
 3. **Movement pattern.** No source has squat, hinge, push or pull as a pattern. We tag it ourselves
    (`movementPattern`), probably one labelling pass with review. The "same movement pattern" swap
    rule in CLAUDE.md depends on it.
-4. **Muscle vocabulary.** Three vocabularies, plus Everkinetic typos and comma-joined values. A
-   cleaning step with a logged mapping.
+4. **Vocabularies.** Three muscle and equipment vocabularies, plus Everkinetic typos and
+   comma-joined values. A cleaning step with a logged mapping, as in section 6.
 5. **Null fields.** Nulls in free-exercise-db (up to 87 per field) and gaps in Everkinetic. Store
    null, don't guess. The UI says "unknown".
 6. **Food portions.** Branded and Foundation portions differ. Some foods have none, so the app needs
