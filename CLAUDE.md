@@ -20,13 +20,33 @@ The product spec lives in `docs/SPEC.md`; the phased plan in `docs/PLAN.md`. Rea
 
 ## Stack
 - Frontend: React + TypeScript + Vite, PWA (service worker, web app manifest, offline-first).
+  Hosted on **GitHub Pages**, deployed by a GitHub Actions workflow (`actions/deploy-pages`).
 - Data: **Cloudflare D1 is the source of truth.** IndexedDB is a local cache + write outbox: every change
   is saved locally first (instant, works offline), pushed to D1 immediately when online, and the app pulls
   from D1 on every open. Reinstalling / a new phone = log in and everything restores. Show a "last synced"
   indicator, retry failed pushes, and provide a full JSON export.
-- Backend: Cloudflare — Pages (hosting), Workers (API + AI proxy), D1 (database), Workers AI (default LLM).
+- Backend: Cloudflare — Workers (API + AI proxy), D1 (database), Workers AI (default LLM). No Cloudflare Pages.
 - Tests: Vitest for all domain logic.
 - Target device: iPhone, installed to the Home Screen from Safari. No native build (no Mac available).
+
+## Hosting and auth constraints (apply everywhere)
+- **Base path.** The site is served from `https://guynuri.github.io/<repo-name>/`, i.e. `/onlyLeveling/`.
+  Vite `base`, the manifest `start_url` and `scope`, the service-worker scope and every asset URL must use
+  that base path. Never hardcode `/`.
+- **Hash routing** (`#/today`, `#/history`). GitHub Pages has no server-side rewrites, so deep links
+  must not depend on them. No `BrowserRouter`.
+- **Auth is a bearer token** in the `Authorization: Bearer <token>` header. **Never cookies.** Safari blocks
+  cross-site cookies between `github.io` and `workers.dev`. The token is stored in the device's local storage
+  (IndexedDB `meta`), never in a cookie. **Accepted risk:** any script on `guynuri.github.io` can read that
+  token, so an XSS bug would expose it. GitHub Pages cannot send CSP headers. Phase 4 must add a
+  `<meta http-equiv="Content-Security-Policy">` to index.html, keep the token short-lived, and avoid
+  `innerHTML` on user data.
+- **Passkeys are out.** GitHub Pages (`github.io`) is a public suffix and cannot bind WebAuthn credentials.
+  Sign-in is password-only (PLAN.md, PR #3). SPEC §6.1 still says passkeys; it is not changed here.
+- **CORS.** The Worker allows exactly `https://guynuri.github.io` and `http://localhost:5173` (dev). Nothing
+  else. It answers `OPTIONS` preflight and lists `Authorization` in `Access-Control-Allow-Headers`. No
+  wildcard origin, and no `Access-Control-Allow-Credentials`.
+- The frontend and the Worker are on different origins. Never assume a same-origin `/api`.
 
 ## Codebase map
 <!-- TODO (first session): fill in once the scaffold exists — folder layout, stores, data model,
