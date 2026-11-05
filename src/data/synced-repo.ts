@@ -31,5 +31,11 @@ export function createSyncedRepo(local: Repo, outbox: Outbox, now: () => number 
       await local.saveSuggestion(s);
       await outbox.enqueue('saveSuggestion', { ...s }, now(), s.id);
     },
+    listBadges: () => local.listBadges(),
+    async awardBadge(badgeKey, earnedAt) {
+      const first = await local.awardBadge(badgeKey, earnedAt);
+      if (first) await outbox.enqueue('awardBadge', { badgeKey, earnedAt }, now(), `badge:${badgeKey}`);
+      return first;
+    },
   };
 }

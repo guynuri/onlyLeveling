@@ -9,7 +9,7 @@ const B = 'u_b';
 
 // Each test gets a clean database; the migrations are applied once per file in setup.ts.
 beforeEach(async () => {
-  for (const t of ['workouts', 'settings', 'bodyweight', 'plans', 'suggestions', 'ops_applied']) {
+  for (const t of ['workouts', 'settings', 'bodyweight', 'plans', 'suggestions', 'badges', 'ops_applied']) {
     await db.prepare(`DELETE FROM ${t}`).run();
   }
 });
@@ -187,5 +187,30 @@ describe('plan and suggestions (Phase 5): last write wins, scoped by user', () =
   it('rejects a plan without daysPerWeek and a suggestion without an id', () => {
     expect(() => parseOps({ ops: [{ opId: 'x', kind: 'plan', data: {}, updatedAt: 1 }] })).toThrow();
     expect(() => parseOps({ ops: [{ opId: 'x', kind: 'suggestion', data: {}, updatedAt: 1 }] })).toThrow();
+  });
+});
+
+describe('badges (Phase 6): first award wins, never revoked', () => {
+  const badge = (opId: string, badgeKey: string, earnedAt: number): Op => ({
+    opId,
+    kind: 'badge',
+    data: { badgeKey, earnedAt },
+    updatedAt: earnedAt,
+  });
+
+  it('a later write for the same badge does not change the first one', async () => {
+    await applyPush(db, A, [badge('b1', 'session:10', 100)], 1000);
+    await applyPush(db, A, [badge('b2', 'session:10', 999)], 2000);
+    const rows = (await exportAll(db, A)).badges;
+    expect(rows).toEqual([{ badgeKey: 'session:10', earnedAt: 100 }]);
+  });
+
+  it('badges are scoped by user', async () => {
+    await applyPush(db, A, [badge('b3', 'pr:first', 100)], 1000);
+    expect((await exportAll(db, B)).badges).toEqual([]);
+  });
+
+  it('rejects a badge without a key', () => {
+    expect(() => parseOps({ ops: [{ opId: 'x', kind: 'badge', data: { earnedAt: 1 }, updatedAt: 1 }] })).toThrow();
   });
 });

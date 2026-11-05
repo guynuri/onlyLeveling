@@ -69,7 +69,26 @@ export const COACH = {
   notNowDays: 7, // "Not now" hides a suggestion for this long
   swapRecentWeeks: 4, // a swap candidate used within this many weeks is de-preferred
 } as const;
-// XP (SPEC §4b). Numbers are open (SPEC §11 items 11 and 12). Phase 6 fills this section when they are decided.
-export const XP = {} as const;
+// XP and ranks (SPEC §4b, PLAN Phase 6). Numbers are our proposal (SPEC §11 items 11 and 12), tuned with real logs.
+// Scale: a set's XP is load (kg, both bells) × credited reps, so one 12-week run lands in the thousands.
+// B is a rough guide, not a target: F → B should take well over 12 weeks.
+export const XP = {
+  overRepsCap: 30, // a set above this earns 0 and is flagged (SPEC §4b anti-cheese)
+  extraRepDecay: 0.8, // each rep beyond target earns this times the one before (strictly less each time)
+  weightDropFloor: 0.5, // a set below the recent best weight earns w/best, never less than this
+  weightDropWindowWeeks: 4, // "recent best" = best working weight in this many weeks before the session
+  secondaryFactor: 0.4, // secondary muscles earn this share of a set (REFERENCE_NOTES §6)
+  sessionCapPerMuscle: 3000, // XP one muscle can earn from one session
+  progressionBonus: 150, // flat XP for an exercise that reached top-of-range reps on every decisive set
+  // Volume rank: cumulative XP on a muscle to reach each rank.
+  rankXp: { F: 0, E: 5_000, D: 15_000, C: 35_000, B: 70_000, A: 120_000, S: 200_000, SS: 320_000, SSS: 480_000 },
+  // Strength rank: best benchmark-lift estimated max ÷ bodyweight, lowest multiple per rank.
+  rankStrength: { F: 0, E: 0.3, D: 0.5, C: 0.75, B: 1.0, A: 1.25, S: 1.5, SS: 1.75, SSS: 2.0 },
+  // A strength rank counts only when this many separate sessions meet it (one lucky set does not count).
+  rankUpSessions: 2,
+  bodyweightWindowDays: 7, // a bodyweight entry this old or newer counts for a session
+  badgeSessionMilestones: [1, 10, 100], // "first session", then 10 and 100 sessions
+  badgeRankFrom: 'C', // achievement badges per muscle start at this rank
+} as const;
 // Nutrition (SPEC §9, later phase). Blueprint only.
 export const NUTRITION = {} as const;

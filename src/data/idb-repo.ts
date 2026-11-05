@@ -42,5 +42,14 @@ export function createRepo(db: Db): Repo {
     async saveSuggestion(s) {
       await db.put('suggestions', s, s.id);
     },
+    async listBadges() {
+      return (await db.getAll('badges')) as { badgeKey: string; earnedAt: number }[];
+    },
+    async awardBadge(badgeKey, earnedAt) {
+      const had = await db.get('badges', badgeKey);
+      if (had) return false;
+      await db.put('badges', { badgeKey, earnedAt }, badgeKey);
+      return true;
+    },
   };
 }
