@@ -115,6 +115,14 @@ describe('validateAiPlan: corrections, not errors', () => {
     if (!r.ok) return;
     expect(r.plan.days[0].exercises[0].reps).toBe(12);
     expect(r.plan.days[1].exercises[0].reps).toBe(8);
-    expect(r.corrections.map((c) => c.to).sort()).toEqual([8, 12]);
+    expect(r.corrections.map((c) => c.to).sort((a, b) => a - b)).toEqual([8, 12]);
+  });
+
+  it('a fractional rep count inside the range is rounded without a correction', () => {
+    const r = validateAiPlan(plan([{ label: 'A', exercises: [ex({ reps: 8.4 })] }, { label: 'B', exercises: [ex({ exerciseId: 'fx_b' })] }]), input);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.plan.days[0].exercises[0].reps).toBe(8);
+    expect(r.corrections).toEqual([]);
   });
 });

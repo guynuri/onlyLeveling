@@ -16,6 +16,7 @@ export default function PlanScreen() {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [avoid, setAvoid] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -35,11 +36,19 @@ export default function PlanScreen() {
     (ex) => isDumbbellCompatible(ex) && movementPattern(ex) !== 'unknown' && !inPlan.has(ex.id) && !avoid.includes(ex.id),
   );
 
-  const replace = async (fromId: string, toId: string) => setPlan(await replaceAndSave(plan, fromId, toId));
+  const replace = async (fromId: string, toId: string) => {
+    setSaveError(null);
+    try {
+      setPlan(await replaceAndSave(plan, fromId, toId));
+    } catch {
+      setSaveError('Could not replace that exercise. Try again.');
+    }
+  };
 
   return (
     <section>
       <h1>Plan</h1>
+      {saveError && <p className="error">{saveError}</p>}
       <p className="muted">
         Your plan. It changes when you accept a coach suggestion, replace an exercise, or change days per week. Dumbbell
         and bodyweight exercises only.

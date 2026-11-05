@@ -139,11 +139,11 @@ export function validateAiPlan(raw: unknown, input: PlanInput): ValidationResult
           w = snapped;
         }
       }
-      let reps = Math.round(ex.reps);
-      const clamped = Math.min(cand.repMax, Math.max(cand.repMin, reps));
-      if (clamped !== ex.reps) {
-        corrections.push({ path: `${p}.reps`, from: ex.reps, to: clamped, why: `kept inside ${cand.repMin} to ${cand.repMax}` });
-        reps = clamped;
+      // Rounding a fraction is not a correction; only moving a rounded value into the range is reported.
+      const rounded = Math.round(ex.reps);
+      const reps = Math.min(cand.repMax, Math.max(cand.repMin, rounded));
+      if (reps !== rounded) {
+        corrections.push({ path: `${p}.reps`, from: rounded, to: reps, why: `kept inside ${cand.repMin} to ${cand.repMax}` });
       }
       exOut.push({ exerciseId: ex.exerciseId, reason: ex.reason, w, reps, sets: ex.sets });
     });
