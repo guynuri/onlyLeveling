@@ -11,6 +11,8 @@ export interface Outbox {
   ack(id: number): Promise<void>;
   fail(id: number, error: string, now?: number): Promise<void>;
   count(): Promise<number>;
+  // Record keys with a write still queued (waiting, backing off or due). A pull must not overwrite them.
+  pendingKeys(): Promise<Set<string>>;
 }
 
 export function createOutbox(db: Db): Outbox {
@@ -43,6 +45,10 @@ export function createOutbox(db: Db): Outbox {
     },
     async count() {
       return db.count('outbox');
+    },
+    async pendingKeys() {
+      const all = await db.getAll('outbox');
+      return new Set(all.map((i) => i.key).filter((k): k is string => k !== null));
     },
   };
 }

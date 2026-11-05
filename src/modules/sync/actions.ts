@@ -1,6 +1,13 @@
 // Sync actions for the UI: run a sync, and tell the rest of the app the state changed.
 import { getDb, getLocalRepo, getOutbox } from '../training/data';
-import { loadSyncState, saveSyncState, syncNow, type ServerConfig, type SyncState } from '../../data/sync-engine';
+import {
+  loadSyncState,
+  saveSyncState,
+  syncNow,
+  withLatestConfig,
+  type ServerConfig,
+  type SyncState,
+} from '../../data/sync-engine';
 
 export const SYNC_EVENT = 'onlyleveling:sync-state';
 
@@ -8,20 +15,27 @@ export async function readSyncState(): Promise<SyncState> {
   return loadSyncState(await getDb());
 }
 
-// Run one sync and store the result. Never throws: the outcome is in the returned state.
+// Run one sync and store the result. Never throws: a failure (for example a local write that fails while
+// applying pulled data) is reported in the returned state, so the buttons always settle.
 export async function runSync(): Promise<SyncState> {
   const db = await getDb();
   const before = await loadSyncState(db);
-  const after = await syncNow({
-    outbox: await getOutbox(),
-    local: await getLocalRepo(),
-    state: before,
-    fetch: (...args) => fetch(...args),
-    now: () => Date.now(),
-  });
-  await saveSyncState(db, after);
+  let after: SyncState;
+  try {
+    after = await syncNow({
+      outbox: await getOutbox(),
+      local: await getLocalRepo(),
+      state: before,
+      fetch: (...args) => fetch(...args),
+      now: () => Date.now(),
+    });
+  } catch (e) {
+    after = { ...before, lastError: e instanceof Error ? e.message : 'sync failed' };
+  }
+  const stored = withLatestConfig(after, await loadSyncState(db));
+  await saveSyncState(db, stored);
   window.dispatchEvent(new CustomEvent(SYNC_EVENT));
-  return after;
+  return stored;
 }
 
 // Store the server address and token, then sync now.

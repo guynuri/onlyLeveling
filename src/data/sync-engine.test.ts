@@ -4,7 +4,7 @@ import { openAppDb, type Db } from '../db/idb';
 import { createRepo } from './idb-repo';
 import { createOutbox } from './outbox';
 import { createSyncedRepo } from './synced-repo';
-import { syncNow, loadSyncState, saveSyncState, fetchExport, type SyncState } from './sync-engine';
+import { syncNow, withLatestConfig, loadSyncState, saveSyncState, fetchExport, type SyncState } from './sync-engine';
 
 let db: Db;
 let n = 0;
@@ -102,6 +102,54 @@ describe('syncNow', () => {
     const r = await syncNow({ outbox: createOutbox(db), local: createRepo(db), state: { ...FRESH, config: null }, fetch: fakeServer().fetch, now: () => 1 });
     expect(r.lastError).toBe('Not signed in to a server.');
     expect(r.lastSyncedAt).toBeNull();
+  });
+});
+
+describe('a pull never overwrites a record that has a queued local write', () => {
+  it('a backed-off local edit survives a pull that returns an older copy of the same record', async () => {
+    const outbox = createOutbox(db);
+    const local = createRepo(db);
+    const synced = createSyncedRepo(local, outbox, () => 0);
+    await synced.saveWorkout({ id: 'w-pending', start: 1, end: 2, entries: [{ exerciseId: 'mine', planned: { w: 8, reps: 8, sets: 1 }, sets: [] }] });
+    // The push failed earlier, so this row is backing off: not due at now=0.
+    const [row] = await outbox.peek(10_000_000);
+    await outbox.fail(row.id, 'offline', 0);
+    expect(await outbox.peek(0)).toHaveLength(0);
+
+    // The server answers the pull with an older copy of the pending record, plus one unrelated record.
+    const serverCopy = async (url: string | URL | Request) => {
+      if (String(url).includes('/api/sync/pull')) {
+        return json({
+          workouts: [
+            { id: 'w-pending', start: 1, end: 2, entries: [{ exerciseId: 'server-old', planned: { w: 1, reps: 1, sets: 1 }, sets: [] }] },
+            { id: 'from-server', start: 9, end: 10, entries: [] },
+          ],
+          settings: null,
+          bodyweight: [],
+          serverTime: 5000,
+        });
+      }
+      return json({ applied: 0, duplicates: 0 });
+    };
+    await syncNow({ outbox, local, state: FRESH, fetch: serverCopy as typeof fetch, now: () => 0 });
+
+    const kept = (await local.listWorkouts()).find((w) => w.id === 'w-pending');
+    expect(kept?.entries[0].exerciseId).toBe('mine');
+    // Other records from the server still arrive.
+    expect((await local.listWorkouts()).map((w) => w.id)).toContain('from-server');
+  });
+});
+
+describe('sign-out and sign-in are not undone by a sync already running', () => {
+  it('the latest stored config wins over the one the sync started with', () => {
+    const started: SyncState = { ...FRESH, config: CONFIG };
+    const signedOut: SyncState = { ...FRESH, config: null };
+    const finished: SyncState = { ...started, lastSyncedAt: 9, cursor: 8 };
+    expect(withLatestConfig(finished, signedOut).config).toBeNull();
+    const newConfig = { baseUrl: 'https://other.example', token: 'new' };
+    expect(withLatestConfig(finished, { ...signedOut, config: newConfig }).config).toEqual(newConfig);
+    // Sync results are kept.
+    expect(withLatestConfig(finished, signedOut)).toMatchObject({ lastSyncedAt: 9, cursor: 8 });
   });
 });
 

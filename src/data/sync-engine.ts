@@ -29,6 +29,12 @@ export async function saveSyncState(db: Db, state: SyncState): Promise<void> {
   await db.put('meta', state, 'sync');
 }
 
+// A sync that was already running must not write back the config it started with: a sign-out or a new
+// sign-in during the sync wins. The results of the sync (cursor, last sync, error) are kept.
+export function withLatestConfig(after: SyncState, latest: SyncState): SyncState {
+  return { ...after, config: latest.config };
+}
+
 interface PullBody {
   workouts: Workout[];
   settings: Settings | null;
@@ -61,9 +67,16 @@ export async function syncNow(args: {
     return { ...state, lastError: e instanceof Error ? e.message : 'sync failed' };
   }
 
-  for (const w of body.workouts) await local.saveWorkout(w);
-  if (body.settings) await local.saveSettings(body.settings);
-  for (const b of body.bodyweight) await local.addBodyweight(b.date, b.kg);
+  // A record with a write still queued keeps the local copy: the server's copy is older, and the queued write
+  // will reach the server on a later push. Other records are applied as usual.
+  const pending = await outbox.pendingKeys();
+  for (const w of body.workouts) {
+    if (!pending.has(w.id)) await local.saveWorkout(w);
+  }
+  if (body.settings && !pending.has('settings')) await local.saveSettings(body.settings);
+  for (const b of body.bodyweight) {
+    if (!pending.has(b.date)) await local.addBodyweight(b.date, b.kg);
+  }
 
   return { ...state, cursor: body.serverTime, lastSyncedAt: now(), lastError: null };
 }
