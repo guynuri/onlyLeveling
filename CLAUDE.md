@@ -40,9 +40,10 @@ The product spec lives in `docs/SPEC.md`; the phased plan in `docs/PLAN.md`. Rea
 - **Never copy media from it.** Its exercise animations are © Gym visual and are not licensed to us.
 
 ## Golden rules
-- **The AI suggests, the rules decide.** Weights, reps, calories and macros are always computed by
-  deterministic, tested code. The LLM may propose (swap X→Y, deload, add a set, meal ideas); its output
-  is validated and the engine produces the final numbers.
+- **The AI suggests, the rules decide.** The LLM may propose swaps, deloads, extra sets, meal ideas, and
+  the first plan's weights, reps and sets. Its output is validated and corrected by deterministic, tested
+  code before it is shown (decided in docs/SPEC.md §5). After the first plan, the engine owns progression
+  (SPEC §3.3). Calories and macros are always computed by the engine.
 - **No secrets in the frontend.** All LLM and USDA calls go through the Worker; keys live in Worker
   secrets. Never commit keys or `.env` files.
 - **Provider-agnostic AI.** One OpenAI-compatible client with configurable base URL + model and a fallback
@@ -73,7 +74,7 @@ The product spec lives in `docs/SPEC.md`; the phased plan in `docs/PLAN.md`. Rea
 - Default progression: double progression over a rep range (e.g. 8–12). All sets at top of range → next
   available weight, reset to bottom of range.
 - "Too easy": logged RIR ≥ 3 at top of range for 2 consecutive sessions → suggest a bigger jump or extra set.
-- "Stalled": no e1RM improvement over ~3 weeks of sessions → suggest deload or swap.
+- "Stalled": no e1RM improvement over 2 weeks of sessions → suggest deload or swap (SPEC §4).
   "Stale": same exercise 8+ weeks → suggest a variation.
 - e1RM: Epley, only from sets of ≤ 12 reps.
 - Swaps: same movement pattern + target muscle + available equipment, preferring ones not used recently.
@@ -89,6 +90,5 @@ The product spec lives in `docs/SPEC.md`; the phased plan in `docs/PLAN.md`. Rea
 - Run tests + lint + build before calling a task done. Update `docs/PLAN.md` status when a phase finishes.
 - When something in the spec is ambiguous, ask — don't invent product decisions.
 
-## Open questions (for `docs/SPEC.md`)
-- Also deload after N missed sessions in a row, in addition to the stall rule above? openGym does this;
-  our spec currently only uses the ~3-week no-e1RM-gain trigger.
+## Open questions
+- Open questions now live in `docs/SPEC.md` §11. The missed-session deload (3 in a row) is decided there.
