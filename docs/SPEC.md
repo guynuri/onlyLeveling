@@ -271,7 +271,8 @@ outside this PR.
 ### 6.2 Sync and conflicts
 - Cloudflare D1 is the source of truth. IndexedDB is the local cache and write outbox (CLAUDE.md).
 - Every change saved locally first, pushed when online, pulled on open.
-- **Conflicts: last write wins per record.** Unit of record = one session, one entry, or one set row.
+- **Conflicts: last write wins per session.** The unit of record is the whole workout session (decided in PR #2).
+  A later edit to any part of a session replaces the whole session version.
 - Show a **"last synced"** indicator. Failed pushes retry with backoff and show a visible error. Sync never
   fails silently.
 
