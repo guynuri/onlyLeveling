@@ -60,7 +60,11 @@ Order: 1 → 2 → 3 → 4 → **Contracts freeze (PR C)**. Each phase must merg
 ## Phase 1: Scaffold, IndexedDB cache and outbox, CI, Pages deploy, installable
 
 **Goal.** An installable PWA shell with an offline-capable local store and a finished outbox API (no remote
-yet). CI gates every PR. Deploys the frontend to GitHub Pages (decided, PR #3).
+yet). CI gates every PR. Deploys the frontend to GitHub Pages (decided, PR #3). **Frontend only:** no Worker,
+no D1, no Cloudflare resources in this phase. Those arrive in Phase 4.
+
+**Hosting constraints (CLAUDE.md "Hosting and auth constraints").** Vite `base` = `/onlyLeveling/`; manifest
+`start_url` and `scope` and the service-worker scope use the same base; hash routing only (no `BrowserRouter`).
 
 **Files (create).**
 - `package.json`, `tsconfig.json`, `vite.config.ts` (with `vite-plugin-pwa`), `vitest.config.ts`,
@@ -89,15 +93,24 @@ yet). CI gates every PR. Deploys the frontend to GitHub Pages (decided, PR #3).
 - Installs to the iPhone Home Screen from Safari. Opens in standalone mode with the correct icon and name.
 - Offline: after one load, the app shell opens with no network.
 - CI: a PR runs test, lint, typecheck and build. A failing test blocks merge (branch protection: user action).
-- Pages deploy runs on `main`.
+- Pages deploy runs on `main`. The deployed app loads from `https://guynuri.github.io/onlyLeveling/` with no
+  404 on assets, and a hash deep link (`#/history`) opens after a reload.
+- Manifest `start_url` and `scope` are `/onlyLeveling/`; the service worker is registered under that scope.
 
 **Risks.**
 - iOS PWA behaviour needs a real iPhone. The dev machine is Windows, no Mac. Manual check in standalone mode is
   required before the phase is called done.
-- GitHub Pages must be enabled for the repo (Settings → Pages, source: GitHub Actions). **User action.** The
-  Worker still needs the user's Cloudflare account and two GitHub secrets (`CLOUDFLARE_API_TOKEN`,
-  `CLOUDFLARE_ACCOUNT_ID`). **User action.**
+- GitHub Pages must be enabled for the repo (Settings → Pages, source: GitHub Actions). **User action.** See the
+  manual steps below.
 - Service worker caching can serve a stale build. Use `registerType: 'prompt'` or autoUpdate, and say which.
+- **Manual steps for the user (Phase 1):**
+  1. Repo Settings → Pages → Source: **GitHub Actions**.
+  2. Repo Settings → Branches: protect `main`, require the CI check (test, lint, typecheck, build).
+  3. Confirm the Pages URL is `https://guynuri.github.io/onlyLeveling/`. If the repo name differs, tell Claude
+     first: `base`, manifest scope and the CORS origin in Phase 4 all depend on it.
+  4. On a real iPhone: Safari → Share → Add to Home Screen, then open it in standalone mode (manual check).
+  No Cloudflare secrets are needed in Phase 1. The `CLOUDFLARE_*` secrets are only needed when the Phase 4
+  Worker deploy workflow is added.
 
 ---
 
@@ -247,6 +260,9 @@ one bootstrap account. 4b: password sign-in, invite codes, recovery, rate limit.
 **Tests.**
 - Worker (Vitest pool for Workers with a local D1): **two accounts**; A cannot read B's workouts or settings
   (SPEC §10). Push is idempotent (same op id twice = one row). LWW: later write wins, earlier does not resurrect.
+- Transport: a request without `Authorization: Bearer` gets 401; a response never sets a cookie; CORS echoes
+  only `https://guynuri.github.io` and `http://localhost:5173` (other origins get no `Access-Control-Allow-Origin`);
+  `OPTIONS` preflight allows the `Authorization` header.
 - Invite: a used code is rejected; codes are not stored in plain text; redemption rate limit per IP.
 - Export: row counts per table match account counts (automated in test; manual check in v1 per SPEC §10).
 - Client sync (fake fetch): a failed push keeps the item in the outbox, retries with backoff, never drops it,
@@ -265,8 +281,11 @@ one bootstrap account. 4b: password sign-in, invite codes, recovery, rate limit.
 
 **Risks.**
 - **Hosting and sign-in decided (PR #3): GitHub Pages, password-only.** GitHub Pages cannot bind passkeys
-  (github.io is a public suffix). SPEC §6.1 still requires passkeys, and CLAUDE.md still says Cloudflare Pages.
-  Both need updating before Phase 4 merges. Not changed in this PR.
+  (github.io is a public suffix). CLAUDE.md now matches (Cloudflare Pages removed). SPEC §6.1, §7, §8 and §10
+  still require passkeys and must be updated before Phase 4 merges. See `docs/SPEC.md` open items list.
+- **Auth transport: bearer token only.** The Worker reads `Authorization: Bearer <token>`. No `Set-Cookie`, no
+  cookie-based session. CORS allows exactly `https://guynuri.github.io` and `http://localhost:5173`.
+  Cross-origin cookies from `github.io` to `workers.dev` are blocked by Safari.
 - Bootstrap: the first user needs a seed invite created by a script with a Worker secret. Document it.
 - Phase is large (D7). Auth and sync can fail independently; ship 4a first.
 - D1 write limits and cold starts: batch pushes per session, not per set.
