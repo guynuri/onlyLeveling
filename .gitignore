@@ -1,1 +1,11 @@
 reference/
+
+# env and local secrets
+.env*
+.dev.vars
+
+# build and local scratch
+dist/
+.superpowers/
+node_modules/
+*.tsbuildinfo

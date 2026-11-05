@@ -590,7 +590,7 @@ background scheduling, which is not exact.
 
 | Phase | Wave | Status |
 |---|---|---|
-| 1 Scaffold, cache, CI, Pages | 1 | not started |
+| 1 Scaffold, cache, CI, Pages | 1 | code done on `phase-1-scaffold`, PR pending; real-iPhone check not done |
 | 2 Exercise library | 1 | not started |
 | 3 Settings, plans, logging, progression | 1 | not started |
 | 4 Worker, D1, sync, auth | 1 | not started |
