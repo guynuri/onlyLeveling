@@ -221,6 +221,8 @@ rules-based template, one-handed logging with rest timer, double progression, e1
 
 **Risks.**
 - Largest phase. Split recommended (D7): 3a domain (`src/domain/**` + tests, no UI), 3b screens.
+- Phase 3 bumps IndexedDB to v2: add `blocked`/`blocking` handlers in `openAppDb` (src/db/idb.ts), and type the
+  database handle with a schema generic instead of `IDBPDatabase` plus casts (PR #5 review).
 - Progression defaults come from coaching guides, not trials (SPEC §3.3). Tune with real logs.
 - Compound/isolation split is judgment (SPEC §11 item 1). Revisit after logs exist.
 - One-handed logging and rest timers need a real-iPhone test: iOS suspends backgrounded pages.
