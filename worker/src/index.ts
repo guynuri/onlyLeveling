@@ -34,10 +34,11 @@ export default {
       return json({ error: 'unauthorized' }, 401, origin);
     }
 
-    const slotted = await routeSlots(req, env, principal);
-    if (slotted) return slotted;
-
     try {
+      // Inside the try: a slot that throws still gets a JSON error and CORS headers.
+      const slotted = await routeSlots(req, env, principal);
+      if (slotted) return slotted;
+
       if (url.pathname === '/api/sync/push' && req.method === 'POST') {
         // Refuse by the declared length first, so a large body is never read into memory.
         const declared = Number(req.headers.get('Content-Length') ?? '0');

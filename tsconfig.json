@@ -11,5 +11,5 @@
     "skipLibCheck": true,
     "types": ["vite/client", "vite-plugin-pwa/client", "node"]
   },
-  "include": ["src", "vite.config.ts", "scripts"]
+  "include": ["src", "shared", "vite.config.ts", "scripts"]
 }

@@ -15,7 +15,19 @@ describe('module registry', () => {
     expect(r.list().map((m) => m.id)).toEqual(['b', 'a']);
   });
 
-  it('reserves the Wave 2 slots, unique, so a later phase cannot pick a clashing id', () => {
+  it('reserves the Wave 2 ids: a module without the claim cannot take one', () => {
+    const r = createRegistry();
+    expect(() => r.register({ id: 'coach', label: 'Coach' })).toThrow('reserved for Wave 2');
+    expect(r.list()).toHaveLength(0);
+  });
+
+  it('the owning Wave 2 phase registers its reserved id with the claim', () => {
+    const r = createRegistry();
+    r.register({ id: 'coach', label: 'Coach' }, { claimReserved: true });
+    expect(r.list().map((m) => m.id)).toEqual(['coach']);
+  });
+
+  it('the reserved list is unique and is the five Wave 2 ids', () => {
     expect(WAVE2_MODULE_IDS).toEqual(['coach', 'xp', 'ai', 'push', 'nutrition']);
     expect(new Set(WAVE2_MODULE_IDS).size).toBe(WAVE2_MODULE_IDS.length);
   });
