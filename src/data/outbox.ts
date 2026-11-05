@@ -24,11 +24,11 @@ export function createOutbox(db: Db): Outbox {
         attempts: 0,
         lastError: null,
         nextTryAt: now,
-      } as Omit<OutboxItem, 'id'>)) as number;
+      } as OutboxItem)) as number; // id is autoIncrement; the store fills it in
       return id;
     },
     async peek(now = Date.now()) {
-      const all = (await db.getAll('outbox')) as OutboxItem[];
+      const all = await db.getAll('outbox');
       return dueItems(all, now);
     },
     async ack(id) {
@@ -37,7 +37,7 @@ export function createOutbox(db: Db): Outbox {
     async fail(id, error, now = Date.now()) {
       // One readwrite transaction: an ack cannot slip in between the read and the write.
       const tx = db.transaction('outbox', 'readwrite');
-      const item = (await tx.store.get(id)) as OutboxItem | undefined;
+      const item = await tx.store.get(id);
       if (item) await tx.store.put(failItem(item, error, now));
       await tx.done;
     },
