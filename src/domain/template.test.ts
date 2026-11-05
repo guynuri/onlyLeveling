@@ -72,6 +72,19 @@ describe('buildTemplate', () => {
     }
   });
 
+  it('warm-up and cool-down are separate blocks, not exercises', () => {
+    for (const day of buildTemplate(INPUT()).days) {
+      expect(day.warmup.length).toBeGreaterThan(0);
+      expect(day.cooldown.length).toBeGreaterThan(0);
+      // Routine items are never in the exercise list, and exercise ids are catalogue ids only.
+      const routineNames = [...day.warmup, ...day.cooldown].map((r) => r.name);
+      for (const id of day.exerciseIds) {
+        expect(routineNames).not.toContain(id);
+        expect(CATALOGUE.map((c) => c.id)).toContain(id);
+      }
+    }
+  });
+
   it('is deterministic for the same input', () => {
     expect(buildTemplate(INPUT())).toEqual(buildTemplate(INPUT()));
   });

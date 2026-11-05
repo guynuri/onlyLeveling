@@ -1,5 +1,6 @@
 // Rules-based plan (SPEC §5.6 fallback; PLAN Phase 3). Deterministic: same input, same plan.
 import { isDumbbellCompatible, movementPattern, type Exercise } from './exercise';
+import { ROUTINE } from '../config/thresholds';
 
 export interface TemplateInput {
   daysPerWeek: number;
@@ -8,9 +9,17 @@ export interface TemplateInput {
   catalogue: readonly Exercise[];
 }
 
+// A timed routine item (warm-up or cool-down). Never an exercise, never a set.
+export interface RoutineItem {
+  name: string;
+  seconds: number;
+}
+
 export interface TemplateDay {
   index: number;
-  exerciseIds: string[];
+  warmup: RoutineItem[];
+  exerciseIds: string[]; // catalogue ids only
+  cooldown: RoutineItem[];
 }
 
 export interface Template {
@@ -42,7 +51,12 @@ export function buildTemplate(input: TemplateInput): Template {
     for (let k = 0; k < per; k++) {
       ids.push(pool[(d * per + k) % pool.length].id);
     }
-    days.push({ index: d, exerciseIds: ids });
+    days.push({
+      index: d,
+      warmup: ROUTINE.warmup.map((r) => ({ ...r })),
+      exerciseIds: ids,
+      cooldown: ROUTINE.cooldown.map((r) => ({ ...r })),
+    });
   }
   return { days };
 }

@@ -39,6 +39,19 @@ export const TEMPLATE = {
   exercisesPerDay: 4,
 } as const;
 
+// Warm-up and cool-down are separate blocks of every session, never part of the exercise list and never
+// counted in progression or PRs. Names and durations are a proposal, to tune with real use.
+export const ROUTINE = {
+  warmup: [
+    { name: 'Light cardio', seconds: 300 },
+    { name: 'Dynamic mobility', seconds: 180 },
+  ],
+  cooldown: [
+    { name: 'Easy walk', seconds: 300 },
+    { name: 'Static stretch', seconds: 240 },
+  ],
+} as const;
+
 export const COACH = {} as const;
 export const NUTRITION = {} as const;
 export const XP = {} as const;
