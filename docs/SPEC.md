@@ -265,6 +265,7 @@ outside this PR.
 - **Passkeys (WebAuthn)** for sign-in. A **password** is the fallback if WebAuthn does not work on a device.
 - **Account recovery (decided in PR #2):** if the passkey is lost, sign in with the password. If the password
   is also forgotten, recover the account with an invite code (a code the user holds, see below).
+  If the user has also lost every invite code, there is no recovery path. This is accepted (decided in PR #2).
 - **Sign-up requires an invite code.** Every user can issue codes from settings. Codes are single-use
   (proposal, §11). Each code is random with at least 128 bits of entropy, and redemption attempts are
   rate-limited per IP address.
