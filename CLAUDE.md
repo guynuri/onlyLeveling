@@ -37,7 +37,10 @@ The product spec lives in `docs/SPEC.md`; the phased plan in `docs/PLAN.md`. Rea
   must not depend on them. No `BrowserRouter`.
 - **Auth is a bearer token** in the `Authorization: Bearer <token>` header. **Never cookies.** Safari blocks
   cross-site cookies between `github.io` and `workers.dev`. The token is stored in the device's local storage
-  (IndexedDB `meta`), never in a cookie.
+  (IndexedDB `meta`), never in a cookie. **Accepted risk:** any script on `guynuri.github.io` can read that
+  token, so an XSS bug would expose it. GitHub Pages cannot send CSP headers. Phase 4 must add a
+  `<meta http-equiv="Content-Security-Policy">` to index.html, keep the token short-lived, and avoid
+  `innerHTML` on user data.
 - **Passkeys are out.** GitHub Pages (`github.io`) is a public suffix and cannot bind WebAuthn credentials.
   Sign-in is password-only (PLAN.md, PR #3). SPEC §6.1 still says passkeys; it is not changed here.
 - **CORS.** The Worker allows exactly `https://guynuri.github.io` and `http://localhost:5173` (dev). Nothing

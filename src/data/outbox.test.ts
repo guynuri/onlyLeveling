@@ -20,6 +20,15 @@ describe('outbox (IndexedDB adapter)', () => {
     expect((await ob.peek(0)).map((i) => i.id)).toEqual([b]);
   });
 
+  it('acking the head of a record releases its next write', async () => {
+    const ob = createOutbox(db);
+    const v1 = await ob.enqueue('saveWorkout', { w: 'v1' }, 0, 'w1');
+    const v2 = await ob.enqueue('saveWorkout', { w: 'v2' }, 0, 'w1');
+    expect((await ob.peek(0)).map((i) => i.id)).toEqual([v1]);
+    await ob.ack(v1);
+    expect((await ob.peek(0)).map((i) => i.id)).toEqual([v2]);
+  });
+
   it('a fail racing an ack never resurrects the acked item', async () => {
     const ob = createOutbox(db);
     const id = await ob.enqueue('saveWorkout', {}, 0);
