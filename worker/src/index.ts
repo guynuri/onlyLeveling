@@ -3,6 +3,7 @@ import type { Env } from './env';
 import { authenticate } from './auth';
 import { corsHeaders } from './cors';
 import { applyPush, exportAll, parseOps, pull, ValidationError } from './sync';
+import { routeSlots } from './routes';
 
 const MAX_BODY_BYTES = 1_000_000;
 
@@ -32,6 +33,9 @@ export default {
     if (!principal) {
       return json({ error: 'unauthorized' }, 401, origin);
     }
+
+    const slotted = await routeSlots(req, env, principal);
+    if (slotted) return slotted;
 
     try {
       if (url.pathname === '/api/sync/push' && req.method === 'POST') {

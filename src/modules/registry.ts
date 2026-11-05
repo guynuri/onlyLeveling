@@ -1,4 +1,7 @@
 // Module registration. Order of registration is kept; duplicate ids are a programming error.
+// Frozen at the contracts freeze (PLAN). Wave 2 modules register under these ids; they are reserved and empty now.
+export const WAVE2_MODULE_IDS = ['coach', 'xp', 'ai', 'push', 'nutrition'] as const;
+
 export interface ModuleDef {
   id: string;
   label: string;

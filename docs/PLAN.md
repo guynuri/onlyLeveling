@@ -593,9 +593,10 @@ background scheduling, which is not exact.
 | Phase | Wave | Status |
 |---|---|---|
 | 1 Scaffold, cache, CI, Pages | 1 | merged (PR #5), deployed; real-iPhone check not done |
-| 2 Exercise library | 1 | code done on `phase-2-exercises`, PR pending; iPhone check not done |
-| 3 Settings, plans, logging, progression | 1 | 3a merged (PR #7); 3b (screens, repo API) code done on `phase-3b-screens`, PR pending; rest-timer iPhone check not done |
-| 4 Worker, D1, sync, auth | 1 | 4a merged (PR #9): Worker deployed, bootstrap bearer token. 4a-2 (app wiring, sign-in in Settings, export, last-synced) on `phase-4a2-wiring`, PR pending; end-to-end check from an iPhone not done; 4b (password sign-in, invites, recovery) not started |
+| 2 Exercise library | 1 | merged (PR #6); iPhone check not done |
+| 3 Settings, plans, logging, progression | 1 | merged (PR #7, #8); rest-timer iPhone check not done |
+| 4 Worker, D1, sync, auth | 1 | 4a merged (PR #9); 4a-2 app wiring merged (PR #10); Worker deploy from Actions in PR #11; end-to-end iPhone check not done; 4b (password sign-in, invites, recovery) not started |
+| Contracts freeze | 1 | in progress (this PR): registry Wave 2 ids, Worker route slots, Coach defaults in thresholds |
 | PR C Contracts freeze | 1 | not started |
 | 5 Coach rules | 2 | not started |
 | 6 XP and Progress | 2 | not started |
