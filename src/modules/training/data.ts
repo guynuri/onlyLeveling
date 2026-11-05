@@ -1,7 +1,9 @@
-// App-side glue for the training screens: one repo handle, default settings, history shaping.
-import { openAppDb } from '../../db/idb';
+// App-side glue for the training screens: one database handle, the repos, default settings, history shaping.
+import { openAppDb, type Db } from '../../db/idb';
 import { createRepo } from '../../data/idb-repo';
 import type { Repo } from '../../data/repo';
+import { createOutbox, type Outbox } from '../../data/outbox';
+import { createSyncedRepo } from '../../data/synced-repo';
 import { TRAINING, REP_RANGES } from '../../config/thresholds';
 import type { Exercise } from '../../domain/exercise';
 import type { HistorySession, ProgressionConfig } from '../../domain/progression';
@@ -9,8 +11,8 @@ import type { Settings, Workout } from '../../domain/types';
 
 // Caches one open handle. A failed open is not cached, so the next call retries. reset() drops the handle,
 // for when another tab upgrades the database and this connection is closed.
-export function createRepoCache(open: () => Promise<Repo>): { get(): Promise<Repo>; reset(): void } {
-  let pending: Promise<Repo> | null = null;
+export function createRepoCache<T>(open: () => Promise<T>): { get(): Promise<T>; reset(): void } {
+  let pending: Promise<T> | null = null;
   return {
     get() {
       pending ??= open().catch((e: unknown) => {
@@ -25,12 +27,25 @@ export function createRepoCache(open: () => Promise<Repo>): { get(): Promise<Rep
   };
 }
 
-const cache = createRepoCache(() =>
-  openAppDb(undefined, { onVersionChange: () => cache.reset() }).then(createRepo),
-);
+const dbCache = createRepoCache<Db>(() => openAppDb(undefined, { onVersionChange: () => dbCache.reset() }));
 
-export function getRepo(): Promise<Repo> {
-  return cache.get();
+export function getDb(): Promise<Db> {
+  return dbCache.get();
+}
+
+// Local repo: applying server data goes here, so it is not queued again.
+export async function getLocalRepo(): Promise<Repo> {
+  return createRepo(await getDb());
+}
+
+export async function getOutbox(): Promise<Outbox> {
+  return createOutbox(await getDb());
+}
+
+// What the screens use: every write is saved locally and queued for the server.
+export async function getRepo(): Promise<Repo> {
+  const db = await getDb();
+  return createSyncedRepo(createRepo(db), createOutbox(db));
 }
 
 export function defaultSettings(): Settings {

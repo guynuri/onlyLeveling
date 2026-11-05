@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { parseRoute, type Route } from './app/route';
+import { readSyncState, runSync, syncLabel, SYNC_EVENT } from './modules/sync/actions';
+import type { SyncState } from './data/sync-engine';
 import ExerciseDetail from './modules/library/ExerciseDetail';
 import ExerciseList from './modules/library/ExerciseList';
 import CreditsScreen from './modules/library/CreditsScreen';
@@ -44,11 +46,25 @@ function Screen({ route }: { route: Route }) {
 
 export default function App() {
   const [route, setRoute] = useState<Route>(() => parseRoute(window.location.hash));
+  const [sync, setSync] = useState<SyncState | null>(null);
 
   useEffect(() => {
     const onHash = () => setRoute(parseRoute(window.location.hash));
+    const refresh = () => readSyncState().then(setSync).catch(() => undefined);
+    const onOnline = () => {
+      void runSync().catch(() => undefined);
+    };
     window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
+    window.addEventListener(SYNC_EVENT, refresh);
+    window.addEventListener('online', onOnline);
+    refresh();
+    // Pull on open: the app shows local data at once, and the server's changes arrive a moment later.
+    void runSync().catch(() => undefined);
+    return () => {
+      window.removeEventListener('hashchange', onHash);
+      window.removeEventListener(SYNC_EVENT, refresh);
+      window.removeEventListener('online', onOnline);
+    };
   }, []);
 
   const active = tabFor(route);
@@ -57,7 +73,7 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <span className="title">onlyLeveling</span>
-        <span className="synced">last synced: never</span>
+        <span className="synced">{sync ? syncLabel(sync) : ''}</span>
       </header>
       <main className="content">
         <Screen route={route} />
