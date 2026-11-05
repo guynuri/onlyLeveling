@@ -4,44 +4,41 @@ import ExerciseDetail from './modules/library/ExerciseDetail';
 import ExerciseList from './modules/library/ExerciseList';
 import CreditsScreen from './modules/library/CreditsScreen';
 import { libraryModule } from './modules/library/register';
+import WorkoutScreen from './modules/training/WorkoutScreen';
+import PlanScreen from './modules/training/PlanScreen';
+import HistoryScreen from './modules/training/HistoryScreen';
+import SettingsScreen from './modules/training/SettingsScreen';
 
 // Shell: top bar, screen, bottom nav. Hash routing only (CLAUDE.md): no server rewrites on GitHub Pages.
 const TABS: ReadonlyArray<{ screen: Route['screen']; label: string }> = [
   { screen: 'today', label: 'Today' },
+  { screen: 'plan', label: 'Plan' },
   { screen: 'library', label: libraryModule.label },
   { screen: 'history', label: 'History' },
-  { screen: 'progress', label: 'Progress' },
   { screen: 'settings', label: 'Settings' },
 ];
 
-// Which bottom tab is highlighted for a route (exercise detail belongs to the Library tab).
+// Which bottom tab is highlighted for a route (detail belongs to Library, credits to Settings).
 function tabFor(route: Route): Route['screen'] {
   return route.screen === 'exercise' ? 'library' : route.screen === 'credits' ? 'settings' : route.screen;
 }
 
 function Screen({ route }: { route: Route }) {
   switch (route.screen) {
+    case 'today':
+      return <WorkoutScreen />;
+    case 'plan':
+      return <PlanScreen />;
     case 'library':
       return <ExerciseList />;
     case 'exercise':
       return <ExerciseDetail id={route.id} />;
+    case 'history':
+      return <HistoryScreen />;
+    case 'settings':
+      return <SettingsScreen />;
     case 'credits':
       return <CreditsScreen />;
-    case 'settings':
-      return (
-        <section>
-          <h1>Settings</h1>
-          <p className="muted">Coming in a later phase.</p>
-          <a href="#/credits">Credits</a>
-        </section>
-      );
-    default:
-      return (
-        <section>
-          <h1>{TABS.find((t) => t.screen === route.screen)?.label ?? 'Today'}</h1>
-          <p className="muted">Coming in a later phase.</p>
-        </section>
-      );
   }
 }
 

@@ -13,6 +13,9 @@ export const TRAINING = {
   defaultSets: 3,
   gridStepKg: 2, // weight step when no owned list exists
   startWeightKg: 6,
+  // Starting settings until the user edits them (onboarding is Phase 7). Owned weights are a placeholder set.
+  defaultDaysPerWeek: 3,
+  defaultOwnedKg: [4, 6, 8, 10, 12, 14, 16],
 } as const;
 
 // Rep ranges by exercise type (SPEC §3.1). Proposal, tuned with real logs (SPEC §11 item 1).

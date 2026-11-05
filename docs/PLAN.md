@@ -594,7 +594,7 @@ background scheduling, which is not exact.
 |---|---|---|
 | 1 Scaffold, cache, CI, Pages | 1 | merged (PR #5), deployed; real-iPhone check not done |
 | 2 Exercise library | 1 | code done on `phase-2-exercises`, PR pending; iPhone check not done |
-| 3 Settings, plans, logging, progression | 1 | 3a (domain, IDB v2) on `phase-3a-domain`, PR pending; 3b (screens, repo API) not started |
+| 3 Settings, plans, logging, progression | 1 | 3a merged (PR #7); 3b (screens, repo API) code done on `phase-3b-screens`, PR pending; rest-timer iPhone check not done |
 | 4 Worker, D1, sync, auth | 1 | not started |
 | PR C Contracts freeze | 1 | not started |
 | 5 Coach rules | 2 | not started |
