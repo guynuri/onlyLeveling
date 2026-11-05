@@ -1,18 +1,54 @@
-// IndexedDB schema v1 (Phase 1): meta and outbox only. Phase 3 bumps to v2 (PLAN §3.3).
-import { openDB, type IDBPDatabase } from 'idb';
+// IndexedDB schema. v1: meta, outbox (Phase 1). v2: training stores and reserved empty stores (PLAN §3.3).
+import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import type { OutboxItem } from '../data/outbox-core';
 
 export const DB_NAME = 'onlyleveling';
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
 
-export type Db = IDBPDatabase;
+export interface AppSchema extends DBSchema {
+  meta: { key: string; value: unknown };
+  // autoIncrement key; the stored value carries its id (keyPath 'id'). Added via `as OutboxItem` in outbox.ts.
+  outbox: { key: number; value: OutboxItem };
+  settings: { key: string; value: unknown }; // single record, key 'settings'
+  plans: { key: string; value: unknown };
+  workouts: { key: string; value: unknown };
+  bodyweight: { key: string; value: unknown }; // { date, kg }
+  // Reserved in v2 so later phases need no version bump (PLAN §3.3).
+  suggestions: { key: string; value: unknown }; // Phase 5
+  badges: { key: string; value: unknown }; // Phase 6
+  aiCache: { key: string; value: unknown }; // Phase 7
+}
 
-export function openAppDb(name: string = DB_NAME): Promise<Db> {
-  return openDB(name, DB_VERSION, {
-    upgrade(db) {
-      if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta');
-      if (!db.objectStoreNames.contains('outbox')) {
+export type Db = IDBPDatabase<AppSchema>;
+
+export interface OpenOptions {
+  // Another tab still holds an older version, so the upgrade is waiting. Show a message in the UI (Phase 4).
+  onBlocked?: () => void;
+}
+
+export function openAppDb(name: string = DB_NAME, opts: OpenOptions = {}): Promise<Db> {
+  let handle: Db | undefined;
+  return openDB<AppSchema>(name, DB_VERSION, {
+    upgrade(db, oldVersion) {
+      if (oldVersion < 1) {
+        db.createObjectStore('meta');
         db.createObjectStore('outbox', { keyPath: 'id', autoIncrement: true });
       }
+      if (oldVersion < 2) {
+        for (const store of ['settings', 'plans', 'workouts', 'bodyweight', 'suggestions', 'badges', 'aiCache'] as const) {
+          db.createObjectStore(store);
+        }
+      }
     },
+    blocked() {
+      opts.onBlocked?.();
+    },
+    blocking() {
+      // Release our connection so the newer version can open; the next open gets the new schema.
+      handle?.close();
+    },
+  }).then((db) => {
+    handle = db;
+    return db;
   });
 }
