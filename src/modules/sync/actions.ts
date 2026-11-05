@@ -1,23 +1,30 @@
-// Sync actions for the UI: run a sync, and tell the rest of the app the state changed.
+// Sync and account actions for the UI. Every action that changes the account stores the session token on this
+// device, then syncs. Nothing here throws to the caller except the auth errors the screen shows.
 import { getDb, getLocalRepo, getOutbox } from '../training/data';
+import { loadSyncState, saveSyncState, syncNow, withLatestConfig, type ServerConfig, type SyncState } from '../../data/sync-engine';
 import {
-  loadSyncState,
-  saveSyncState,
-  syncNow,
-  withLatestConfig,
-  type ServerConfig,
-  type SyncState,
-} from '../../data/sync-engine';
+  signInRequest,
+  signUpRequest,
+  recoverRequest,
+  signOutRequest,
+  createInviteRequest,
+  type AuthClientOptions,
+} from '../../data/auth-client';
 
 export const SYNC_EVENT = 'onlyleveling:sync-state';
+type FetchFn = typeof fetch;
+const defaultFetch: FetchFn = (...args) => fetch(...args);
+
+function announce(): void {
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(SYNC_EVENT));
+}
 
 export async function readSyncState(): Promise<SyncState> {
   return loadSyncState(await getDb());
 }
 
-// Run one sync and store the result. Never throws: a failure (for example a local write that fails while
-// applying pulled data) is reported in the returned state, so the buttons always settle.
-export async function runSync(): Promise<SyncState> {
+// Run one sync and store the result. Never throws: a failure is reported in the returned state.
+export async function runSync(fetchImpl: FetchFn = defaultFetch): Promise<SyncState> {
   const db = await getDb();
   const before = await loadSyncState(db);
   let after: SyncState;
@@ -26,7 +33,7 @@ export async function runSync(): Promise<SyncState> {
       outbox: await getOutbox(),
       local: await getLocalRepo(),
       state: before,
-      fetch: (...args) => fetch(...args),
+      fetch: fetchImpl,
       now: () => Date.now(),
     });
   } catch (e) {
@@ -34,23 +41,77 @@ export async function runSync(): Promise<SyncState> {
   }
   const stored = withLatestConfig(after, await loadSyncState(db));
   await saveSyncState(db, stored);
-  window.dispatchEvent(new CustomEvent(SYNC_EVENT));
+  announce();
   return stored;
 }
 
-// Store the server address and token, then sync now.
-export async function signIn(baseUrl: string, token: string): Promise<SyncState> {
-  const db = await getDb();
-  const cfg: ServerConfig = { baseUrl: baseUrl.replace(/\/+$/, ''), token };
-  await saveSyncState(db, { ...(await loadSyncState(db)), config: cfg, lastError: null });
-  return runSync();
+function normalise(baseUrl: string): string {
+  return baseUrl.trim().replace(/\/+$/, '');
 }
 
-// Forget the server and the token on this device. Local data stays.
-export async function signOut(): Promise<void> {
+// Store the session for this server, then sync. Used after sign-in, sign-up and recovery.
+async function adopt(baseUrl: string, token: string, fetchImpl: FetchFn): Promise<SyncState> {
   const db = await getDb();
-  await saveSyncState(db, { ...(await loadSyncState(db)), config: null, lastError: null });
-  window.dispatchEvent(new CustomEvent(SYNC_EVENT));
+  const cfg: ServerConfig = { baseUrl: normalise(baseUrl), token };
+  await saveSyncState(db, { ...(await loadSyncState(db)), config: cfg, lastError: null });
+  return runSync(fetchImpl);
+}
+
+export async function signInWithPassword(
+  baseUrl: string,
+  username: string,
+  password: string,
+  fetchImpl: FetchFn = defaultFetch,
+): Promise<SyncState> {
+  const { token } = await signInRequest(authOpts(baseUrl, fetchImpl), { username, password });
+  return adopt(baseUrl, token, fetchImpl);
+}
+
+export async function createAccountWithInvite(
+  baseUrl: string,
+  input: { code: string; username: string; password: string },
+  fetchImpl: FetchFn = defaultFetch,
+): Promise<SyncState> {
+  const { token } = await signUpRequest(authOpts(baseUrl, fetchImpl), input);
+  return adopt(baseUrl, token, fetchImpl);
+}
+
+export async function recoverAccount(
+  baseUrl: string,
+  input: { username: string; code: string; newPassword: string },
+  fetchImpl: FetchFn = defaultFetch,
+): Promise<SyncState> {
+  const { token } = await recoverRequest(authOpts(baseUrl, fetchImpl), input);
+  return adopt(baseUrl, token, fetchImpl);
+}
+
+// Ends the session on the server (best effort) and forgets it on this device. Local data is kept.
+export async function signOut(fetchImpl: FetchFn = defaultFetch): Promise<void> {
+  const db = await getDb();
+  const state = await loadSyncState(db);
+  let pendingRevoke = state.pendingRevoke;
+  if (state.config) {
+    try {
+      await signOutRequest(authOpts(state.config.baseUrl, fetchImpl), state.config.token);
+    } catch {
+      // Offline: the device signs out now, and the token is kept to revoke on the next sync.
+      pendingRevoke = [...pendingRevoke, state.config.token];
+    }
+  }
+  await saveSyncState(db, { ...state, config: null, lastError: null, pendingRevoke });
+  announce();
+}
+
+// A new invite code for this account. Shown once; the server keeps only its hash.
+export async function createInvite(fetchImpl: FetchFn = defaultFetch): Promise<string> {
+  const state = await loadSyncState(await getDb());
+  if (!state.config) throw new Error('Sign in to create an invite code.');
+  const { code } = await createInviteRequest(authOpts(state.config.baseUrl, fetchImpl), state.config.token);
+  return code;
+}
+
+function authOpts(baseUrl: string, fetchImpl: FetchFn): AuthClientOptions {
+  return { baseUrl: normalise(baseUrl), fetch: fetchImpl };
 }
 
 // "last synced" text for the top bar.

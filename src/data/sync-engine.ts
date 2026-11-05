@@ -4,6 +4,7 @@ import type { Db } from '../db/idb';
 import type { Repo } from './repo';
 import type { Outbox } from './outbox';
 import { pushDue } from './sync-client';
+import { signOutRequest } from './auth-client';
 import type { BodyweightEntry, Settings, Workout } from '../domain/types';
 
 // What is stored: address and token only. A fetch function cannot be stored, so it is added at sync time.
@@ -17,12 +18,15 @@ export interface SyncState {
   lastSyncedAt: number | null; // local time of the last fully successful sync
   cursor: number; // server time of the last pull
   lastError: string | null;
+  // Tokens signed out on this device whose server revoke did not go through yet. Retried on the next sync.
+  pendingRevoke: string[];
 }
 
-const EMPTY: SyncState = { config: null, lastSyncedAt: null, cursor: 0, lastError: null };
+const EMPTY: SyncState = { config: null, lastSyncedAt: null, cursor: 0, lastError: null, pendingRevoke: [] };
 
 export async function loadSyncState(db: Db): Promise<SyncState> {
-  return ((await db.get('meta', 'sync')) as SyncState | undefined) ?? { ...EMPTY };
+  const stored = (await db.get('meta', 'sync')) as Partial<SyncState> | undefined;
+  return { ...EMPTY, ...(stored ?? {}) };
 }
 
 export async function saveSyncState(db: Db, state: SyncState): Promise<void> {
@@ -33,6 +37,15 @@ export async function saveSyncState(db: Db, state: SyncState): Promise<void> {
 // sign-in during the sync wins. The results of the sync (cursor, last sync, error) are kept.
 export function withLatestConfig(after: SyncState, latest: SyncState): SyncState {
   return { ...after, config: latest.config };
+}
+
+// A 401 means the server has ended this session (expired, recovered, or signed out elsewhere). The device
+// forgets the token and asks for sign-in again. Anything else is a normal error that keeps the session.
+function sessionOrError(state: SyncState, error: string): SyncState {
+  if (error === 'HTTP 401') {
+    return { ...state, config: null, lastError: 'Your session has ended. Sign in again.' };
+  }
+  return { ...state, lastError: error };
 }
 
 interface PullBody {
@@ -49,12 +62,24 @@ export async function syncNow(args: {
   fetch: typeof fetch;
   now: () => number;
 }): Promise<SyncState> {
-  const { outbox, local, state, now } = args;
-  if (!state.config) return { ...state, lastError: 'Not signed in to a server.' };
-  const cfg = { ...state.config, fetch: args.fetch };
+  const { outbox, local, now } = args;
+  if (!args.state.config) return { ...args.state, lastError: 'Not signed in to a server.' };
+  const cfg = { ...args.state.config, fetch: args.fetch };
+
+  // Sign-outs that could not reach the server before are retried first.
+  let state: SyncState = args.state;
+  const stillPending: string[] = [];
+  for (const token of state.pendingRevoke) {
+    try {
+      await signOutRequest({ baseUrl: cfg.baseUrl, fetch: args.fetch }, token);
+    } catch {
+      stillPending.push(token);
+    }
+  }
+  state = { ...state, pendingRevoke: stillPending };
 
   const pushed = await pushDue(outbox, cfg, now());
-  if (pushed.error) return { ...state, lastError: pushed.error };
+  if (pushed.error) return sessionOrError(state, pushed.error);
 
   let body: PullBody;
   try {
@@ -64,7 +89,7 @@ export async function syncNow(args: {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     body = (await res.json()) as PullBody;
   } catch (e) {
-    return { ...state, lastError: e instanceof Error ? e.message : 'sync failed' };
+    return sessionOrError(state, e instanceof Error ? e.message : 'sync failed');
   }
 
   // A record with a write still queued keeps the local copy: the server's copy is older, and the queued write
