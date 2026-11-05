@@ -19,9 +19,17 @@ describe('outbox-core', () => {
     expect(due.map((i) => i.id)).toEqual([1, 2, 3]);
   });
 
-  it('skips items whose nextTryAt is in the future', () => {
+  it('returns nothing when the oldest item is still backing off', () => {
     const due = dueItems([item(1, { nextTryAt: 500 }), item(2)], 100);
-    expect(due.map((i) => i.id)).toEqual([2]);
+    expect(due).toEqual([]);
+  });
+
+  it('a backing-off item blocks later writes to the same record (no stale overwrite)', () => {
+    // v1 failed and is waiting; v2 must not be pushed ahead of it.
+    const v1 = item(1, { nextTryAt: 500, payload: { w: 'v1' } });
+    const v2 = item(2, { payload: { w: 'v2' } });
+    expect(dueItems([v1, v2], 100).map((i) => i.id)).toEqual([]);
+    expect(dueItems([v1, v2], 600).map((i) => i.id)).toEqual([1, 2]);
   });
 
   it('fail increments attempts, records the error and sets nextTryAt', () => {

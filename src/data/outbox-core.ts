@@ -22,9 +22,14 @@ export function failItem(item: OutboxItem, error: string, now: number): OutboxIt
   return { ...item, attempts, lastError: error, nextTryAt: now + backoffMs(attempts) };
 }
 
-// FIFO by id (ids are increasing). Only items whose nextTryAt has passed are due.
+// FIFO by id. Returns the due prefix of the queue: stops at the first item still backing off,
+// so a later write to the same record can never be pushed ahead of an earlier, failed one.
 export function dueItems(items: OutboxItem[], now: number): OutboxItem[] {
-  return items
-    .filter((i) => i.nextTryAt <= now)
-    .sort((a, b) => a.id - b.id);
+  const sorted = [...items].sort((a, b) => a.id - b.id);
+  const out: OutboxItem[] = [];
+  for (const item of sorted) {
+    if (item.nextTryAt > now) break;
+    out.push(item);
+  }
+  return out;
 }

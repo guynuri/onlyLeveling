@@ -11,7 +11,9 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'prompt',
+      // autoUpdate: a new build activates on its own. 'prompt' needs an update UI that does not exist yet,
+      // and without it an installed iOS app keeps the old build until every copy is closed.
+      registerType: 'autoUpdate',
       includeAssets: ['icons/apple-touch-icon.png'],
       manifest: {
         name: 'onlyLeveling',
