@@ -57,8 +57,11 @@ Settings live in one config module with thresholds (§4.5). No thresholds are sc
 - **Rep ranges per exercise (proposal)**. Compound lifts 6–10 reps; isolation and accessory lifts 10–15;
   calves and core 10–20. Stated as a default table in config, editable per exercise. Hypertrophy
   research (Schoenfeld and colleagues) shows similar growth across a wide rep range when sets are near
-  failure, so the range is about fit and fatigue, not a fixed rule. I did not find a source that settles
-  the compound-versus-isolation split. This table is a judgment call, flagged in §11.
+  failure, so the range is about fit and fatigue, not a fixed rule. Sources: Schoenfeld et al. 2017 meta-analysis of
+  low- vs high-load training, [semanticscholar](https://www.semanticscholar.org/paper/Strength-and-Hypertrophy-Adaptations-Between-Low-A-Schoenfeld-Grgic/bf737d9c1090be1a883e2be6873060c6c1c5273e);
+  Grgic et al. on training to failure vs not, [ResearchGate](https://www.researchgate.net/publication/345597197_Effects_of_resistance_training_performed_to_repetition_failure_or_non-failure_on_muscular_strength_and_hypertrophy_A_systematic_review_and_meta-analysis).
+  Neither compares compound and isolation exercises directly. The compound-versus-isolation split is a judgment
+  call, flagged in §11.
 
 ### 3.2 Logging
 - Log sets: weight (from the owned list), reps, done. Optional RIR per set.
@@ -183,8 +186,9 @@ recompute XP, so history cannot be inflated by backdating.
 
 ## 5. AI coach (MVP scope: plan proposal only)
 
-**Rule: the AI suggests, the rules decide.** The AI writes text and proposes structure. The engine
-computes every number.
+**Rule: the AI suggests, the rules decide.** The AI writes text and proposes structure, including the first
+plan's weights, reps and sets (§5.4). The rules validate and correct every number before it is shown.
+After the first plan, the engine owns progression (§3.3).
 
 ### 5.1 MVP AI use
 - **First plan proposal** only. Weekly review and meal ideas are later (§9).
@@ -223,7 +227,14 @@ computes every number.
 `reason` and `note` are plain text only. The app renders them as text: no HTML, no Markdown, no links.
 Length limits are enforced in validation (§5.5).
 
-The AI never returns weights, reps, sets or rest. The engine adds those from config and history.
+The AI may return weights, reps and sets for each exercise (decided in PR #2). Rest is set by config. Every
+returned number is validated by the rules in §5.5 before it is shown. Rules may correct an out-of-range value
+(e.g. snap a weight to the owned list, clamp reps to the rep range) and the app shows the corrected value.
+The engine still owns progression: after the first plan, weights and reps change only through §3.3.
+
+**Conflict with CLAUDE.md:** CLAUDE.md's golden rule says the AI proposes and the engine sets the numbers.
+This section changes that rule for the first plan. CLAUDE.md must be updated to match; that update is
+outside this PR.
 
 ### 5.5 Validation (every response)
 1. Parse as JSON. Reject non-JSON.
@@ -416,9 +427,8 @@ Credits screen lists text licence per exercise, each image's author and licence,
 10. **Weekly review timing and content**: decided at implementation time, when that feature is built.
 14. **Onboarding interview questions**: **decided**, written when the onboarding feature is built. §2 lists
     the topics only until then.
-15. **AI returns weights, reps and sets** (PR thread on §5.4): **open**. CLAUDE.md's golden rule says the
-    AI proposes and the engine sets the numbers. Allowing the AI to return numbers, validated by rules,
-    changes that rule. Decide before §5.4 changes.
+15. **AI returns weights, reps and sets** (PR thread on §5.4): **decided**, yes, validated by rules (§5.4).
+    CLAUDE.md's golden rule must be updated to match.
 11. **Strength-standard table (XP ranks)**: which benchmark lift per muscle (e.g. dumbbell press for
     chest, row for back, goblet squat for legs), and the bodyweight-ratio thresholds for F through SSS.
     The thresholds must be set so a 12-week plan reaches about B. Numbers are not yet proposed.
