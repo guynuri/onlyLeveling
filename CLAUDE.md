@@ -52,7 +52,11 @@ The product spec lives in `docs/SPEC.md`; the phased plan in `docs/PLAN.md`. Rea
 - **Frontend:** GitHub Pages, built and published by `.github/workflows/deploy.yml` on every push to `main`.
 - **API (Worker):** `.github/workflows/deploy-worker.yml` runs on every push to `main` that touches `worker/`,
   `wrangler.toml` or the lockfile. It runs the Worker tests, applies D1 migrations with `--remote`, then
-  `wrangler deploy`. Migrations always run before the code that needs them.
+  `wrangler deploy`. The job runs only for code on `main`, including manual runs.
+- **Migrations must be compatible with the live Worker**, because the new schema is live before the new code.
+  Expand, then contract: a migration only adds (new tables, nullable or defaulted columns, new indexes). A column
+  is dropped, renamed or made NOT NULL only in a later PR, after the code that used it has been deployed and
+  is gone. A failed deploy after a migration leaves the schema ahead of the code, so the old code must still work.
 - Live API: `https://onlyleveling-api.guynuri.workers.dev`. Allowed origins are in `worker/src/cors.ts`.
 - **Repository secrets** (GitHub → Settings → Secrets and variables → Actions): `CLOUDFLARE_API_TOKEN`
   (Workers Scripts: Edit, D1: Edit, Account Settings: Read) and `CLOUDFLARE_ACCOUNT_ID`.
