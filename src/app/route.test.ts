@@ -22,6 +22,11 @@ describe('parseRoute', () => {
     expect(parseRoute('#/credits')).toEqual({ screen: 'credits' });
   });
 
+  it('a malformed % escape falls back to the library list instead of throwing', () => {
+    expect(parseRoute('#/library/100%')).toEqual({ screen: 'library' });
+    expect(parseRoute('#/library/%E0%A4%A')).toEqual({ screen: 'library' });
+  });
+
   it('decodes an encoded exercise id', () => {
     expect(parseRoute('#/library/fx_a%20b')).toEqual({ screen: 'exercise', id: 'fx_a b' });
   });
