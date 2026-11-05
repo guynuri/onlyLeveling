@@ -3,6 +3,7 @@ import type { Env } from './env';
 import { authenticate } from './auth';
 import { corsHeaders } from './cors';
 import { applyPush, exportAll, parseOps, pull, ValidationError } from './sync';
+import { routeSlots } from './routes';
 
 const MAX_BODY_BYTES = 1_000_000;
 
@@ -34,6 +35,10 @@ export default {
     }
 
     try {
+      // Inside the try: a slot that throws still gets a JSON error and CORS headers.
+      const slotted = await routeSlots(req, env, principal);
+      if (slotted) return slotted;
+
       if (url.pathname === '/api/sync/push' && req.method === 'POST') {
         // Refuse by the declared length first, so a large body is never read into memory.
         const declared = Number(req.headers.get('Content-Length') ?? '0');

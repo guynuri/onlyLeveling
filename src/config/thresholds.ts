@@ -55,6 +55,16 @@ export const ROUTINE = {
   ],
 } as const;
 
-export const COACH = {} as const;
-export const NUTRITION = {} as const;
+// Coach rules (SPEC §4). These are the spec defaults; each Wave 2 module edits only its own section.
+export const COACH = {
+  stallWeeks: 2, // no e1RM gain over this many weeks → stalled
+  staleWeeks: 8, // the same exercise this long → stale
+  tooEasyRir: 3, // RIR at or above this at the top of the range …
+  tooEasySessions: 2, // … for this many sessions in a row → too easy
+  missedSessionsForDeload: 3, // missed in a row before a deload is suggested (SPEC §4.1)
+  deloadFactor: 0.9, // SPEC §4.1
+} as const;
+// XP (SPEC §4b). Numbers are open (SPEC §11 items 11 and 12). Phase 6 fills this section when they are decided.
 export const XP = {} as const;
+// Nutrition (SPEC §9, later phase). Blueprint only.
+export const NUTRITION = {} as const;
