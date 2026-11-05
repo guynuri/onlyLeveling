@@ -10,6 +10,7 @@ import WorkoutScreen from './modules/training/WorkoutScreen';
 import PlanScreen from './modules/training/PlanScreen';
 import HistoryScreen from './modules/training/HistoryScreen';
 import SettingsScreen from './modules/training/SettingsScreen';
+import ProgressScreen from './modules/progress/ProgressScreen';
 
 // Shell: top bar, screen, bottom nav. Hash routing only (CLAUDE.md): no server rewrites on GitHub Pages.
 const TABS: ReadonlyArray<{ screen: Route['screen']; label: string }> = [
@@ -20,9 +21,12 @@ const TABS: ReadonlyArray<{ screen: Route['screen']; label: string }> = [
   { screen: 'settings', label: 'Settings' },
 ];
 
-// Which bottom tab is highlighted for a route (detail belongs to Library, credits to Settings).
+// Which bottom tab is highlighted for a route (detail belongs to Library, credits to Settings, progress to Today).
 function tabFor(route: Route): Route['screen'] {
-  return route.screen === 'exercise' ? 'library' : route.screen === 'credits' ? 'settings' : route.screen;
+  if (route.screen === 'exercise') return 'library';
+  if (route.screen === 'credits') return 'settings';
+  if (route.screen === 'progress') return 'today';
+  return route.screen;
 }
 
 function Screen({ route }: { route: Route }) {
@@ -41,6 +45,8 @@ function Screen({ route }: { route: Route }) {
       return <SettingsScreen />;
     case 'credits':
       return <CreditsScreen />;
+    case 'progress':
+      return <ProgressScreen />;
   }
 }
 

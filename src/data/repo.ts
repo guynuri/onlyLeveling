@@ -14,4 +14,7 @@ export interface Repo {
   savePlan(p: Plan): Promise<void>;
   listSuggestions(): Promise<Suggestion[]>;
   saveSuggestion(s: Suggestion): Promise<void>;
+  listBadges(): Promise<{ badgeKey: string; earnedAt: number }[]>;
+  // Stores a badge the first time only. true = newly earned; an earned badge is never revoked (SPEC §4b).
+  awardBadge(badgeKey: string, earnedAt: number): Promise<boolean>;
 }

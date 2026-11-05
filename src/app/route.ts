@@ -6,7 +6,8 @@ export type Route =
   | { screen: 'exercise'; id: string }
   | { screen: 'history' }
   | { screen: 'settings' }
-  | { screen: 'credits' };
+  | { screen: 'credits' }
+  | { screen: 'progress' }; // reached from a link on Today, not a bottom tab (PLAN Phase 6)
 
 const TABS = ['today', 'plan', 'library', 'history', 'settings'] as const satisfies readonly Route['screen'][];
 
@@ -28,6 +29,7 @@ export function parseRoute(hash: string): Route {
   }
   if (head === 'library') return { screen: 'library' };
   if (head === 'credits') return { screen: 'credits' };
+  if (head === 'progress') return { screen: 'progress' };
   const tab = TABS.find((t) => t === head);
   return tab ? { screen: tab } : { screen: 'today' };
 }

@@ -110,6 +110,9 @@ export default function WorkoutScreen() {
     <section>
       <h1>Today · Day {(workouts.length % settings.daysPerWeek) + 1}</h1>
       <CoachCards />
+      <p className="small">
+        <a href="#/progress">Progress and XP</a>
+      </p>
 
       <h3>Warm-up</h3>
       <ul className="routine">

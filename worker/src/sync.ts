@@ -8,9 +8,14 @@ export type Op =
   | { opId: string; kind: 'settings'; data: Record<string, unknown>; updatedAt: number }
   | { opId: string; kind: 'bodyweight'; data: { date: string; kg: number }; updatedAt: number }
   | { opId: string; kind: 'plan'; data: Record<string, unknown>; updatedAt: number }
-  | { opId: string; kind: 'suggestion'; data: { id: string } & Record<string, unknown>; updatedAt: number };
+  | { opId: string; kind: 'suggestion'; data: { id: string } & Record<string, unknown>; updatedAt: number }
+  | { opId: string; kind: 'badge'; data: { badgeKey: string; earnedAt: number }; updatedAt: number };
 
 export class ValidationError extends Error {}
+
+// Badge keys: session milestones, first PR, first rank-up, and per-muscle ranks from C up (badges.ts, config XP).
+const BADGE_KEY =
+  /^(session:(1|10|100)|pr:first|rankup:first|muscle:(chest|back|shoulders|biceps|triceps|quads|hamstrings|glutes|calves|core):(C|B|A|S|SS|SSS))$/;
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -46,6 +51,14 @@ export function parseOps(body: unknown): Op[] {
     if (raw.kind === 'suggestion') {
       if (!isObj(raw.data) || !isStr(raw.data.id)) throw new ValidationError(`op ${i}: suggestion needs data.id`);
       return { ...common, kind: 'suggestion', data: raw.data as { id: string } & Record<string, unknown> };
+    }
+    if (raw.kind === 'badge') {
+      if (!isObj(raw.data) || !isStr(raw.data.badgeKey) || !isNum(raw.data.earnedAt)) {
+        throw new ValidationError(`op ${i}: badge needs badgeKey and earnedAt`);
+      }
+      // Only the keys the app produces (src/modules/xp/domain/badges.ts). Anything else is rejected, not stored.
+      if (!BADGE_KEY.test(raw.data.badgeKey)) throw new ValidationError(`op ${i}: unknown badge key`);
+      return { ...common, kind: 'badge', data: { badgeKey: raw.data.badgeKey, earnedAt: raw.data.earnedAt } };
     }
     throw new ValidationError(`op ${i}: unknown kind`);
   });
@@ -123,6 +136,15 @@ async function upsert(db: D1Database, userId: string, op: Op, serverAt: number):
       )
       .bind(userId, op.data.id, JSON.stringify(op.data), op.updatedAt, serverAt)
       .run();
+  } else if (op.kind === 'badge') {
+    // First award wins and is never revoked: a second write for the same badge does nothing.
+    await db
+      .prepare(
+        `INSERT INTO badges (user_id, badge_key, earned_at, server_at) VALUES (?, ?, ?, ?)
+         ON CONFLICT (user_id, badge_key) DO NOTHING`,
+      )
+      .bind(userId, op.data.badgeKey, op.data.earnedAt, serverAt)
+      .run();
   } else {
     await db
       .prepare(
@@ -142,6 +164,7 @@ export interface Pulled {
   bodyweight: { date: string; kg: number }[];
   plan: unknown | null;
   suggestions: unknown[];
+  badges: { badgeKey: string; earnedAt: number }[];
   serverTime: number;
 }
 
@@ -166,12 +189,17 @@ export async function pull(db: D1Database, userId: string, since: number, now = 
     .prepare('SELECT data FROM suggestions WHERE user_id = ? AND server_at > ? ORDER BY server_at')
     .bind(userId, since)
     .all<{ data: string }>();
+  const bd = await db
+    .prepare('SELECT badge_key, earned_at FROM badges WHERE user_id = ? AND server_at > ? ORDER BY server_at')
+    .bind(userId, since)
+    .all<{ badge_key: string; earned_at: number }>();
   return {
     workouts: w.results.map((r) => JSON.parse(r.data)),
     settings: s ? JSON.parse(s.data) : null,
     bodyweight: b.results,
     plan: p ? JSON.parse(p.data) : null,
     suggestions: g.results.map((r) => JSON.parse(r.data)),
+    badges: bd.results.map((r) => ({ badgeKey: r.badge_key, earnedAt: r.earned_at })),
     serverTime: now,
   };
 }

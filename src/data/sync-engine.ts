@@ -56,6 +56,7 @@ interface PullBody {
   bodyweight: BodyweightEntry[];
   plan?: Plan | null;
   suggestions?: Suggestion[];
+  badges?: { badgeKey: string; earnedAt: number }[];
   serverTime: number;
 }
 
@@ -110,6 +111,7 @@ export async function syncNow(args: {
   for (const s of body.suggestions ?? []) {
     if (!pending.has(s.id)) await local.saveSuggestion(s);
   }
+  for (const b of body.badges ?? []) await local.awardBadge(b.badgeKey, b.earnedAt);
 
   return { ...state, cursor: body.serverTime, lastSyncedAt: now(), lastError: null };
 }
