@@ -46,3 +46,17 @@ html, body {
 }
 .bottom-nav a { color: var(--muted); text-decoration: none; font-size: 0.85rem; padding: 4px 8px; }
 .bottom-nav a[aria-current='page'] { color: var(--accent); }
+
+/* Library */
+.toggle { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.exercise-list { list-style: none; padding: 0; margin: 0; }
+.exercise-list li { display: flex; flex-direction: column; padding: 10px 0; border-bottom: 1px solid var(--bar); }
+.exercise-list a { color: var(--fg); text-decoration: none; font-weight: 500; }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; }
+.source { display: block; margin-top: 16px; color: var(--muted); font-size: 0.85rem; }
+.credit { padding: 8px 0; border-bottom: 1px solid var(--bar); }
+.credit h2 { font-size: 1.1rem; margin: 0 0 4px; }
+.credit a { color: var(--accent); }
+a { color: var(--accent); }
