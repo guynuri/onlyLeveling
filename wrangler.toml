@@ -1,0 +1,12 @@
+# Worker (API + AI proxy later). Phase 4a. The frontend is GitHub Pages, not Cloudflare Pages (CLAUDE.md).
+# Secrets are never in this file: set them with `wrangler secret put BOOTSTRAP_TOKEN`.
+name = "onlyleveling-api"
+main = "worker/src/index.ts"
+compatibility_date = "2025-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "onlyleveling"
+# Replace with the real id after `wrangler d1 create onlyleveling` (manual step; see PLAN Phase 4).
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "worker/migrations"
