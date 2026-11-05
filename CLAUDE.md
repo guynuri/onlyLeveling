@@ -48,6 +48,20 @@ The product spec lives in `docs/SPEC.md`; the phased plan in `docs/PLAN.md`. Rea
   wildcard origin, and no `Access-Control-Allow-Credentials`.
 - The frontend and the Worker are on different origins. Never assume a same-origin `/api`.
 
+## Backend deploy
+- **Frontend:** GitHub Pages, built and published by `.github/workflows/deploy.yml` on every push to `main`.
+- **API (Worker):** `.github/workflows/deploy-worker.yml` runs on every push to `main` that touches `worker/`,
+  `wrangler.toml` or the lockfile. It runs the Worker tests, applies D1 migrations with `--remote`, then
+  `wrangler deploy`. Migrations always run before the code that needs them.
+- Live API: `https://onlyleveling-api.guynuri.workers.dev`. Allowed origins are in `worker/src/cors.ts`.
+- **Repository secrets** (GitHub → Settings → Secrets and variables → Actions): `CLOUDFLARE_API_TOKEN`
+  (Workers Scripts: Edit, D1: Edit, Account Settings: Read) and `CLOUDFLARE_ACCOUNT_ID`.
+- **Worker secrets** (Cloudflare, never in the repo): `BOOTSTRAP_TOKEN`, set with `npx wrangler secret put`.
+  Changing it needs a manual `wrangler secret put` and a new token in the app's Settings.
+- Manual fallback, from the repo folder: `npx wrangler d1 migrations apply onlyleveling --remote`,
+  then `npx wrangler deploy`.
+- Never commit tokens, `.env` files or `.dev.vars`.
+
 ## Codebase map
 <!-- TODO (first session): fill in once the scaffold exists — folder layout, stores, data model,
      how to run, test, lint, build and deploy. Keep it to ~20 lines. -->

@@ -1,0 +1,44 @@
+name: Deploy Worker to Cloudflare
+
+# The API (worker/) deploys on every merge to main that touches it. The frontend deploys separately, to GitHub Pages.
+# Needs two repository secrets (Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN  — token with Workers Scripts:Edit, D1:Edit and Account Settings:Read
+#   CLOUDFLARE_ACCOUNT_ID — the account id from the Cloudflare dashboard
+# The bearer token (BOOTSTRAP_TOKEN) lives in Cloudflare as a secret, not here.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'worker/**'
+      - 'wrangler.toml'
+      - 'package-lock.json'
+      - '.github/workflows/deploy-worker.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: worker-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Worker tests (local D1)
+        run: npm run test:worker
+      - name: Apply D1 migrations (before the code that needs them)
+        run: npx wrangler d1 migrations apply onlyleveling --remote
+      - name: Deploy Worker
+        run: npx wrangler deploy
