@@ -39,7 +39,8 @@ First sign-up runs a short **onboarding interview**. Answers are stored as setti
 | Units | kg | |
 | Rest between sets | 90 s (`restSec`) | Ported default, `REFERENCE_NOTES.md` §5. 0 = off. |
 | Warm-up pause (rest-pause) | 15 s | |
-| Push notifications | Rest-timer end, workout reminder | §8.4. |
+| Bodyweight | Logged over time | Needed for strength-standard ranks (§4b). Not sent to AI. |
+| Push notifications | Rest-timer end, workout reminder | §6.4. |
 
 Settings live in one config module with thresholds (§4.5). No thresholds are scattered through the code.
 
@@ -120,6 +121,48 @@ recently. Movement pattern needs a labelling pass (`DATA_SOURCES.md` §7 item 3)
 
 Wording: "suggestion", "based on your last N sessions". Never "prescription" or "medical". A footer line
 says: *Training guidance, not medical advice.*
+
+## 4b. XP, ranks, streaks, badges (MVP)
+
+**Per-muscle progress.** Every muscle group has its own XP bar and rank. Ranks run F, E, D, C, B, A, S,
+SS, SSS. A 12-week plan should land around **B**, not SSS. Top ranks need strength evidence.
+
+**Earning XP (volume-based).**
+- Per set: `load × reps`, only for sets done at or above target reps. Load uses the logged weight
+  with the load meaning from §3.4 (each / total / as entered), so a bell is not counted twice.
+- Diminishing returns on reps: each rep beyond the plan's target reps earns less than the one before
+  (e.g. full XP up to target, then a fixed fraction per extra rep). Factors in config. Stops rewarding
+  "30 reps for volume".
+- Weight drop penalty: if the working weight is below the exercise's best recent weight, XP for that
+  set is scaled down (config factor). Stops "drop the weight, pile on reps" farming.
+- Per session: a small credit per muscle trained, plus a progression bonus when an exercise hits a new
+  owned weight or top-of-range reps. All values in config.
+- Credit goes to primary muscles in full and secondary muscles at the secondary weight (0.4, as in
+  `REFERENCE_NOTES.md` §6).
+- Per-session XP is capped (config). The cap prevents runaway XP from one session.
+
+**Rank rule (both required, lower wins).** A muscle's rank = the lower of:
+1. **Volume rank**: from accumulated XP on that muscle (the progress bar).
+2. **Strength rank**: from a benchmark lift for that muscle, as a multiple of **bodyweight**
+   (the strength-standard table, in config).
+
+A rank-up needs the threshold met on **2 separate sessions**. This blocks a single lucky set. Bodyweight
+is a settings field and is logged over time, so ratios use the bodyweight on the day of the lift.
+
+**Streaks (weekly).** A week counts when the planned sessions for that week are completed (3 of 3 on a
+3-day plan). Streak = consecutive counted weeks. A missed week resets it.
+
+**Badges.** Two kinds, each earned once:
+- Milestones: first session, 10 and 100 sessions, first PR, first rank-up on any muscle.
+- Achievements: per muscle and per lift, tied to the rank system (e.g. "Chest reached C",
+  "Benchmark lift at 1.0× bodyweight").
+
+**Presentation.** A dedicated **Progress** screen: one bar and rank per muscle, the overall streak, and
+badges. Home does not show XP beyond a link to Progress.
+
+**Anti-cheese (MVP).** Only sets with a plausible rep count count for XP (over 30 reps earns nothing, and
+outliers are flagged). Diminishing reps and weight-drop penalty above. Sessions edited after the fact
+recompute XP, so history cannot be inflated by backdating.
 
 ## 5. AI coach (MVP scope: plan proposal only)
 
@@ -226,7 +269,12 @@ Workout    { id, userId, routineIds[], start, end, entries[], prs[], excludeFrom
 Entry      { id (exerciseId), sets[], planned, note? }
 SetRow     { w, r, done, rir?, phase, at }
 Suggestion { id, userId, rule, exerciseId, reason, createdAt, status: pending|accepted|rejected|snoozed|never }
+XpEvent    { id, userId, workoutId, setRef, muscle, xp, reason }        // derived; recomputable from history
+MuscleRank { userId, muscle, xpTotal, volumeRank, strengthRank, rank, pendingRankUp? }
+Badge      { id, userId, badgeKey, earnedAt }
 ```
+
+XP and ranks are derived from history (like progression), so editing a session recomputes them.
 
 Live-only bookkeeping (own rest, planned seconds) is stripped at finish (`REFERENCE_NOTES.md` §1).
 Config thresholds are not in the data model.
@@ -242,9 +290,10 @@ Config thresholds are not in the data model.
 2. **Home**: today's session, coach cards (§4), last synced indicator.
 3. **Plan**: days, exercises, rep ranges. Propose a new plan, accept or reject.
 4. **In-workout**: one-handed logging (§3.2). Rest timer.
-5. **History**: sessions, PRs, per-exercise trend.
-6. **Exercise**: details, text from `DATA_SOURCES.md`, images with credit.
-7. **Settings**: all §2 settings, export, invite codes, passkey, Credits screen (`docs/CREDITS.md`).
+5. **Progress**: per-muscle XP bars and ranks, weekly streak, badges (§4b).
+6. **History**: sessions, PRs, per-exercise trend.
+7. **Exercise**: details, text from `DATA_SOURCES.md`, images with credit.
+8. **Settings**: all §2 settings, export, invite codes, passkey, Credits screen (`docs/CREDITS.md`).
 
 ### 8.3 Credits
 Credits screen lists text licence per exercise, each image's author and licence, and Everkinetic credit.
@@ -260,9 +309,9 @@ Credits screen lists text licence per exercise, each image's author and licence,
 - Swaps via cards.
 - D1 sync, outbox, last-synced indicator, JSON export.
 - Push: rest timer end and workout reminder.
+- XP per muscle with F→SSS ranks, weekly streaks, and badges (§4b). Progress screen (§8.2).
 
 **Later phases**
-- Phase 2: XP, streaks, badges (derived from sessions and progression, §10).
 - Phase 2: Weekly AI review (cached), proposing swaps and rotations through the same accept flow.
 - Phase 3: Nutrition: calorie and protein log, starter USDA list, recents and favourites, custom foods,
   quick-add kcal, targets via Mifflin-St Jeor × activity, goal-adjusted, protein 1.6–2.2 g/kg, weekly
@@ -312,6 +361,16 @@ Credits screen lists text licence per exercise, each image's author and licence,
 - Workout reminder fires at the chosen time on training days.
 - Denied permission shows the on-screen fallback.
 
+**XP and ranks**
+- A set below target reps earns no XP. A set over 30 reps earns no XP and is flagged.
+- Each extra rep beyond target earns less than the previous one (monotonic decrease).
+- Dropping the weight below the exercise's recent best lowers that set's XP.
+- A muscle's rank = the lower of its volume rank and its strength rank.
+- A rank-up does not apply until the threshold is met on 2 separate sessions.
+- A 12-week plan run as planned moves the trained muscles to about B (checked with a fixture, not by hand).
+- Weekly streak counts only completed planned sessions; a missed week resets it.
+- Editing a past session recomputes its XP and ranks.
+
 **Guidance wording**
 - Every suggestion screen shows the non-medical footer.
 
@@ -333,6 +392,12 @@ Credits screen lists text licence per exercise, each image's author and licence,
 9. **Settings that were deferred** to "input later": goal, days per week, owned weights, experience. The
    onboarding interview covers them; confirm onboarding is the only place they are asked.
 10. **Weekly review timing and content** when it returns in phase 2.
+11. **Strength-standard table (XP ranks)**: which benchmark lift per muscle (e.g. dumbbell press for
+    chest, row for back, goblet squat for legs), and the bodyweight-ratio thresholds for F through SSS.
+    The thresholds must be set so a 12-week plan reaches about B. Numbers are not yet proposed.
+12. **XP numbers**: per-rep diminishing factor, weight-drop penalty, per-session cap, progression
+    bonus, rank XP curve. All to be tuned; config values, not fixed here.
+13. **Badge list**: the milestone list and first per-muscle / per-lift set are a starting point. Confirm.
 
 ## 12. Glossary
 
