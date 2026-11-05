@@ -414,8 +414,8 @@ Credits screen lists text licence per exercise, each image's author and licence,
 8. **Provider chain**: **decided**, Workers AI → Gemini → Claude.
 9. **Settings deferred to onboarding**: **confirmed**, onboarding is the only place they are asked.
 10. **Weekly review timing and content**: decided at implementation time, when that feature is built.
-14. **Onboarding interview questions**: **open**. Do we list the exact questions in §2 now, or when the
-    feature is built?
+14. **Onboarding interview questions**: **decided**, written when the onboarding feature is built. §2 lists
+    the topics only until then.
 15. **AI returns weights, reps and sets** (PR thread on §5.4): **open**. CLAUDE.md's golden rule says the
     AI proposes and the engine sets the numbers. Allowing the AI to return numbers, validated by rules,
     changes that rule. Decide before §5.4 changes.
