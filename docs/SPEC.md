@@ -69,8 +69,12 @@ Settings live in one config module with thresholds (§4.5). No thresholds are sc
 - Finished session saves locally first, then pushes to D1.
 
 ### 3.3 Progression (double progression, per exercise)
-- Default: double progression over the exercise's rep range (§3.1). All sets at top of range → next
-  owned weight, reset to bottom of range.
+- Default: double progression over the exercise's rep range (§3.1). Reps go up each session, inside the
+  range. Weight goes up only when every working set reaches the top of the range; the weight then
+  resets to the bottom of the range. The weight does **not** rise every session.
+- Basis: common coaching sources describe this rule the same way (e.g. FitBudd, Shortform, Alpha
+  Progression). These are coaching guides, not controlled trials, so the rule is a default to tune with
+  real logs.
 - Weights snap to the owned list. With no owned list, fall back to the increment grid.
 - Progression is **derived, not stored**: `nextPrescription(history, config, routine)` recomputes each
   time (`REFERENCE_NOTES.md` §2). Editing a mistyped set changes the next target with no drift.
@@ -111,6 +115,9 @@ recently. Movement pattern needs a labelling pass (`DATA_SOURCES.md` §7 item 3)
 ### 4.1 Deload
 - Factor 0.9 (allowed 0.5–0.95, per config). Candidate chosen by `selectDeloadCandidate`: closest
   estimated 1RM, then fewer rep changes, then heavier load (`REFERENCE_NOTES.md` §2).
+- Two triggers, both in config: the **stall** rule (§4, no e1RM gain over 2 weeks) and a **missed-session**
+  rule: deload after **3 missed sessions in a row** on an exercise (openGym's default for double
+  progression, `REFERENCE_NOTES.md` §2). The missed-session count resets on a weight change or a plan change.
 
 ### 4.2 Accept / reject flow
 - Accept → the plan changes and history is kept. A plan change stamps `planned` so it isn't mistaken
@@ -121,6 +128,10 @@ recently. Movement pattern needs a labelling pass (`DATA_SOURCES.md` §7 item 3)
 
 Wording: "suggestion", "based on your last N sessions". Never "prescription" or "medical". A footer line
 says: *Training guidance, not medical advice.*
+
+**Plain words in the UI.** The screen never shows internal terms such as "e1RM", "RIR", "Epley", "stall"
+or "deload" without a plain explanation. Use "estimated max", "reps left in the tank", and "a lighter
+week" instead. The spec keeps the technical names; the app copy does not.
 
 ## 4b. XP, ranks, streaks, badges (MVP)
 
@@ -157,8 +168,10 @@ is a settings field and is logged over time, so ratios use the bodyweight on the
 - Achievements: per muscle and per lift, tied to the rank system (e.g. "Chest reached C",
   "Benchmark lift at 1.0× bodyweight").
 
-**Presentation.** A dedicated **Progress** screen: one bar and rank per muscle, the overall streak, and
-badges. Home does not show XP beyond a link to Progress.
+**Presentation.** A dedicated **Progress** screen is gamified: a body figure you can use to pick a muscle
+group. Selecting a muscle shows its bar, rank, and how it has been "forming" over time (the figure fills
+in gradually as XP and rank grow). Also on the screen: the weekly streak and badges. Home stays calm and
+shows XP only as a link to Progress.
 
 **Anti-cheese (MVP).** Only sets with a plausible rep count count for XP (over 30 reps earns nothing, and
 outliers are flagged). Diminishing reps and weight-drop penalty above. Sessions edited after the fact
@@ -174,8 +187,9 @@ computes every number.
 - Feature text, such as the exercise explanation on a card, may be AI-written later. Not MVP.
 
 ### 5.2 Providers
-- One OpenAI-compatible client, configurable base URL and model. Fallback chain (CLAUDE.md):
-  Workers AI → Groq → Gemini → OpenRouter. No code outside the client knows a provider name.
+- One OpenAI-compatible client, configurable base URL and model. Fallback chain (decided in PR #2):
+  Workers AI → Gemini → Claude. Groq and OpenRouter are dropped from the chain. No code outside the
+  client knows a provider name.
 - Called only through the Worker. Keys are Worker secrets.
 
 ### 5.3 What leaves the device
@@ -218,6 +232,7 @@ The AI never returns weights, reps, sets or rest. The engine adds those from con
   to the same validators), and say so on screen: "Built by rules; AI unavailable."
 - Copy-paste fallback (CLAUDE.md golden rule): kept as a manual option in settings for when the Worker is
   unreachable. Not automatic. See §11.
+- The rules-based template is also always available as a starting point, not only after an AI failure.
 - The AI is never trusted for numbers. A wrong AI plan is caught by validation, not by the user.
 
 ### 5.7 Cost and abuse
@@ -227,8 +242,8 @@ The AI never returns weights, reps, sets or rest. The engine adds those from con
 ## 6. Platform and data
 
 ### 6.1 Auth and accounts
-- **Passkeys (WebAuthn)** for sign-in. No passwords.
-- **Sign-up requires an invite code.** Existing users issue codes from settings. Codes are single-use
+- **Passkeys (WebAuthn)** for sign-in. A **password** is the fallback if WebAuthn does not work on a device.
+- **Sign-up requires an invite code.** Every user can issue codes from settings. Codes are single-use
   (proposal, §11).
 - Multi-user: every record has `userId`. Every query is scoped to the authenticated user.
 
@@ -282,7 +297,8 @@ Config thresholds are not in the data model.
 ## 8. UI and UX
 
 ### 8.1 Look and feel
-- Dark and light, following the phone. Calm, dense, functional. One accent colour.
+- Dark and light, following the phone. Calm, dense, functional. One accent colour. Calm everywhere except
+  the Progress screen, which is gamified (§4b).
 - English only. Every screen works at phone width with a 16 px gutter.
 
 ### 8.2 Key screens
@@ -376,22 +392,24 @@ Credits screen lists text licence per exercise, each image's author and licence,
 
 ## 11. Open questions
 
-1. **Rep-range table**: is the proposed default (compound 6–10, isolation 10–15, calves/core 10–20)
-   right? The research I found does not settle compound versus isolation. Confirm or edit.
-2. **Stale window**: stays at 8 weeks. Confirm.
-3. **Deload after N missed sessions** (openGym does this; `REFERENCE_NOTES.md` §12, CLAUDE.md open
-   question): recommend **no**, stall rule only. Confirm.
-4. **Copy-paste fallback**: keep as a manual option (proposed), or drop it?
-5. **Invite codes**: single-use or multi-use? Who issues them (only you, or every user)?
-6. **AI plan on day one**: the "rules-based fallback" uses the same validators. Is that enough, or do you
-   want the rules-based template to be a separate, always-available starting point?
-7. **Movement pattern labels**: who tags them (`DATA_SOURCES.md` §7 item 3)? Proposed: one labelling
-   pass by you with review.
-8. **Provider chain**: CLAUDE.md order (Workers AI → Groq → Gemini → OpenRouter). Confirm, or pick a
-   different first provider.
-9. **Settings that were deferred** to "input later": goal, days per week, owned weights, experience. The
-   onboarding interview covers them; confirm onboarding is the only place they are asked.
-10. **Weekly review timing and content** when it returns in phase 2.
+1. **Rep-range table**: kept as proposed (compound 6–10, isolation 10–15, calves/core 10–20). Research
+   for compound versus isolation is still thin; revisit with real logs.
+2. **Stale window**: 8 weeks. Confirmed.
+3. **Deload after missed sessions**: **decided** (§4.1), 3 missed sessions in a row, as in openGym.
+4. **Copy-paste fallback**: **decided**, kept as a manual option (§5.6).
+5. **Invite codes**: **decided**, every user can issue them. Single-use is still the proposal.
+6. **Rules-based template**: **decided**, always available as a starting point (§5.6).
+7. **Movement pattern labels**: **open**. You are not a trainer, so you cannot label exercises by hand.
+   Options to choose from: (a) the AI proposes the labels and you approve from the names only; (b) derive
+   them from free-exercise-db fields automatically, with unknowns marked; (c) I label them and you spot-check.
+8. **Provider chain**: **decided**, Workers AI → Gemini → Claude.
+9. **Settings deferred to onboarding**: **confirmed**, onboarding is the only place they are asked.
+10. **Weekly review timing and content**: decided at implementation time, when that feature is built.
+14. **Onboarding interview questions**: **open**. Do we list the exact questions in §2 now, or when the
+    feature is built?
+15. **AI returns weights, reps and sets** (PR thread on §5.4): **open**. CLAUDE.md's golden rule says the
+    AI proposes and the engine sets the numbers. Allowing the AI to return numbers, validated by rules,
+    changes that rule. Decide before §5.4 changes.
 11. **Strength-standard table (XP ranks)**: which benchmark lift per muscle (e.g. dumbbell press for
     chest, row for back, goblet squat for legs), and the bodyweight-ratio thresholds for F through SSS.
     The thresholds must be set so a 12-week plan reaches about B. Numbers are not yet proposed.
