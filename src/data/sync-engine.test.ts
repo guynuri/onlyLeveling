@@ -14,7 +14,7 @@ beforeEach(async () => {
 });
 
 const CONFIG = { baseUrl: 'https://api.example', token: 'tok' };
-const FRESH: SyncState = { config: CONFIG, lastSyncedAt: null, cursor: 0, lastError: null };
+const FRESH: SyncState = { config: CONFIG, lastSyncedAt: null, cursor: 0, lastError: null, pendingRevoke: [] };
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -153,9 +153,46 @@ describe('sign-out and sign-in are not undone by a sync already running', () => 
   });
 });
 
+describe('a session the server has ended', () => {
+  it('a 401 from the server ends the session on this device, so the screen asks to sign in again', async () => {
+    const outbox = createOutbox(db);
+    await createSyncedRepo(createRepo(db), outbox, () => 0).saveWorkout({ id: 'w', start: 1, end: 2, entries: [] });
+    const dead = (async () => json({ error: 'unauthorized' }, 401)) as unknown as typeof fetch;
+    const state = await syncNow({ outbox, local: createRepo(db), state: FRESH, fetch: dead, now: () => 1 });
+    expect(state.config).toBeNull();
+    expect(state.lastError).toMatch(/session has ended/i);
+    // The queued write is kept: it goes out when the user signs in again.
+    expect(await outbox.count()).toBe(1);
+  });
+});
+
+describe('a sign-out that could not reach the server is retried', () => {
+  it('the next sync revokes the token that was queued for revoking', async () => {
+    const outbox = createOutbox(db);
+    const seen: string[] = [];
+    const server = (async (url: string | URL | Request, init?: RequestInit) => {
+      if (String(url).endsWith('/api/auth/signout')) {
+        seen.push(String((init?.headers as Record<string, string>).Authorization));
+        return json({ ok: true });
+      }
+      if (String(url).includes('/api/sync/pull')) return json({ workouts: [], settings: null, bodyweight: [], serverTime: 9 });
+      return json({ applied: 0, duplicates: 0 });
+    }) as typeof fetch;
+    const state = await syncNow({
+      outbox,
+      local: createRepo(db),
+      state: { ...FRESH, pendingRevoke: ['old-token'] },
+      fetch: server,
+      now: () => 1,
+    });
+    expect(seen).toEqual(['Bearer old-token']);
+    expect(state.pendingRevoke).toEqual([]);
+  });
+});
+
 describe('sync state storage', () => {
   it('round-trips the config and cursor through the meta store', async () => {
-    expect(await loadSyncState(db)).toEqual({ config: null, lastSyncedAt: null, cursor: 0, lastError: null });
+    expect(await loadSyncState(db)).toEqual({ config: null, lastSyncedAt: null, cursor: 0, lastError: null, pendingRevoke: [] });
     await saveSyncState(db, { ...FRESH, lastSyncedAt: 7, cursor: 9 });
     expect(await loadSyncState(db)).toMatchObject({ config: CONFIG, lastSyncedAt: 7, cursor: 9 });
   });

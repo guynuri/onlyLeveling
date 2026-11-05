@@ -66,6 +66,18 @@ describe('sign-out and invites', () => {
     expect((await readSyncState()).config).toBeNull();
   });
 
+  it('a sign-out the server could not hear is kept to retry, and the device is still signed out', async () => {
+    const { fetchImpl } = server();
+    await signInWithPassword(BASE, 'guy', 'right password here', fetchImpl);
+    const offline = (async () => {
+      throw new TypeError('Failed to fetch');
+    }) as unknown as typeof fetch;
+    await signOut(offline);
+    const st = await readSyncState();
+    expect(st.config).toBeNull();
+    expect(st.pendingRevoke).toEqual(['session-abc']);
+  });
+
   it('an invite code is created with the session and returned once', async () => {
     const { fetchImpl } = server();
     await signInWithPassword(BASE, 'guy', 'right password here', fetchImpl);

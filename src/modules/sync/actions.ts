@@ -89,14 +89,16 @@ export async function recoverAccount(
 export async function signOut(fetchImpl: FetchFn = defaultFetch): Promise<void> {
   const db = await getDb();
   const state = await loadSyncState(db);
+  let pendingRevoke = state.pendingRevoke;
   if (state.config) {
     try {
       await signOutRequest(authOpts(state.config.baseUrl, fetchImpl), state.config.token);
     } catch {
-      // Offline or already expired: the session still ends here, and it expires on the server anyway.
+      // Offline: the device signs out now, and the token is kept to revoke on the next sync.
+      pendingRevoke = [...pendingRevoke, state.config.token];
     }
   }
-  await saveSyncState(db, { ...state, config: null, lastError: null });
+  await saveSyncState(db, { ...state, config: null, lastError: null, pendingRevoke });
   announce();
 }
 
