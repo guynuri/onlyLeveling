@@ -87,6 +87,23 @@ describe('pushDue', () => {
     expect(await ob.count()).toBe(1);
   });
 
+  it('one bad op (400) does not block the good ones: they are acked, the bad one waits with its error', async () => {
+    await ob.enqueue('saveWorkout', { id: 'w1', start: 1, end: 2, entries: [] }, 0);
+    await ob.enqueue('saveWorkout', { id: 'w2', bad: true, start: 1, end: 2, entries: [] }, 0);
+    await ob.enqueue('saveWorkout', { id: 'w3', start: 1, end: 2, entries: [] }, 0);
+    const result = await pushDue(ob, cfg(async (_u, init) => {
+      const ops = (JSON.parse(String(init?.body)) as { ops: { data: { bad?: boolean } }[] }).ops;
+      // The server rejects the whole batch when any op is invalid, as parseOps does.
+      if (ops.some((o) => o.data.bad)) return new Response('{"error":"bad"}', { status: 400 });
+      return ok({ applied: ops.length, duplicates: 0 });
+    }), 0);
+    expect(result).toEqual({ pushed: 2, failed: 1, error: 'HTTP 400' });
+    expect(await ob.count()).toBe(1);
+    const [left] = await ob.peek(10_000_000);
+    expect((left.payload as { id: string }).id).toBe('w2');
+    expect(left.lastError).toBe('HTTP 400');
+  });
+
   it('nothing due means no request is sent', async () => {
     let called = false;
     const result = await pushDue(ob, cfg(async () => {

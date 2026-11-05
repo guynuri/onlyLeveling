@@ -60,7 +60,7 @@ export async function applyPush(
       duplicates++;
       continue;
     }
-    await upsert(db, userId, op);
+    await upsert(db, userId, op, now);
     await db
       .prepare('INSERT OR IGNORE INTO ops_applied (user_id, op_id, applied_at) VALUES (?, ?, ?)')
       .bind(userId, op.opId, now)
@@ -70,33 +70,38 @@ export async function applyPush(
   return { applied, duplicates };
 }
 
-async function upsert(db: D1Database, userId: string, op: Op): Promise<void> {
+// Last write wins on the client's updatedAt. server_at is the server's receive time, and only moves when a
+// write is actually applied: pulls use it as the cursor, so a slow client clock cannot hide a record.
+async function upsert(db: D1Database, userId: string, op: Op, serverAt: number): Promise<void> {
   if (op.kind === 'workout') {
     await db
       .prepare(
-        `INSERT INTO workouts (user_id, id, data, updated_at) VALUES (?, ?, ?, ?)
-         ON CONFLICT (user_id, id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at
+        `INSERT INTO workouts (user_id, id, data, updated_at, server_at) VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT (user_id, id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at,
+           server_at = excluded.server_at
          WHERE excluded.updated_at >= workouts.updated_at`,
       )
-      .bind(userId, op.data.id, JSON.stringify(op.data), op.updatedAt)
+      .bind(userId, op.data.id, JSON.stringify(op.data), op.updatedAt, serverAt)
       .run();
   } else if (op.kind === 'settings') {
     await db
       .prepare(
-        `INSERT INTO settings (user_id, data, updated_at) VALUES (?, ?, ?)
-         ON CONFLICT (user_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at
+        `INSERT INTO settings (user_id, data, updated_at, server_at) VALUES (?, ?, ?, ?)
+         ON CONFLICT (user_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at,
+           server_at = excluded.server_at
          WHERE excluded.updated_at >= settings.updated_at`,
       )
-      .bind(userId, JSON.stringify(op.data), op.updatedAt)
+      .bind(userId, JSON.stringify(op.data), op.updatedAt, serverAt)
       .run();
   } else {
     await db
       .prepare(
-        `INSERT INTO bodyweight (user_id, date, kg, updated_at) VALUES (?, ?, ?, ?)
-         ON CONFLICT (user_id, date) DO UPDATE SET kg = excluded.kg, updated_at = excluded.updated_at
+        `INSERT INTO bodyweight (user_id, date, kg, updated_at, server_at) VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT (user_id, date) DO UPDATE SET kg = excluded.kg, updated_at = excluded.updated_at,
+           server_at = excluded.server_at
          WHERE excluded.updated_at >= bodyweight.updated_at`,
       )
-      .bind(userId, op.data.date, op.data.kg, op.updatedAt)
+      .bind(userId, op.data.date, op.data.kg, op.updatedAt, serverAt)
       .run();
   }
 }
@@ -110,15 +115,15 @@ export interface Pulled {
 
 export async function pull(db: D1Database, userId: string, since: number, now = Date.now()): Promise<Pulled> {
   const w = await db
-    .prepare('SELECT data FROM workouts WHERE user_id = ? AND updated_at > ? ORDER BY updated_at')
+    .prepare('SELECT data FROM workouts WHERE user_id = ? AND server_at > ? ORDER BY server_at')
     .bind(userId, since)
     .all<{ data: string }>();
   const s = await db
-    .prepare('SELECT data FROM settings WHERE user_id = ? AND updated_at > ?')
+    .prepare('SELECT data FROM settings WHERE user_id = ? AND server_at > ?')
     .bind(userId, since)
     .first<{ data: string }>();
   const b = await db
-    .prepare('SELECT date, kg FROM bodyweight WHERE user_id = ? AND updated_at > ? ORDER BY date')
+    .prepare('SELECT date, kg FROM bodyweight WHERE user_id = ? AND server_at > ? ORDER BY date')
     .bind(userId, since)
     .all<{ date: string; kg: number }>();
   return {

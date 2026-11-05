@@ -35,8 +35,14 @@ export default {
 
     try {
       if (url.pathname === '/api/sync/push' && req.method === 'POST') {
+        // Refuse by the declared length first, so a large body is never read into memory.
+        const declared = Number(req.headers.get('Content-Length') ?? '0');
+        if (declared > MAX_BODY_BYTES) return json({ error: 'body too large' }, 413, origin);
         const text = await req.text();
-        if (text.length > MAX_BODY_BYTES) return json({ error: 'body too large' }, 413, origin);
+        // Measured in bytes, the unit the limit is written in.
+        if (new TextEncoder().encode(text).byteLength > MAX_BODY_BYTES) {
+          return json({ error: 'body too large' }, 413, origin);
+        }
         const ops = parseOps(JSON.parse(text));
         const result = await applyPush(env.DB, principal.userId, ops, Date.now());
         return json(result, 200, origin);

@@ -97,12 +97,21 @@ describe('tenant isolation (SPEC §10: a user cannot read another user’s recor
 });
 
 describe('pull and export', () => {
-  it('pull returns only records changed after `since`', async () => {
-    await applyPush(db, A, [wOp('o1', 'old', 10, 100), wOp('o2', 'new', 10, 300)], 1000);
+  it('pull returns only records the server received after `since`', async () => {
+    await applyPush(db, A, [wOp('o1', 'old', 10, 100)], 100);
+    await applyPush(db, A, [wOp('o2', 'new', 10, 100)], 300);
     const p = await pull(db, A, 200);
     expect(p.workouts.map((w) => (w as { id: string }).id)).toEqual(['new']);
     expect(typeof p.serverTime).toBe('number');
     expect(p.serverTime).toBeGreaterThan(0);
+  });
+
+  it('a phone whose clock runs behind still gets its records: the cursor is server time, not client time', async () => {
+    // The client stamped updatedAt=50, but the server received the write at 300. A cursor of 200 (a server
+    // time from an earlier pull) must still return it.
+    await applyPush(db, A, [wOp('skew', 'slow-clock', 10, 50)], 300);
+    const p = await pull(db, A, 200);
+    expect(p.workouts.map((w) => (w as { id: string }).id)).toEqual(['slow-clock']);
   });
 
   it('export contains every record of the account', async () => {

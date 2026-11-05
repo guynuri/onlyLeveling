@@ -47,16 +47,41 @@ export async function pushDue(outbox: Outbox, cfg: SyncConfig, now: number): Pro
     return { pushed: 0, failed: due.length, error: message };
   }
 
-  try {
-    const res = await cfg.fetch(`${cfg.baseUrl}/api/sync/push`, {
+  const send = (batch: ReturnType<typeof toOp>[]) =>
+    cfg.fetch(`${cfg.baseUrl}/api/sync/push`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.token}` },
-      body: JSON.stringify({ ops }),
+      body: JSON.stringify({ ops: batch }),
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    for (const item of due) await outbox.ack(item.id);
-    return { pushed: due.length, failed: 0 };
+
+  try {
+    const res = await send(ops);
+    if (res.ok) {
+      for (const item of due) await outbox.ack(item.id);
+      return { pushed: due.length, failed: 0 };
+    }
+    if (res.status !== 400 || due.length === 1) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    // The server refused the batch as a whole because one op is invalid. Send each op alone, so the valid ones
+    // go through and only the invalid one waits (with its error) instead of stalling every row behind it.
+    let pushed = 0;
+    let failed = 0;
+    let lastError: string | undefined;
+    for (let i = 0; i < due.length; i++) {
+      const single = await send([ops[i]]);
+      if (single.ok) {
+        await outbox.ack(due[i].id);
+        pushed++;
+      } else {
+        lastError = `HTTP ${single.status}`;
+        await outbox.fail(due[i].id, lastError, now);
+        failed++;
+      }
+    }
+    return lastError ? { pushed, failed, error: lastError } : { pushed, failed };
   } catch (e) {
+    // Network failure: nothing is acked, every row keeps its error and retries with backoff.
     const message = e instanceof Error ? e.message : 'sync failed';
     for (const item of due) await outbox.fail(item.id, message, now);
     return { pushed: 0, failed: due.length, error: message };
