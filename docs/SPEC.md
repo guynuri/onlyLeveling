@@ -300,6 +300,7 @@ Settings   { userId, goal, daysPerWeek, sessionMinutes, owned: {unit: weights[]}
 Exercise   { id, name, aliases[], equipment, force, mechanic, level, category,
              primaryMuscles[], secondaryMuscles[], movementPattern, instructions[],
              images[], source, textSource, license, author, sourceUrl }   // from DATA_SOURCES.md §6
+// source and textSource: 'free-exercise-db' | 'wger' | 'everkinetic' | 'custom' (same values as DATA_SOURCES.md §6)
 Plan       { id, userId, name, days[], createdAt, source: 'ai'|'rules'|'manual' }
 Routine    { id, planId, exercises: [{ exerciseId, sets, repsMin, repsMax, weight?, dbLoad, rest }] }
 Workout    { id, userId, routineIds[], start, end, entries[], prs[], excludeFromProgression? }
