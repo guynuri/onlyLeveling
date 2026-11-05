@@ -58,9 +58,7 @@ export function candidates(input: CoachInput): Candidate[] {
     const stall = detectStall(hist, now);
     if (stall) {
       // Deload first; once a deload was accepted for this exercise, the next stall offers a swap.
-      const deloadTried = stored.some(
-        (s) => s.id === suggestionId('stall', exerciseId) && s.status === 'accepted' && s.action.kind === 'deload',
-      );
+      const deloadTried = stored.some((s) => s.id === suggestionId('stall', exerciseId) && s.deloadTried === true);
       const swap = deloadTried ? swapTo() : null;
       out.push({
         ...base,
@@ -132,6 +130,7 @@ export function reconcile(
       action: c.action,
       createdAt: keepTime ? rec.createdAt : now,
       status: 'pending',
+      ...(rec?.deloadTried ? { deloadTried: true } : {}),
     };
     cards.push(next);
     if (!rec || JSON.stringify(rec) !== JSON.stringify(next)) save.push(next);

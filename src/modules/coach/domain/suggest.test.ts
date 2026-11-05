@@ -123,4 +123,46 @@ describe('candidates', () => {
     expect(out.map((c) => c.rule)).toContain('stale');
     expect(out.find((c) => c.rule === 'stale')?.action).toEqual({ kind: 'swap', toId: 'b' });
   });
+  it('after an accepted deload, the next stall offers a swap, on the next load too', () => {
+    const plan = planFromTemplate([{ index: 0, warmup: [], exerciseIds: ['a'], cooldown: [] }], 1, 0);
+    const set = { w: 8, r: 8, done: true, phase: 'work' as const, at: 0 };
+    const session = (daysAgo: number) => ({
+      id: `w${daysAgo}`,
+      start: NOW - daysAgo * DAY,
+      end: NOW - daysAgo * DAY,
+      entries: [{ exerciseId: 'a', planned: { w: 8, reps: 8, sets: 1 }, sets: [set] }],
+    });
+    const workouts: Workout[] = [session(40), session(5), session(2)];
+    const cat = [ex('a', 'chest'), ex('b', 'chest')];
+    const tried: Suggestion = {
+      id: 'stall:a',
+      rule: 'stall',
+      exerciseId: 'a',
+      reason: 'r',
+      action: { kind: 'deload', w: 7 },
+      createdAt: NOW - 10 * DAY,
+      status: 'accepted',
+      deloadTried: true,
+    };
+    const first = candidates({ now: NOW, plan, owned: [8], catalogue: cat, workouts, stored: [tried], repMaxFor: () => 12 });
+    expect(first.find((c) => c.rule === 'stall')?.action).toEqual({ kind: 'swap', toId: 'b' });
+    // The card comes back and is saved; the flag must survive, so the next load still offers the swap.
+    const saved = reconcile([tried], first, NOW).save.find((s) => s.id === 'stall:a')!;
+    const second = candidates({ now: NOW, plan, owned: [8], catalogue: cat, workouts, stored: [saved], repMaxFor: () => 12 });
+    expect(second.find((c) => c.rule === 'stall')?.action).toEqual({ kind: 'swap', toId: 'b' });
+  });
+});
+
+describe('deload tried survives later saves', () => {
+  it('a stall card that comes back after an accepted deload is saved still marked, so the next stall offers a swap', () => {
+    const accepted: Suggestion = { ...stored(), status: 'accepted', createdAt: NOW - DAY, deloadTried: true };
+    const r = reconcile([accepted], [cand({ lastLogged: NOW - DAY / 2 })], NOW);
+    expect(r.save).toHaveLength(1);
+    expect(r.save[0]).toMatchObject({ status: 'pending', deloadTried: true });
+  });
+
+  it('a deload accepted for the first time is not marked until it is accepted', () => {
+    const r = reconcile([], [cand()], NOW);
+    expect(r.save[0].deloadTried).toBeUndefined();
+  });
 });

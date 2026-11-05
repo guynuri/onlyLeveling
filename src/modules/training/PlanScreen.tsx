@@ -1,20 +1,22 @@
 import { useEffect, useState } from 'react';
 import { getExercise } from '../../data/exercises';
 import type { Plan } from '../../domain/plan';
-import { getRepo, defaultSettings, currentPlan } from './data';
+import { getRepo, getLocalRepo, defaultSettings, currentPlan } from './data';
 
 // The saved plan. Warm-up and cool-down are shown as their own blocks, never as exercises.
 export default function PlanScreen() {
   const [plan, setPlan] = useState<Plan | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
       const repo = await getRepo();
       const s = (await repo.getSettings()) ?? defaultSettings();
-      setPlan(await currentPlan(repo, s));
-    })().catch(() => setPlan(null));
+      setPlan(await currentPlan(repo, await getLocalRepo(), s));
+    })().catch(() => setError('Could not load your plan. Reload to try again.'));
   }, []);
 
+  if (error) return <p className="muted">{error}</p>;
   if (!plan) return <p className="muted">Loading…</p>;
 
   return (

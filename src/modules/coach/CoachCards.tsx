@@ -29,9 +29,15 @@ export function CoachCards() {
       .catch(() => setError('Could not load suggestions. Reload to try again.'));
   }, []);
 
-  const act = (fn: () => Promise<void>) => {
+  // fn may return false: the card no longer matches the plan. Say so, then reload (the stale card drops out).
+  const act = (fn: () => Promise<boolean | void>) => {
     setError(null);
-    fn().then(reload).catch(() => setError('Could not save that. Try again.'));
+    fn()
+      .then((ok) => {
+        if (ok === false) setError('That plan changed. The suggestions below are current.');
+        return reload();
+      })
+      .catch(() => setError('Could not save that. Try again.'));
   };
 
   if (error) return <p className="muted">{error}</p>;

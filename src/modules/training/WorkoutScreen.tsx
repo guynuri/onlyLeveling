@@ -7,7 +7,7 @@ import { nextPrescription, type Prescription } from '../../domain/progression';
 import type { SetRow } from '../../domain/session';
 import type { Settings, Workout, Entry } from '../../domain/types';
 import { startRest, remainingMs, type RestTimer } from './rest-timer';
-import { getRepo, defaultSettings, historyFor, progressionConfigFor, currentPlan } from './data';
+import { getRepo, getLocalRepo, defaultSettings, historyFor, progressionConfigFor, currentPlan } from './data';
 import { parseSetInput, todayFromTemplate } from './validate';
 
 interface ExercisePlan {
@@ -36,7 +36,7 @@ export default function WorkoutScreen() {
       const repo = await getRepo();
       const s = (await repo.getSettings()) ?? defaultSettings();
       const ws = await repo.listWorkouts();
-      const plan = await currentPlan(repo, s);
+      const plan = await currentPlan(repo, await getLocalRepo(), s);
       const today = todayFromTemplate(plan, ws.length);
       if (!today) {
         setLoadError('No plan days yet. Check the days per week in Settings.');

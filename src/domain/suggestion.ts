@@ -14,6 +14,8 @@ export interface Suggestion {
   createdAt: number; // epoch ms
   status: SuggestionStatus;
   until?: number; // snoozed: shown again at this time
+  // Set once a deload was accepted for this stall. Kept through later saves, so the next stall offers a swap.
+  deloadTried?: boolean;
 }
 
 export function suggestionId(rule: SuggestionRule, exerciseId: string): string {

@@ -53,7 +53,9 @@ export async function getRepo(): Promise<Repo> {
 
 // The saved plan. Built from the rules once, then kept as is: it is rebuilt only when days per week changes.
 // Accepted coach suggestions edit it (coach/actions.ts). Never rebuilt on every open.
-export async function currentPlan(repo: Repo, s: Settings, now = Date.now()): Promise<Plan> {
+// A plan built here is derived from settings, so it is saved locally only and never queued for the server:
+// a new device must not push its default over the plan already on the server.
+export async function currentPlan(repo: Repo, local: Repo, s: Settings, now = Date.now()): Promise<Plan> {
   const saved = await repo.getPlan();
   if (saved && planIsCurrent(saved, s.daysPerWeek)) return saved;
   const t = buildTemplate({
@@ -63,7 +65,7 @@ export async function currentPlan(repo: Repo, s: Settings, now = Date.now()): Pr
     catalogue: listExercises(),
   });
   const plan = planFromTemplate(t.days, s.daysPerWeek, now);
-  await repo.savePlan(plan);
+  await local.savePlan(plan);
   return plan;
 }
 

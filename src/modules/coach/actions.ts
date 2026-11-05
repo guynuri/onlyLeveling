@@ -3,13 +3,13 @@ import { listExercises, getExercise } from '../../data/exercises';
 import { applySuggestion, planExerciseIds } from '../../domain/plan';
 import { notNowUntil, candidates, reconcile } from './domain/suggest';
 import type { Suggestion } from '../../domain/suggestion';
-import { getRepo, defaultSettings, currentPlan, repRangeFor } from '../training/data';
+import { getRepo, getLocalRepo, defaultSettings, currentPlan, repRangeFor } from '../training/data';
 
 // Cards to show now. Saves any new or changed suggestion records, so they sync like other data.
 export async function loadCoachCards(now = Date.now()): Promise<Suggestion[]> {
   const repo = await getRepo();
   const s = (await repo.getSettings()) ?? defaultSettings();
-  const plan = await currentPlan(repo, s, now);
+  const plan = await currentPlan(repo, await getLocalRepo(), s, now);
   const workouts = await repo.listWorkouts();
   const stored = await repo.listSuggestions();
   const catalogue = listExercises();
@@ -30,13 +30,17 @@ export async function loadCoachCards(now = Date.now()): Promise<Suggestion[]> {
   return cards;
 }
 
-export async function acceptCoachCard(s: Suggestion, now = Date.now()): Promise<void> {
+// Returns false when the plan no longer has the exercise (it changed since the card was shown): nothing is saved.
+export async function acceptCoachCard(s: Suggestion, now = Date.now()): Promise<boolean> {
   const repo = await getRepo();
   const settings = (await repo.getSettings()) ?? defaultSettings();
-  const plan = await currentPlan(repo, settings, now);
-  if (!planExerciseIds(plan).includes(s.exerciseId)) return; // the plan changed since the card was shown
+  const plan = await currentPlan(repo, await getLocalRepo(), settings, now);
+  if (!planExerciseIds(plan).includes(s.exerciseId)) return false;
   await repo.savePlan(applySuggestion(plan, s, now, settings.owned));
-  await repo.saveSuggestion({ ...s, status: 'accepted', createdAt: now });
+  // deloadTried outlives later saves of this card: the next stall offers a swap, not another deload.
+  const deloadTried = s.deloadTried === true || s.action.kind === 'deload';
+  await repo.saveSuggestion({ ...s, status: 'accepted', createdAt: now, deloadTried });
+  return true;
 }
 
 export async function snoozeCoachCard(s: Suggestion, now = Date.now()): Promise<void> {
