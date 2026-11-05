@@ -6,6 +6,7 @@ import { applyPush, exportAll, parseOps, pull, ValidationError } from './sync';
 import { routeSlots } from './routes';
 import { handleAuthRoutes } from './routes/auth-routes';
 import { readLimitedText, TooLargeError } from './request';
+import { runDue, vapidFromEnv } from './push/run';
 
 function json(body: unknown, status: number, origin: string | null): Response {
   return new Response(JSON.stringify(body), {
@@ -15,6 +16,11 @@ function json(body: unknown, status: number, origin: string | null): Response {
 }
 
 export default {
+  // Cron (wrangler.toml [triggers], every minute): due rest alerts and workout reminders (PLAN Phase 9).
+  async scheduled(_event: ScheduledController, env: Env): Promise<void> {
+    await runDue(env.DB, vapidFromEnv(env), Date.now());
+  },
+
   async fetch(req: Request, env: Env): Promise<Response> {
     const origin = req.headers.get('Origin');
     const url = new URL(req.url);

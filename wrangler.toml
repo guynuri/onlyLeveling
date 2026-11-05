@@ -14,3 +14,11 @@ migrations_dir = "worker/migrations"
 # Workers AI for the first-plan proposal (PLAN Phase 7). The binding is the credential: no key to store.
 [ai]
 binding = "AI"
+
+# Push (PLAN Phase 9). The public key is not secret; the private key is set with `wrangler secret put VAPID_PRIVATE_JWK`.
+[vars]
+VAPID_PUBLIC = "BMalQh-b7Pd3MlEycckDlTHCZaffMNHEBJSKWSBkyqrem4Q0Z-YOYQYggc7zmuN--uCXYlRGrlRBCv4jOovqfz8"
+
+# Cron: every minute, for rest alerts and workout reminders.
+[triggers]
+crons = ["* * * * *"]
