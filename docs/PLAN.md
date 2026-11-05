@@ -101,44 +101,46 @@ yet). CI gates every PR. Deploys to Cloudflare Pages.
 
 ---
 
-## Phase 2: Exercise library import (free-exercise-db), self-hosted images, credits
+## Phase 2: Exercise library import (free-exercise-db, text only), credits
 
-**Goal.** A bundled, self-hosted exercise catalogue with licence fields, an exercise detail screen, a
-dumbbell-compatible filter, and a Credits screen. Movement pattern labels derived where possible.
+**Goal.** A bundled exercise catalogue with licence fields, an exercise detail screen, a dumbbell-compatible
+filter, and a Credits screen. Movement pattern labels derived where possible. No images in v1 (see Risks).
 
 **Files (create).**
-- `scripts/import-exercises.ts`: one-off script. Reads free-exercise-db JSON, writes `src/data/exercises.json`
-  (committed) and copies images to `public/exercises/`. Not run in the browser.
+- `scripts/import-exercises.ts`: one-off script. Reads free-exercise-db JSON and writes `src/data/exercises.json`
+  (committed). Copies no images (DATA_SOURCES §1: free-exercise-db images are unlicensed). Not run in the browser.
 - `src/domain/exercise.ts`: `Exercise` type (SPEC §7); `isDumbbellCompatible(ex)` (equipment `dumbbell` or
-  `body only`, D9); `movementPattern(ex)` returns `push | pull | static | unknown` (SPEC §11 item 7, option b).
-  Unknown is returned when `force`/`mechanic` cannot decide; squat vs hinge is never derived.
+  `body only`, D9); `movementPattern(ex)` returns `push | pull | static | unknown`. `known` means any value other
+  than `unknown`. Unknown is returned when `force`/`mechanic` cannot decide; squat vs hinge is never derived.
+  Source of the labelling rule: SPEC §11 item 7 (decided, derive from free-exercise-db fields).
 - `src/data/exercises.ts`: read API (`listExercises()`, `getExercise(id)`), no direct import of JSON from modules.
 - `src/modules/library/` (`register.ts`, `ExerciseList.tsx`, `ExerciseDetail.tsx`, `CreditsScreen.tsx`).
-- `docs/CREDITS.md`: append the free-exercise-db entry (Unlicense) and the data-import note.
-- Images: `public/exercises/<id>/*.jpg`, copied from free-exercise-db only.
+- `docs/CREDITS.md`: append the free-exercise-db entry (Unlicense, data only) and the data-import note.
 
 **Data model and migrations.**
 - Static bundle, not in D1. User-created exercises come later (SPEC §8.3 mentions custom).
 - Fields per SPEC §7 Exercise: `id, name, aliases[], equipment, force, mechanic, level, category,
-  primaryMuscles[], secondaryMuscles[], movementPattern, instructions[], images[], source, textSource, license,
-  author, sourceUrl`.
+  primaryMuscles[], secondaryMuscles[], movementPattern, instructions[], source, textSource, license,
+  author, sourceUrl`. No `images[]` in v1.
 - `source`: `'free-exercise-db'`. `license`: `'Unlicense'`.
 
 **Tests.**
-- Import on a 3-exercise fixture: fields mapped, licence fields set on every record, image paths local.
+- Import on a 3-exercise fixture: fields mapped, licence fields set on every record, no image fields written.
 - `isDumbbellCompatible`: table test, with barbell, machine and kettlebell rows rejected.
 - `movementPattern`: table test, with unknown returned for ambiguous rows. Never returns `squat` or `hinge`.
 - Guard test: no `https://raw.githubusercontent.com` or other hotlink in the bundle or source.
+- CI guard: fail if `public/exercises/` exists or any exercise record has a non-empty `images` field.
 
 **Acceptance (SPEC §8.3, §10).**
-- Every exercise shows its source, licence and author. The Credits screen lists each image's author and
-  licence (CC-BY-SA entries come in Phase 2 only if imported; none now).
-- No image is hotlinked. No Gym visual media file exists in the repo (grep check in CI).
+- Every exercise shows its source, licence and author. The Credits screen lists each source's licence
+  (free-exercise-db: Unlicense, data only).
+- No image is shipped or hotlinked from free-exercise-db. No Gym visual media file exists in the repo
+  (grep check in CI).
 
 **Risks.**
 - free-exercise-db muscle and category fields are inconsistent. Unknown mapping must be visible, not guessed.
-- Image bundle size: free-exercise-db images are many megabytes. Precache them lazily; do not precache all.
-  Set a size budget in the script and fail if exceeded.
+- Exercise images are deferred. Licensed images (wger or Everkinetic, CC-BY-SA, credited) come in a later
+  import phase with their own size budget.
 - Pattern labels are weak (SPEC §11 item 7). Swaps (Phase 5) only use `known` patterns.
 
 ---
@@ -285,10 +287,10 @@ Small PR. Nothing new in behaviour. It locks what Wave 2 depends on.
    edits only its own section.
 5. `worker/src/routes/index.ts`: reserved slots for `coach`, `xp`, `ai`, `push`, `nutrition`. Each slot is a
    one-line import, so Wave 2 adds only its own file.
-6. §5 ownership table filled in and checked against the actual tree.
+6. §3.5 ownership table filled in and checked against the actual tree.
 7. This PLAN.md: all Wave 1 statuses set to `merged`, Wave 2 statuses to `not started`.
 
-**Acceptance.** No Wave 2 phase needs to edit a Wave 1 file except the lines listed in §5. A dry run:
+**Acceptance.** No Wave 2 phase needs to edit a Wave 1 file except the lines listed in §3.5. A dry run:
 an empty `src/modules/coach/register.ts` (stub) is added and CI is green with no other change.
 
 ---
@@ -594,3 +596,11 @@ called PR C so it does not clash with Phase 5.
 7. **Compound/isolation mapping** from free-exercise-db `mechanic` (D10): confirm.
 8. **CLAUDE.md update** for the first-plan AI numbers (D8): confirm it lands in the Phase 7 PR.
 9. **Cloudflare and GitHub setup** (Phase 1 deploy, Phase 4 D1, Phase 7 AI secrets): user actions.
+10. **Account recovery** (SPEC §6.1): the spec says an invite code recovers an account when the password is
+    forgotten, but invite codes are single-use sign-up codes. Define the recovery path and which account it opens
+    before Phase 4b.
+11. **Provider chain** (SPEC §5.2, decided: Workers AI → Gemini → Claude, Groq and OpenRouter dropped). CLAUDE.md
+    still lists Groq and OpenRouter. Claude is not a free tier. Confirm Claude, and update CLAUDE.md with the
+    chain change.
+12. **Sync conflicts** (SPEC §6.2, decided: last write wins per whole session). Two devices editing one session
+    lose the earlier device's sets. Confirm this is acceptable, or change the unit before Phase 4a.
