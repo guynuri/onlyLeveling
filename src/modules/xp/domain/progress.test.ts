@@ -68,6 +68,63 @@ describe('a 12-week run', () => {
   });
 });
 
+const oneArm: Exercise = {
+  ...bench,
+  id: 'fx_One-Arm_Dumbbell_Row',
+  name: 'One-Arm Dumbbell Row',
+  primaryMuscles: ['middle back'],
+  secondaryMuscles: [],
+};
+const bothLifts = new Map([
+  [bench.id, bench],
+  [oneArm.id, oneArm],
+]);
+const lift = (id: string, start: number, w: number, reps = 10): Workout => ({
+  id: `${id}-${start}`,
+  start,
+  end: start + 3_600_000,
+  entries: [{ exerciseId: id, planned: { w, reps, sets: 3 }, sets: sets(w, reps) }],
+});
+
+describe('strength rank, end to end through computeProgress', () => {
+  const both = { exerciseById: (id: string) => bothLifts.get(id), repMaxFor: () => 10, now: NOW };
+
+  it('two bench sessions at 18 kg each (bells counted), against 80 kg bodyweight, give D', () => {
+    // e1RM(18, 10) = 24 per bell, × 2 bells = 48; 48 ÷ 80 = 0.6, which meets D (0.5) and not C (0.75)
+    const p = computeProgress({
+      ...both,
+      workouts: [lift(bench.id, START, 18), lift(bench.id, START + 7 * DAY, 18)],
+      bodyweight: [{ date: '2026-11-02', kg: 80 }],
+      daysPerWeek: 3,
+    });
+    expect(p.muscles.chest.strength).toBe('D');
+    // Two sessions are far below the E volume threshold, so the lower of the two (volume F) is the rank.
+    expect(p.muscles.chest.rank).toBe('F');
+  });
+
+  it('a one-arm lift counts one bell: 20 kg row against 80 kg gives E, not C', () => {
+    // e1RM(20, 10) = 26.7, one bell: 0.33 meets E (0.3); two bells would give 0.67 and C
+    const p = computeProgress({
+      ...both,
+      workouts: [lift(oneArm.id, START, 20), lift(oneArm.id, START + 7 * DAY, 20)],
+      bodyweight: [{ date: '2026-11-02', kg: 80 }],
+      daysPerWeek: 3,
+    });
+    expect(p.muscles.back.strength).toBe('E');
+  });
+
+  it('bodyweight older than the window does not count: strength stays F', () => {
+    // The only entry is 8 days before the first session, outside the 7-day window
+    const p = computeProgress({
+      ...both,
+      workouts: [lift(bench.id, START, 18), lift(bench.id, START + 7 * DAY, 18)],
+      bodyweight: [{ date: '2026-10-25', kg: 80 }],
+      daysPerWeek: 3,
+    });
+    expect(p.muscles.chest.strength).toBe('F');
+  });
+});
+
 describe('rules inside the computation', () => {
   it('without any bodyweight entry, every muscle stays at F', () => {
     const p = computeProgress(input([session('a', START, 20)], []));

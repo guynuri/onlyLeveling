@@ -77,7 +77,13 @@ export default function ProgressScreen() {
       )}
 
       <div className="progress-top">
-        <BodyFigure xpFor={(g) => state.muscles[g].xp} fullXp={FULL} selected={selected} onPick={setSelected} />
+        <BodyFigure
+          xpFor={(g) => state.muscles[g].xp}
+          rankFor={(g) => state.muscles[g].rank}
+          fullXp={FULL}
+          selected={selected}
+          onPick={setSelected}
+        />
         <ul className="muscle-list">
           {GROUPS.map((g) => {
             const m = state.muscles[g];

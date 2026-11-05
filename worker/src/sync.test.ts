@@ -213,4 +213,14 @@ describe('badges (Phase 6): first award wins, never revoked', () => {
   it('rejects a badge without a key', () => {
     expect(() => parseOps({ ops: [{ opId: 'x', kind: 'badge', data: { earnedAt: 1 }, updatedAt: 1 }] })).toThrow();
   });
+
+  it('accepts only the keys the app produces', () => {
+    const op = (badgeKey: string) => ({ ops: [{ opId: 'x', kind: 'badge', data: { badgeKey, earnedAt: 1 }, updatedAt: 1 }] });
+    for (const k of ['session:10', 'pr:first', 'rankup:first', 'muscle:chest:C', 'muscle:core:SSS']) {
+      expect(() => parseOps(op(k))).not.toThrow();
+    }
+    for (const k of ['x', 'x'.repeat(1000), 'session:11', 'muscle:chest:F', 'muscle:arms:C']) {
+      expect(() => parseOps(op(k))).toThrow();
+    }
+  });
 });

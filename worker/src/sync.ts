@@ -13,6 +13,10 @@ export type Op =
 
 export class ValidationError extends Error {}
 
+// Badge keys: session milestones, first PR, first rank-up, and per-muscle ranks from C up (badges.ts, config XP).
+const BADGE_KEY =
+  /^(session:(1|10|100)|pr:first|rankup:first|muscle:(chest|back|shoulders|biceps|triceps|quads|hamstrings|glutes|calves|core):(C|B|A|S|SS|SSS))$/;
+
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isStr = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 200;
@@ -52,6 +56,8 @@ export function parseOps(body: unknown): Op[] {
       if (!isObj(raw.data) || !isStr(raw.data.badgeKey) || !isNum(raw.data.earnedAt)) {
         throw new ValidationError(`op ${i}: badge needs badgeKey and earnedAt`);
       }
+      // Only the keys the app produces (src/modules/xp/domain/badges.ts). Anything else is rejected, not stored.
+      if (!BADGE_KEY.test(raw.data.badgeKey)) throw new ValidationError(`op ${i}: unknown badge key`);
       return { ...common, kind: 'badge', data: { badgeKey: raw.data.badgeKey, earnedAt: raw.data.earnedAt } };
     }
     throw new ValidationError(`op ${i}: unknown kind`);

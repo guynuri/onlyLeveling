@@ -25,6 +25,7 @@ const OUTLINE =
 
 export function BodyFigure(props: {
   xpFor: (g: Group) => number;
+  rankFor: (g: Group) => string;
   fullXp: number; // XP that fills a region completely (the B threshold)
   selected: Group;
   onPick: (g: Group) => void;
@@ -44,8 +45,17 @@ export function BodyFigure(props: {
             stroke={isSel ? 'currentColor' : 'none'}
             strokeWidth="2"
             style={{ cursor: 'pointer' }}
+            role="button"
+            tabIndex={0}
             onClick={() => props.onPick(r.group)}
-            aria-label={r.label}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                props.onPick(r.group);
+              }
+            }}
+            aria-label={`${r.label}, rank ${props.rankFor(r.group)}`}
+            aria-pressed={isSel}
           />
         );
       })}
