@@ -8,6 +8,8 @@ export function createSyncedRepo(local: Repo, outbox: Outbox, now: () => number 
     getSettings: () => local.getSettings(),
     listWorkouts: () => local.listWorkouts(),
     listBodyweight: () => local.listBodyweight(),
+    getPlan: () => local.getPlan(),
+    listSuggestions: () => local.listSuggestions(),
 
     async saveWorkout(w) {
       await local.saveWorkout(w);
@@ -20,6 +22,14 @@ export function createSyncedRepo(local: Repo, outbox: Outbox, now: () => number 
     async addBodyweight(date, kg) {
       await local.addBodyweight(date, kg);
       await outbox.enqueue('saveBodyweight', { date, kg }, now(), date);
+    },
+    async savePlan(p) {
+      await local.savePlan(p);
+      await outbox.enqueue('savePlan', p, now(), 'plan');
+    },
+    async saveSuggestion(s) {
+      await local.saveSuggestion(s);
+      await outbox.enqueue('saveSuggestion', { ...s }, now(), s.id);
     },
   };
 }

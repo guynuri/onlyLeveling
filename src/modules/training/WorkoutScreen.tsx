@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { getExercise, listExercises } from '../../data/exercises';
-import { buildTemplate, type TemplateDay } from '../../domain/template';
+import { getExercise } from '../../data/exercises';
+import { type TemplateDay } from '../../domain/template';
+import { activeAdjustment } from '../../domain/plan';
+import { CoachCards } from '../coach/CoachCards';
 import { nextPrescription, type Prescription } from '../../domain/progression';
 import type { SetRow } from '../../domain/session';
 import type { Settings, Workout, Entry } from '../../domain/types';
-import { TEMPLATE } from '../../config/thresholds';
 import { startRest, remainingMs, type RestTimer } from './rest-timer';
-import { getRepo, defaultSettings, historyFor, progressionConfigFor } from './data';
+import { getRepo, defaultSettings, historyFor, progressionConfigFor, currentPlan } from './data';
 import { parseSetInput, todayFromTemplate } from './validate';
 
 interface ExercisePlan {
@@ -35,13 +36,8 @@ export default function WorkoutScreen() {
       const repo = await getRepo();
       const s = (await repo.getSettings()) ?? defaultSettings();
       const ws = await repo.listWorkouts();
-      const template = buildTemplate({
-        daysPerWeek: s.daysPerWeek,
-        exercisesPerDay: TEMPLATE.exercisesPerDay,
-        avoid: [],
-        catalogue: listExercises(),
-      });
-      const today = todayFromTemplate(template, ws.length);
+      const plan = await currentPlan(repo, s);
+      const today = todayFromTemplate(plan, ws.length);
       if (!today) {
         setLoadError('No plan days yet. Check the days per week in Settings.');
         return;
@@ -52,7 +48,10 @@ export default function WorkoutScreen() {
       setExercises(
         today.exerciseIds.map((id) => {
           const ex = getExercise(id)!;
-          const p = nextPrescription(historyFor(ws, id), progressionConfigFor(ex, s.owned));
+          const next = nextPrescription(historyFor(ws, id), progressionConfigFor(ex, s.owned));
+          // An accepted coach change sets the weight for this session only (plan.ts activeAdjustment).
+          const adj = activeAdjustment(plan, id, ws);
+          const p = adj === null ? next : { ...next, w: adj };
           return { exerciseId: id, prescription: p, sets: [], weight: String(p.w), reps: String(p.reps) };
         }),
       );
@@ -110,6 +109,7 @@ export default function WorkoutScreen() {
   return (
     <section>
       <h1>Today · Day {(workouts.length % settings.daysPerWeek) + 1}</h1>
+      <CoachCards />
 
       <h3>Warm-up</h3>
       <ul className="routine">

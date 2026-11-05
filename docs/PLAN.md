@@ -598,7 +598,7 @@ background scheduling, which is not exact.
 | 4 Worker, D1, sync, auth | 1 | 4a merged (PR #9); 4a-2 app wiring merged (PR #10); Worker deploy from Actions merged (PR #11); 4b server (password sign-in, invites, recovery, per-IP rate limits, sessions) on `phase-4b-auth`, PR pending; 4b app sign-in screen not started; end-to-end iPhone check not done |
 | Contracts freeze | 1 | in progress (this PR): registry Wave 2 ids, Worker route slots, Coach defaults in thresholds |
 | PR C Contracts freeze | 1 | not started |
-| 5 Coach rules | 2 | not started |
+| 5 Coach rules | 2 | implemented on `worktree-phase-5` (5a domain, data and sync; 5b Today cards and actions), not yet merged or checked on iPhone. Added: saved plan (built once, changed only by settings days or accepted suggestions; `0004_plans.sql`), suggestions sync (`0010_coach.sql`) |
 | 6 XP and Progress | 2 | not started |
 | 7 AI client, onboarding, first plan | 2 | not started |
 | 8 Nutrition | Later (D1) | blueprint only |

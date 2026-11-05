@@ -4,10 +4,13 @@ import { createRepo } from '../../data/idb-repo';
 import type { Repo } from '../../data/repo';
 import { createOutbox, type Outbox } from '../../data/outbox';
 import { createSyncedRepo } from '../../data/synced-repo';
-import { TRAINING, REP_RANGES } from '../../config/thresholds';
+import { TRAINING, REP_RANGES, TEMPLATE } from '../../config/thresholds';
 import type { Exercise } from '../../domain/exercise';
 import type { HistorySession, ProgressionConfig } from '../../domain/progression';
 import type { Settings, Workout } from '../../domain/types';
+import { planFromTemplate, planIsCurrent, type Plan } from '../../domain/plan';
+import { buildTemplate } from '../../domain/template';
+import { listExercises } from '../../data/exercises';
 
 // Caches one open handle. A failed open is not cached, so the next call retries. reset() drops the handle,
 // for when another tab upgrades the database and this connection is closed.
@@ -46,6 +49,22 @@ export async function getOutbox(): Promise<Outbox> {
 export async function getRepo(): Promise<Repo> {
   const db = await getDb();
   return createSyncedRepo(createRepo(db), createOutbox(db));
+}
+
+// The saved plan. Built from the rules once, then kept as is: it is rebuilt only when days per week changes.
+// Accepted coach suggestions edit it (coach/actions.ts). Never rebuilt on every open.
+export async function currentPlan(repo: Repo, s: Settings, now = Date.now()): Promise<Plan> {
+  const saved = await repo.getPlan();
+  if (saved && planIsCurrent(saved, s.daysPerWeek)) return saved;
+  const t = buildTemplate({
+    daysPerWeek: s.daysPerWeek,
+    exercisesPerDay: TEMPLATE.exercisesPerDay,
+    avoid: [],
+    catalogue: listExercises(),
+  });
+  const plan = planFromTemplate(t.days, s.daysPerWeek, now);
+  await repo.savePlan(plan);
+  return plan;
 }
 
 export function defaultSettings(): Settings {
