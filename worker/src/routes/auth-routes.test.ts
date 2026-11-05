@@ -94,6 +94,17 @@ describe('sign-up, sign-in and sign-out', () => {
   });
 });
 
+describe('body size on the public auth routes', () => {
+  it('a sign-in body over the limit is refused with 413 before it is parsed', async () => {
+    const big = '€'.repeat(340_000);
+    const res = await worker.fetch(
+      new Request(`${URL}/api/auth/signin`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: big }),
+      e,
+    );
+    expect(res.status).toBe(413);
+  });
+});
+
 describe('rate limits on sign-in, sign-up and recovery', () => {
   it('after 10 wrong sign-in attempts from one IP the next is refused with 429', async () => {
     await ownerSetup();

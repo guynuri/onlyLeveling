@@ -104,19 +104,28 @@ export async function signUp(
       .prepare('INSERT INTO users (id, username, created_at) VALUES (?, ?, ?)')
       .bind(userId, username, now)
       .run();
-  } catch {
+  } catch (e) {
+    // Give the invite back whatever went wrong. Only a clash on the name is reported as "taken";
+    // any other failure is passed on as it is, so the user is not told the wrong thing.
     await releaseInvite(db, input.code, userId);
-    throw new AuthError('username_taken', 'That username is taken.');
+    if (isUniqueViolation(e)) throw new AuthError('username_taken', 'That username is taken.');
+    throw e;
   }
   await storePassword(db, userId, await hashPassword(input.password), now);
   return { userId, token: await openSession(db, userId, now) };
 }
+
+// A password check that always runs, against a dummy hash when the user is unknown, so the time taken
+// does not reveal whether a username exists.
+let dummy: Promise<StoredPassword> | null = null;
+const dummyHash = (): Promise<StoredPassword> => (dummy ??= hashPassword('timing-equaliser-password'));
 
 export async function signIn(
   db: D1Database,
   input: { username: string; password: string },
   now: number,
 ): Promise<{ userId: string; token: string }> {
+  await pruneExpired(db, now);
   const username = input.username.trim().toLowerCase();
   const user = await db
     .prepare('SELECT id FROM users WHERE username = ?')
@@ -128,11 +137,25 @@ export async function signIn(
         .bind(user.id)
         .first<StoredPassword>()
     : null;
+  const ok = await verifyPassword(input.password, stored ?? (await dummyHash()));
   // The same error for an unknown user and a wrong password: no account enumeration.
-  if (!user || !stored || !(await verifyPassword(input.password, stored))) {
+  if (!user || !stored || !ok) {
     throw new AuthError('invalid_credentials', 'Wrong username or password.');
   }
   return { userId: user.id, token: await openSession(db, user.id, now) };
+}
+
+// Expired sessions and rate-limit windows that have closed are removed, so the tables do not grow forever.
+export async function pruneExpired(db: D1Database, now: number): Promise<void> {
+  await db.prepare('DELETE FROM sessions WHERE expires_at <= ?').bind(now).run();
+  await db
+    .prepare('DELETE FROM rate_limits WHERE window_start <= ?')
+    .bind(now - AUTH.rateLimit.windowSec * 1000)
+    .run();
+}
+
+function isUniqueViolation(e: unknown): boolean {
+  return /UNIQUE/i.test(String(e));
 }
 
 // The user a bearer token belongs to, while it has not expired. Null otherwise.
@@ -182,8 +205,9 @@ export async function ownerSetup(
       .prepare('INSERT INTO users (id, username, created_at) VALUES (?, ?, ?) ON CONFLICT (id) DO UPDATE SET username = excluded.username')
       .bind(OWNER_ID, username, now)
       .run();
-  } catch {
-    throw new AuthError('username_taken', 'That username is taken.');
+  } catch (e) {
+    if (isUniqueViolation(e)) throw new AuthError('username_taken', 'That username is taken.');
+    throw e;
   }
   await storePassword(db, OWNER_ID, await hashPassword(input.password), now);
 }

@@ -6,6 +6,7 @@ import { AuthError, createInvite, ownerSetup, recover, signIn, signOut, signUp }
 import { allowAttempt, type LimitedAction } from '../auth/rate-limit';
 import { bearerToken } from '../auth';
 import { corsHeaders } from '../cors';
+import { readLimitedText, TooLargeError } from '../request';
 
 const STATUS: Record<string, number> = {
   invalid_credentials: 401,
@@ -23,8 +24,10 @@ function json(body: unknown, status: number, origin: string | null): Response {
 }
 
 async function readBody(req: Request): Promise<Record<string, unknown>> {
+  // Size first: a too-large body is refused (413) before it is parsed or held in memory.
+  const text = await readLimitedText(req);
   try {
-    const parsed: unknown = JSON.parse(await req.text());
+    const parsed: unknown = JSON.parse(text);
     if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) throw new Error('not an object');
     return parsed as Record<string, unknown>;
   } catch {
@@ -94,6 +97,9 @@ export async function handleAuthRoutes(req: Request, env: Env, now: number): Pro
   } catch (e) {
     if (e instanceof AuthError) {
       return json({ error: e.message, code: e.code }, STATUS[e.code] ?? 400, origin);
+    }
+    if (e instanceof TooLargeError) {
+      return json({ error: 'body too large' }, 413, origin);
     }
     if (e instanceof RateLimited) {
       return json({ error: 'Too many attempts. Wait 15 minutes and try again.', code: 'rate_limited' }, 429, origin);

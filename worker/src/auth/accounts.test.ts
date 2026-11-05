@@ -111,6 +111,28 @@ describe('secrets are stored as hashes', () => {
   });
 });
 
+describe('expired sessions and old rate-limit windows are removed', () => {
+  it('a sign-in clears what has expired, and keeps what is still valid', async () => {
+    const owner = await ownerSetupWithUser('pruner');
+    await setPassword(owner, PW);
+    await db
+      .prepare('INSERT INTO sessions (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)')
+      .bind('old-expired-hash', owner, NOW - 2 * DAY, NOW - 1)
+      .run();
+    await db
+      .prepare('INSERT INTO rate_limits (key, window_start, count) VALUES (?, ?, ?)')
+      .bind('signin:stale', NOW - 60 * 60 * 1000, 3)
+      .run();
+    await signIn(db, { username: 'pruner', password: PW }, NOW);
+    const expired = await db.prepare("SELECT COUNT(*) AS n FROM sessions WHERE token_hash = 'old-expired-hash'").first<{ n: number }>();
+    const stale = await db.prepare("SELECT COUNT(*) AS n FROM rate_limits WHERE key = 'signin:stale'").first<{ n: number }>();
+    const fresh = await db.prepare('SELECT COUNT(*) AS n FROM sessions WHERE user_id = ?').bind(owner).first<{ n: number }>();
+    expect(expired?.n).toBe(0);
+    expect(stale?.n).toBe(0);
+    expect(fresh?.n).toBe(1);
+  });
+});
+
 describe('two accounts stay apart', () => {
   it('a session resolves to its own user, never another', async () => {
     const a = await ownerSetupWithUser('acct_a');

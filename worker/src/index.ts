@@ -5,8 +5,7 @@ import { corsHeaders } from './cors';
 import { applyPush, exportAll, parseOps, pull, ValidationError } from './sync';
 import { routeSlots } from './routes';
 import { handleAuthRoutes } from './routes/auth-routes';
-
-const MAX_BODY_BYTES = 1_000_000;
+import { readLimitedText, TooLargeError } from './request';
 
 function json(body: unknown, status: number, origin: string | null): Response {
   return new Response(JSON.stringify(body), {
@@ -46,14 +45,7 @@ export default {
       if (slotted) return slotted;
 
       if (url.pathname === '/api/sync/push' && req.method === 'POST') {
-        // Refuse by the declared length first, so a large body is never read into memory.
-        const declared = Number(req.headers.get('Content-Length') ?? '0');
-        if (declared > MAX_BODY_BYTES) return json({ error: 'body too large' }, 413, origin);
-        const text = await req.text();
-        // Measured in bytes, the unit the limit is written in.
-        if (new TextEncoder().encode(text).byteLength > MAX_BODY_BYTES) {
-          return json({ error: 'body too large' }, 413, origin);
-        }
+        const text = await readLimitedText(req);
         const ops = parseOps(JSON.parse(text));
         const result = await applyPush(env.DB, principal.userId, ops, Date.now());
         return json(result, 200, origin);
@@ -67,6 +59,9 @@ export default {
         return json(await exportAll(env.DB, principal.userId), 200, origin);
       }
     } catch (e) {
+      if (e instanceof TooLargeError) {
+        return json({ error: 'body too large' }, 413, origin);
+      }
       if (e instanceof ValidationError || e instanceof SyntaxError) {
         return json({ error: e.message }, 400, origin);
       }
