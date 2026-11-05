@@ -600,7 +600,7 @@ background scheduling, which is not exact.
 | PR C Contracts freeze | 1 | not started |
 | 5 Coach rules | 2 | implemented on `worktree-phase-5` (5a domain, data and sync; 5b Today cards and actions), not yet merged or checked on iPhone. Added: saved plan (built once, changed only by settings days or accepted suggestions; `0004_plans.sql`), suggestions sync (`0010_coach.sql`) |
 | 6 XP and Progress | 2 | implemented on `phase-6` (XP per set and session, volume and strength ranks, streak, badges in `0020_xp.sql`, Progress screen with body figure). Numbers are set in `src/config/thresholds.ts` `XP` (SPEC §11 items 11 and 12 decided by the owner: hundreds and thousands, B is a guide, F → B takes well over 12 weeks). Strength uses one dumbbell lift per muscle; hamstrings, glutes and core rank on volume only. Not yet on an iPhone |
-| 7 AI client, onboarding, first plan | 2 | not started |
+| 7 AI client, onboarding, first plan | 2 | implemented on `phase-7`: Workers AI only (binding, no key), retry-once chain with rules fallback, daily cap of 5 (`0030_ai.sql`), shared validator (`shared/ai-plan.ts`), onboarding (core six plus bodyweight), first-plan proposal with copy-paste fallback, plan replace. Gemini and Claude not wired. Not yet deployed or checked on an iPhone |
 | 8 Nutrition | Later (D1) | blueprint only |
 | 9 Push | 2 | not started |
 

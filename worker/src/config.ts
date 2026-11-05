@@ -1,4 +1,12 @@
 // Worker thresholds, all in one place (CLAUDE.md "Domain rules": no magic numbers elsewhere).
+// AI (SPEC §5.2, §5.7, PLAN Phase 7). Provider order is the chain in ai/chain.ts. Model names change over time:
+// check the Workers AI catalogue before deploy.
+export const AI = {
+  model: '@cf/meta/llama-3.1-8b-instruct',
+  dailyCap: 5, // plan proposals per user per UTC day, counting failed calls
+  timeoutMs: 25_000,
+} as const;
+
 export const AUTH = {
   pbkdf2Iterations: 100_000, // raise over time; each stored hash keeps its own count
   minPasswordLength: 10,
