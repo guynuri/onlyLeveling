@@ -33,9 +33,11 @@ export function createOutbox(db: Db): Outbox {
       await db.delete('outbox', id);
     },
     async fail(id, error, now = Date.now()) {
-      const item = (await db.get('outbox', id)) as OutboxItem | undefined;
-      if (!item) return;
-      await db.put('outbox', failItem(item, error, now));
+      // One readwrite transaction: an ack cannot slip in between the read and the write.
+      const tx = db.transaction('outbox', 'readwrite');
+      const item = (await tx.store.get(id)) as OutboxItem | undefined;
+      if (item) await tx.store.put(failItem(item, error, now));
+      await tx.done;
     },
     async count() {
       return db.count('outbox');

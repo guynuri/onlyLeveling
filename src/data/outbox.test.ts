@@ -20,6 +20,13 @@ describe('outbox (IndexedDB adapter)', () => {
     expect((await ob.peek(0)).map((i) => i.id)).toEqual([b]);
   });
 
+  it('a fail racing an ack never resurrects the acked item', async () => {
+    const ob = createOutbox(db);
+    const id = await ob.enqueue('saveWorkout', {}, 0);
+    await Promise.all([ob.fail(id, 'offline', 0), ob.ack(id)]);
+    expect(await ob.count()).toBe(0);
+  });
+
   it('fail keeps the item, bumps attempts and delays the next try', async () => {
     const ob = createOutbox(db);
     const id = await ob.enqueue('saveWorkout', {}, 0);
