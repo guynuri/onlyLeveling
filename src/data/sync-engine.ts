@@ -6,6 +6,8 @@ import type { Outbox } from './outbox';
 import { pushDue } from './sync-client';
 import { signOutRequest } from './auth-client';
 import type { BodyweightEntry, Settings, Workout } from '../domain/types';
+import type { Plan } from '../domain/plan';
+import type { Suggestion } from '../domain/suggestion';
 
 // What is stored: address and token only. A fetch function cannot be stored, so it is added at sync time.
 export interface ServerConfig {
@@ -52,6 +54,8 @@ interface PullBody {
   workouts: Workout[];
   settings: Settings | null;
   bodyweight: BodyweightEntry[];
+  plan?: Plan | null;
+  suggestions?: Suggestion[];
   serverTime: number;
 }
 
@@ -101,6 +105,10 @@ export async function syncNow(args: {
   if (body.settings && !pending.has('settings')) await local.saveSettings(body.settings);
   for (const b of body.bodyweight) {
     if (!pending.has(b.date)) await local.addBodyweight(b.date, b.kg);
+  }
+  if (body.plan && !pending.has('plan')) await local.savePlan(body.plan);
+  for (const s of body.suggestions ?? []) {
+    if (!pending.has(s.id)) await local.saveSuggestion(s);
   }
 
   return { ...state, cursor: body.serverTime, lastSyncedAt: now(), lastError: null };

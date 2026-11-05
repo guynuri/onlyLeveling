@@ -58,11 +58,16 @@ export const ROUTINE = {
 // Coach rules (SPEC §4). These are the spec defaults; each Wave 2 module edits only its own section.
 export const COACH = {
   stallWeeks: 2, // no e1RM gain over this many weeks → stalled
+  stallMinSessions: 2, // sessions needed inside the stall window before it can fire
   staleWeeks: 8, // the same exercise this long → stale
   tooEasyRir: 3, // RIR at or above this at the top of the range …
   tooEasySessions: 2, // … for this many sessions in a row → too easy
   missedSessionsForDeload: 3, // missed in a row before a deload is suggested (SPEC §4.1)
   deloadFactor: 0.9, // SPEC §4.1
+  deloadMinFactor: 0.5, // deload factor is clamped to this range
+  deloadMaxFactor: 0.95,
+  notNowDays: 7, // "Not now" hides a suggestion for this long
+  swapRecentWeeks: 4, // a swap candidate used within this many weeks is de-preferred
 } as const;
 // XP (SPEC §4b). Numbers are open (SPEC §11 items 11 and 12). Phase 6 fills this section when they are decided.
 export const XP = {} as const;

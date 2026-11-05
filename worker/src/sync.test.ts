@@ -9,7 +9,7 @@ const B = 'u_b';
 
 // Each test gets a clean database; the migrations are applied once per file in setup.ts.
 beforeEach(async () => {
-  for (const t of ['workouts', 'settings', 'bodyweight', 'ops_applied']) {
+  for (const t of ['workouts', 'settings', 'bodyweight', 'plans', 'suggestions', 'ops_applied']) {
     await db.prepare(`DELETE FROM ${t}`).run();
   }
 });
@@ -146,5 +146,46 @@ describe('parseOps (trust boundary: reject what we do not understand)', () => {
   it('rejects a batch over the size limit', () => {
     const many = Array.from({ length: 501 }, (_, i) => wOp(`o${i}`, `w${i}`, 1, 1));
     expect(() => parseOps({ ops: many })).toThrow(/too many/i);
+  });
+});
+
+describe('plan and suggestions (Phase 5): last write wins, scoped by user', () => {
+  const plan = (daysPerWeek: number, updatedAt: number): Op => ({
+    opId: `p${updatedAt}`,
+    kind: 'plan',
+    data: { daysPerWeek, days: [], adjustments: [], updatedAt },
+    updatedAt,
+  });
+  const sug = (id: string, status: string, updatedAt: number): Op => ({
+    opId: `s${id}${updatedAt}`,
+    kind: 'suggestion',
+    data: { id, status },
+    updatedAt,
+  });
+
+  it('keeps one plan per user; the newer write wins, an older one does not', async () => {
+    await applyPush(db, A, [plan(3, 200)], 1000);
+    await applyPush(db, A, [plan(4, 100)], 1001); // older client clock: ignored
+    expect((await exportAll(db, A)).plan).toMatchObject({ daysPerWeek: 3 });
+    await applyPush(db, A, [plan(4, 300)], 1002);
+    expect((await exportAll(db, A)).plan).toMatchObject({ daysPerWeek: 4 });
+  });
+
+  it('stores suggestions per id and pulls them since the cursor', async () => {
+    await applyPush(db, A, [sug('stall:x', 'pending', 10), sug('stale:y', 'pending', 10)], 1000);
+    expect((await exportAll(db, A)).suggestions).toHaveLength(2);
+    expect((await pull(db, A, 1000, 2000)).suggestions).toHaveLength(0);
+  });
+
+  it('never shows one user another user\'s plan or suggestions', async () => {
+    await applyPush(db, A, [plan(3, 1), sug('stall:x', 'pending', 1)], 1000);
+    const other = await exportAll(db, B);
+    expect(other.plan).toBeNull();
+    expect(other.suggestions).toHaveLength(0);
+  });
+
+  it('rejects a plan without daysPerWeek and a suggestion without an id', () => {
+    expect(() => parseOps({ ops: [{ opId: 'x', kind: 'plan', data: {}, updatedAt: 1 }] })).toThrow();
+    expect(() => parseOps({ ops: [{ opId: 'x', kind: 'suggestion', data: {}, updatedAt: 1 }] })).toThrow();
   });
 });

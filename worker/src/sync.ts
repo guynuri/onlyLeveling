@@ -6,7 +6,9 @@ export const MAX_OPS = 500;
 export type Op =
   | { opId: string; kind: 'workout'; data: { id: string } & Record<string, unknown>; updatedAt: number }
   | { opId: string; kind: 'settings'; data: Record<string, unknown>; updatedAt: number }
-  | { opId: string; kind: 'bodyweight'; data: { date: string; kg: number }; updatedAt: number };
+  | { opId: string; kind: 'bodyweight'; data: { date: string; kg: number }; updatedAt: number }
+  | { opId: string; kind: 'plan'; data: Record<string, unknown>; updatedAt: number }
+  | { opId: string; kind: 'suggestion'; data: { id: string } & Record<string, unknown>; updatedAt: number };
 
 export class ValidationError extends Error {}
 
@@ -36,6 +38,14 @@ export function parseOps(body: unknown): Op[] {
         throw new ValidationError(`op ${i}: bodyweight needs date and kg`);
       }
       return { ...common, kind: 'bodyweight', data: { date: raw.data.date, kg: raw.data.kg } };
+    }
+    if (raw.kind === 'plan') {
+      if (!isObj(raw.data) || !isNum(raw.data.daysPerWeek)) throw new ValidationError(`op ${i}: plan needs daysPerWeek`);
+      return { ...common, kind: 'plan', data: raw.data };
+    }
+    if (raw.kind === 'suggestion') {
+      if (!isObj(raw.data) || !isStr(raw.data.id)) throw new ValidationError(`op ${i}: suggestion needs data.id`);
+      return { ...common, kind: 'suggestion', data: raw.data as { id: string } & Record<string, unknown> };
     }
     throw new ValidationError(`op ${i}: unknown kind`);
   });
@@ -93,6 +103,26 @@ async function upsert(db: D1Database, userId: string, op: Op, serverAt: number):
       )
       .bind(userId, JSON.stringify(op.data), op.updatedAt, serverAt)
       .run();
+  } else if (op.kind === 'plan') {
+    await db
+      .prepare(
+        `INSERT INTO plans (user_id, data, updated_at, server_at) VALUES (?, ?, ?, ?)
+         ON CONFLICT (user_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at,
+           server_at = excluded.server_at
+         WHERE excluded.updated_at >= plans.updated_at`,
+      )
+      .bind(userId, JSON.stringify(op.data), op.updatedAt, serverAt)
+      .run();
+  } else if (op.kind === 'suggestion') {
+    await db
+      .prepare(
+        `INSERT INTO suggestions (user_id, id, data, updated_at, server_at) VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT (user_id, id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at,
+           server_at = excluded.server_at
+         WHERE excluded.updated_at >= suggestions.updated_at`,
+      )
+      .bind(userId, op.data.id, JSON.stringify(op.data), op.updatedAt, serverAt)
+      .run();
   } else {
     await db
       .prepare(
@@ -110,6 +140,8 @@ export interface Pulled {
   workouts: unknown[];
   settings: unknown | null;
   bodyweight: { date: string; kg: number }[];
+  plan: unknown | null;
+  suggestions: unknown[];
   serverTime: number;
 }
 
@@ -126,10 +158,20 @@ export async function pull(db: D1Database, userId: string, since: number, now = 
     .prepare('SELECT date, kg FROM bodyweight WHERE user_id = ? AND server_at > ? ORDER BY date')
     .bind(userId, since)
     .all<{ date: string; kg: number }>();
+  const p = await db
+    .prepare('SELECT data FROM plans WHERE user_id = ? AND server_at > ?')
+    .bind(userId, since)
+    .first<{ data: string }>();
+  const g = await db
+    .prepare('SELECT data FROM suggestions WHERE user_id = ? AND server_at > ? ORDER BY server_at')
+    .bind(userId, since)
+    .all<{ data: string }>();
   return {
     workouts: w.results.map((r) => JSON.parse(r.data)),
     settings: s ? JSON.parse(s.data) : null,
     bodyweight: b.results,
+    plan: p ? JSON.parse(p.data) : null,
+    suggestions: g.results.map((r) => JSON.parse(r.data)),
     serverTime: now,
   };
 }
