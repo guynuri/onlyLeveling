@@ -8,5 +8,5 @@ compatibility_date = "2025-09-01"
 binding = "DB"
 database_name = "onlyleveling"
 # Replace with the real id after `wrangler d1 create onlyleveling` (manual step; see PLAN Phase 4).
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "69a0743f-9cc2-47cc-a6b9-e8d342d2e181"
 migrations_dir = "worker/migrations"
