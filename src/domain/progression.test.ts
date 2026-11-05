@@ -58,6 +58,14 @@ describe('nextPrescription: double progression', () => {
     expect(nextPrescription(miss, CFG).w).toBe(8);
   });
 
+  it('warm-up sets never decide the outcome', () => {
+    // A warm-up at 2 reps is not a working set; the three work sets at 12 are all hits.
+    const top: Prescription = { w: 8, reps: 12, sets: 3 };
+    const warm: SetRow = { w: 4, r: 2, done: true, phase: 'warmup', at: 1 };
+    const h: HistorySession[] = [{ date: 1, target: top, sets: [warm, set(8, 12), set(8, 12), set(8, 12)] }];
+    expect(nextPrescription(h, CFG)).toEqual({ w: 10, reps: 8, sets: 3 });
+  });
+
   it('weight never lands off the owned list', () => {
     const top: Prescription = { w: 12, reps: 12, sets: 3 };
     const h = [session(1, 12, [12, 12, 12], top)];

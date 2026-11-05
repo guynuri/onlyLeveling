@@ -14,6 +14,15 @@ describe('PRs', () => {
     expect(bestWeight([])).toBeNull();
   });
 
+  it('warm-up sets never count toward the best weight or a PR', () => {
+    const warm = { w: 20, r: 3, done: true, phase: 'warmup' as const, at: 1 };
+    const h: HistorySession[] = [
+      { date: 1, target: { w: 10, reps: 8, sets: 1 }, sets: [warm, { w: 10, r: 8, done: true, phase: 'work', at: 1 }] },
+    ];
+    expect(bestWeight(h)).toBe(10);
+    expect(isNewWeightPR(12, h)).toBe(true);
+  });
+
   it('a new weight PR only when strictly above history', () => {
     const history = [s(1, [10]), s(2, [12])];
     expect(isNewWeightPR(13, history)).toBe(true);

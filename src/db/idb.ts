@@ -24,6 +24,9 @@ export type Db = IDBPDatabase<AppSchema>;
 export interface OpenOptions {
   // Another tab still holds an older version, so the upgrade is waiting. Show a message in the UI (Phase 4).
   onBlocked?: () => void;
+  // A newer version was requested (another tab upgraded). This connection is closed; the app must reopen
+  // or tell the user to reload. Calls on the closed handle throw, so the caller must not keep using it.
+  onVersionChange?: () => void;
 }
 
 export function openAppDb(name: string = DB_NAME, opts: OpenOptions = {}): Promise<Db> {
@@ -44,8 +47,9 @@ export function openAppDb(name: string = DB_NAME, opts: OpenOptions = {}): Promi
       opts.onBlocked?.();
     },
     blocking() {
-      // Release our connection so the newer version can open; the next open gets the new schema.
+      // Release our connection so the newer version can open, then tell the app its handle is dead.
       handle?.close();
+      opts.onVersionChange?.();
     },
   }).then((db) => {
     handle = db;

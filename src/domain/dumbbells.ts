@@ -1,11 +1,11 @@
 // Owned-dumbbell arithmetic (SPEC §3.4). Owned weights are an exact list per unit; results stay on it.
 const EPS = 1e-9;
 
-// The n-th owned weight above w (n = 2 is a double jump: two bells up). Null at the top of the list.
+// The n-th owned weight above w (n = 2 is a double jump: two bells up). Null when fewer than n bells sit above w.
 export function ownedUp(ws: readonly number[], w: number, n = 1): number | null {
   const above = ws.filter((x) => x > w + EPS).sort((a, b) => a - b);
-  if (above.length === 0) return null;
-  return above[Math.min(n, above.length) - 1];
+  if (above.length < n) return null;
+  return above[n - 1];
 }
 
 // The nearest owned weight below w. Null under the lightest.

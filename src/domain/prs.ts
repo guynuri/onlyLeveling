@@ -5,7 +5,8 @@ export function bestWeight(history: readonly HistorySession[]): number | null {
   let best: number | null = null;
   for (const s of history) {
     for (const set of s.sets) {
-      if (set.done && (best === null || set.w > best)) best = set.w;
+      // Warm-ups are not work: a warm-up never sets a PR (SPEC §3.5 counts working sets).
+      if (set.done && set.phase === 'work' && (best === null || set.w > best)) best = set.w;
     }
   }
   return best;

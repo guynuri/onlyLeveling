@@ -37,7 +37,8 @@ export function nextPrescription(history: readonly HistorySession[], cfg: Progre
     return { w: snapWeight(cfg.startWeight, cfg), reps: cfg.repMin, sets };
   }
   const last = [...history].sort((a, b) => a.date - b.date).at(-1)!;
-  const decisive = last.sets.slice(0, last.target.sets);
+  // Warm-ups never decide: only working sets count, and only the first `sets` of them.
+  const decisive = last.sets.filter((s) => s.phase === 'work').slice(0, last.target.sets);
   const targetReps = last.target.reps;
   const allHit = decisive.length > 0 && decisive.every((s) => isHit(s, targetReps));
   const w = last.target.w;

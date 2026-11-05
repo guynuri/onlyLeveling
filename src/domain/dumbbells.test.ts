@@ -23,6 +23,10 @@ describe('owned-weight stepping', () => {
     expect(ownedUp(OWNED, 8, 2)).toBe(12.5);
   });
 
+  it('a double jump with fewer than two bells above is null, not the top bell', () => {
+    expect(ownedUp(OWNED, 14, 2)).toBeNull();
+  });
+
   it('stepOwned stays on the list and holds at the ends', () => {
     expect(stepOwned(OWNED, 8, 1)).toBe(10);
     expect(stepOwned(OWNED, 16, 1)).toBe(16);

@@ -7,6 +7,20 @@ let n = 0;
 const fresh = () => `test-idb-${n++}`;
 
 describe('IndexedDB schema v2', () => {
+  it('when a newer version is requested, the old connection is closed and the app is told', async () => {
+    const name = fresh();
+    let told = 0;
+    const app = await openAppDb(name, { onVersionChange: () => told++ });
+    const newer = await openDB(name, DB_VERSION + 1, {
+      upgrade() {},
+      blocked() {},
+    });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(told).toBe(1);
+    await expect(app.count('outbox')).rejects.toThrow();
+    newer.close();
+  });
+
   it('opens at version 2 with every store PLAN §3.3 lists', async () => {
     const db = await openAppDb(fresh());
     expect(db.version).toBe(DB_VERSION);
