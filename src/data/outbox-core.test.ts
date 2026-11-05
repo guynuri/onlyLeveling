@@ -5,6 +5,7 @@ import { OUTBOX } from '../config/thresholds';
 const item = (id: number, over: Partial<OutboxItem> = {}): OutboxItem => ({
   id,
   op: 'saveWorkout',
+  key: null,
   payload: { id },
   createdAt: 0,
   attempts: 0,
@@ -19,17 +20,30 @@ describe('outbox-core', () => {
     expect(due.map((i) => i.id)).toEqual([1, 2, 3]);
   });
 
-  it('returns nothing when the oldest item is still backing off', () => {
-    const due = dueItems([item(1, { nextTryAt: 500 }), item(2)], 100);
-    expect(due).toEqual([]);
+  it('a backing-off item blocks later writes to the same record (no stale overwrite)', () => {
+    // v1 failed and is waiting; v2 of the same record must not go out ahead of it.
+    const v1 = item(1, { key: 'w1', nextTryAt: 500, payload: { w: 'v1' } });
+    const v2 = item(2, { key: 'w1', payload: { w: 'v2' } });
+    expect(dueItems([v1, v2], 100).map((i) => i.id)).toEqual([]);
+    expect(dueItems([v1, v2], 600).map((i) => i.id)).toEqual([1]);
   });
 
-  it('a backing-off item blocks later writes to the same record (no stale overwrite)', () => {
-    // v1 failed and is waiting; v2 must not be pushed ahead of it.
-    const v1 = item(1, { nextTryAt: 500, payload: { w: 'v1' } });
-    const v2 = item(2, { payload: { w: 'v2' } });
-    expect(dueItems([v1, v2], 100).map((i) => i.id)).toEqual([]);
-    expect(dueItems([v1, v2], 600).map((i) => i.id)).toEqual([1, 2]);
+  it('a permanently failing record does not block other records', () => {
+    const stuck = item(1, { key: 'w1', nextTryAt: Number.MAX_SAFE_INTEGER });
+    const other = item(2, { key: 'w2' });
+    expect(dueItems([stuck, other], 100).map((i) => i.id)).toEqual([2]);
+  });
+
+  it('unkeyed items are independent of each other', () => {
+    const a = item(1, { nextTryAt: 500 });
+    const b = item(2);
+    expect(dueItems([a, b], 100).map((i) => i.id)).toEqual([2]);
+  });
+
+  it('releases at most one item per record per peek', () => {
+    const v1 = item(1, { key: 'w1' });
+    const v2 = item(2, { key: 'w1' });
+    expect(dueItems([v1, v2], 0).map((i) => i.id)).toEqual([1]);
   });
 
   it('fail increments attempts, records the error and sets nextTryAt', () => {

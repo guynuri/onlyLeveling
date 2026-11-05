@@ -5,7 +5,8 @@ import { dueItems, failItem, type OutboxItem } from './outbox-core';
 export type { OutboxItem } from './outbox-core';
 
 export interface Outbox {
-  enqueue(op: string, payload: unknown, now?: number): Promise<number>;
+  // key: record id; writes with the same key stay ordered. Omit for an independent write.
+  enqueue(op: string, payload: unknown, now?: number, key?: string | null): Promise<number>;
   peek(now?: number): Promise<OutboxItem[]>;
   ack(id: number): Promise<void>;
   fail(id: number, error: string, now?: number): Promise<void>;
@@ -14,9 +15,10 @@ export interface Outbox {
 
 export function createOutbox(db: Db): Outbox {
   return {
-    async enqueue(op, payload, now = Date.now()) {
+    async enqueue(op, payload, now = Date.now(), key = null) {
       const id = (await db.add('outbox', {
         op,
+        key,
         payload,
         createdAt: now,
         attempts: 0,

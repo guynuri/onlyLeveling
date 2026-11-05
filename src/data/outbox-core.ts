@@ -4,6 +4,8 @@ import { OUTBOX } from '../config/thresholds';
 export interface OutboxItem {
   id: number;
   op: string;
+  // Record key (e.g. workout id). Writes with the same key are ordered; null = independent.
+  key: string | null;
   payload: unknown;
   createdAt: number;
   attempts: number;
@@ -22,14 +24,19 @@ export function failItem(item: OutboxItem, error: string, now: number): OutboxIt
   return { ...item, attempts, lastError: error, nextTryAt: now + backoffMs(attempts) };
 }
 
-// FIFO by id. Returns the due prefix of the queue: stops at the first item still backing off,
-// so a later write to the same record can never be pushed ahead of an earlier, failed one.
+// FIFO by id, per record. Items with the same key are ordered: at most one per key is released,
+// and only when it is due, so a later write to a record never goes out ahead of an earlier one.
+// Items with a different key (or no key) are independent: one record's failure cannot block another.
 export function dueItems(items: OutboxItem[], now: number): OutboxItem[] {
   const sorted = [...items].sort((a, b) => a.id - b.id);
   const out: OutboxItem[] = [];
+  const held = new Set<string>();
   for (const item of sorted) {
-    if (item.nextTryAt > now) break;
-    out.push(item);
+    if (item.key !== null) {
+      if (held.has(item.key)) continue;
+      held.add(item.key);
+    }
+    if (item.nextTryAt <= now) out.push(item);
   }
   return out;
 }
