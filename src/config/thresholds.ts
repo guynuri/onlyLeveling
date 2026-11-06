@@ -90,5 +90,40 @@ export const XP = {
   badgeSessionMilestones: [1, 10, 100], // "first session", then 10 and 100 sessions
   badgeRankFrom: 'C', // achievement badges per muscle start at this rank
 } as const;
+// Profile and onboarding v2 (UX design §4). Weight grids are what the chip grids offer.
+export const PROFILE = {
+  dumbbellGrid: [
+    1, 2, 2.5, 3, 4, 5, 6, 7, 7.5, 8, 9, 10, 11, 12, 12.5, 13, 14, 15, 16, 17.5, 18, 20, 22, 22.5, 24, 25, 26, 27.5, 28,
+    30, 32, 32.5, 34, 35, 36, 37.5, 40, 42.5, 44, 45, 47.5, 50,
+  ],
+  kettlebellGrid: [4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 32, 36, 40, 44, 48],
+  about: { age: [13, 100], heightCm: [100, 250], weightKg: [30, 300] },
+  limitsNoteMax: 200,
+} as const;
+
+// Goal blend (UX design §4): goals are a set; each asks for this much, and the blend takes the most of each.
+// Used by plans from U4. The user reviews these numbers.
+export const GOAL_BLEND = {
+  'build-muscle': { cardioSessions: 0, cardioMinutes: 0, mobilityMinutes: 0, repBias: 'none' },
+  strength: { cardioSessions: 0, cardioMinutes: 0, mobilityMinutes: 0, repBias: 'heavier' },
+  'lose-fat': { cardioSessions: 2, cardioMinutes: 20, mobilityMinutes: 0, repBias: 'none' },
+  endurance: { cardioSessions: 2, cardioMinutes: 30, mobilityMinutes: 0, repBias: 'lighter' },
+  mobility: { cardioSessions: 0, cardioMinutes: 0, mobilityMinutes: 5, repBias: 'none' },
+  health: { cardioSessions: 1, cardioMinutes: 20, mobilityMinutes: 5, repBias: 'none' },
+} as const;
+
+// Limits (UX design §4): a sore body part removes exercises whose primary muscles load it, unless RepDB marks the
+// exercise safe for that joint. Conservative on purpose; the user reviews this table. Training guidance only.
+export const LIMIT_RULES = {
+  shoulder: { slugs: ['deltoids'], safeTag: 'shoulder_safe' },
+  elbow: { slugs: ['triceps', 'biceps'] },
+  wrist: { slugs: ['forearm'] },
+  'lower-back': { slugs: ['lower-back'], safeTag: 'lower_back_safe' },
+  hip: { slugs: ['gluteal', 'adductors', 'hip-flexors'] },
+  knee: { slugs: ['quadriceps'], safeTag: 'knee_safe' },
+  ankle: { slugs: ['calves', 'tibialis'] },
+  neck: { slugs: ['trapezius'] },
+} as const;
+
 // Nutrition (SPEC §9, later phase). Blueprint only.
 export const NUTRITION = {} as const;
