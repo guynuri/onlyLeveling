@@ -109,7 +109,9 @@ export default function App() {
 
   // Hash navigation keeps the old offset, so set it once the new screen is in the DOM.
   // ponytail: a list that fills in after an async read may be too short to restore fully; wait-for-height if it shows up.
-  useLayoutEffect(() => window.scrollTo(0, nextScroll.current), [route]);
+  useLayoutEffect(() => {
+    window.scrollTo(0, nextScroll.current); // a block body: an effect must not return scrollTo's result as its cleanup
+  }, [route]);
 
   const active = tabFor(route);
 
