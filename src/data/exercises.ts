@@ -5,7 +5,7 @@ import fxCatalogue from './exercises.json';
 import ogCatalogue from './opengym.json';
 import type { Exercise } from '../domain/exercise';
 import { upgradeFx } from '../domain/exercise-import';
-import { mergeCatalogue } from '../domain/catalogue-merge';
+import { lookupExercise, mergeCatalogue } from '../domain/catalogue-merge';
 import { ALIASES } from './aliases';
 
 const generated = import.meta.glob<Exercise[]>('./generated/repdb.json', { eager: true, import: 'default' });
@@ -22,5 +22,5 @@ export function listExercises(): readonly Exercise[] {
 }
 
 export function getExercise(id: string): Exercise | undefined {
-  return BY_ID.get(id);
+  return lookupExercise(BY_ID, ALIASES, id);
 }

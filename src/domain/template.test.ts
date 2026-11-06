@@ -93,6 +93,23 @@ describe('buildTemplate', () => {
   });
 });
 
+describe('candidates suit a starter dumbbell plan', () => {
+  it('leaves out expert, timed and non-strength exercises', () => {
+    const pool = candidates({
+      daysPerWeek: 1,
+      exercisesPerDay: 4,
+      avoid: [],
+      catalogue: [
+        ex({ id: 'OK_Press' }),
+        ex({ id: 'Expert_Handstand', level: 'expert' }),
+        ex({ id: 'Timed_Plank', mode: 'time' }),
+        ex({ id: 'Plyo_Pushup', category: 'plyometrics' }),
+      ],
+    });
+    expect(pool.map((e) => e.id)).toEqual(['OK_Press']);
+  });
+});
+
 describe('candidates prefer exercises with pictures', () => {
   it('between two otherwise equal candidates, the one with media comes first', () => {
     const pool = candidates({

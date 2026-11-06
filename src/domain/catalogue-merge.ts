@@ -156,6 +156,16 @@ export function mapOpengym(raw: OpengymRaw): Exercise | null {
   };
 }
 
+// Ids never die (UX design §3.2): an rp_ id that an alias later merged into an fx record still finds that record,
+// so logged workouts and plans that hold it keep working.
+export function lookupExercise(
+  byId: ReadonlyMap<string, Exercise>,
+  aliases: Readonly<Record<string, string>>,
+  id: string,
+): Exercise | undefined {
+  return byId.get(id) ?? (aliases[id] !== undefined ? byId.get(aliases[id]) : undefined);
+}
+
 // Name key for de-duplication: case, punctuation, "dumbbells"/"dumbbell" and filler words do not matter.
 export function normaliseName(name: string): string {
   return name

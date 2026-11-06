@@ -33,6 +33,8 @@ export function candidates(input: TemplateInput): Exercise[] {
   return input.catalogue
     .filter((ex) => isDumbbellCompatible(ex))
     .filter((ex) => movementPattern(ex) !== 'unknown')
+    // A starter plan: rep-based strength work, nothing expert (U4 replaces this builder).
+    .filter((ex) => ex.category === 'strength' && ex.mode === 'reps' && ex.level !== 'expert')
     .filter((ex) => !avoid.has(ex.id) && !avoid.has(ex.name))
     .sort((a, b) => {
       const ca = a.mechanic === 'compound' ? 0 : 1;

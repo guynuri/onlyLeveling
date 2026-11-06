@@ -1,6 +1,6 @@
 // Fixtures here are made up in RepDB's and openGym's shapes. No real RepDB data is committed (CLAUDE.md).
 import { describe, it, expect } from 'vitest';
-import { mapRepdb, mapOpengym, normaliseName, mergeCatalogue, type RepdbRaw, type OpengymRaw } from './catalogue-merge';
+import { mapRepdb, mapOpengym, normaliseName, mergeCatalogue, lookupExercise, type RepdbRaw, type OpengymRaw } from './catalogue-merge';
 import { upgradeFx } from './exercise-import';
 import type { Exercise } from './exercise';
 
@@ -108,6 +108,17 @@ describe('mapOpengym', () => {
     expect(e.muscles).toEqual({ primary: ['upper-back'], secondary: ['biceps'] });
     expect(e.primaryMuscles).toEqual(['lats']);
     expect(e.name).toBe('Made Up Dumbbell Row');
+  });
+});
+
+describe('lookupExercise', () => {
+  it('an rp_ id that an alias later merged away still resolves to the merged record (logged history stays valid)', () => {
+    const aliases = { 'rp_other-name': 'fx_A' };
+    const merged = mergeCatalogue([fx('fx_A', 'Flat Press')], [mapRepdb(rp({ id: 'other-name' }), BASE)!], [], aliases);
+    const byId = new Map(merged.map((e) => [e.id, e] as const));
+    expect(lookupExercise(byId, aliases, 'rp_other-name')?.id).toBe('fx_A');
+    expect(lookupExercise(byId, aliases, 'fx_A')?.id).toBe('fx_A');
+    expect(lookupExercise(byId, aliases, 'nope')).toBeUndefined();
   });
 });
 
