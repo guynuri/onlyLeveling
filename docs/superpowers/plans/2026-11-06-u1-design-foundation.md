@@ -117,9 +117,9 @@ describe('pct', () => {
 **Interfaces:**
 - Consumes: `stepOwned(ws: readonly number[], w: number, dir: 1 | -1): number` from `src/domain/dumbbells.ts`.
 - Produces:
-  - `stepValue(current: number, dir: 1 | -1, opts: { values?: readonly number[]; step?: number; min?: number }): number` — with a non-empty `values` list, delegates to `stepOwned`; otherwise `current + dir * (step ?? 1)`, never below `min ?? 0`.
+  - `stepValue(current: number, dir: 1 | -1, opts: { values?: readonly number[]; step?: number; min?: number; max?: number }): number` — with a non-empty `values` list, delegates to `stepOwned`; otherwise `current + dir * (step ?? 1)`; the result is always clamped to `[min ?? 0, max ?? Infinity]`.
   - Components (named exports from `src/ui/controls.tsx`):
-    - `Stepper(props: { value: number; onChange: (v: number) => void; label: string; unit?: string; values?: readonly number[]; step?: number; min?: number })` — −/value/+, buttons ≥ 44 px, uses `stepValue`.
+    - `Stepper(props: { value: number; onChange: (v: number) => void; label: string; unit?: string; values?: readonly number[]; step?: number; min?: number; max?: number })` — −/value/+, buttons ≥ 44 px, uses `stepValue`.
     - `SegmentedControl<T extends string>(props: { options: readonly { value: T; label: string }[]; value: T; onChange: (v: T) => void; label: string })` — `role="radiogroup"`.
     - `Sheet(props: { open: boolean; onClose: () => void; title: string; children: React.ReactNode })` — a native `<dialog>` opened with `showModal()`, styled as a bottom sheet (max-height 90dvh, rounded top, safe-area bottom padding, internal scroll); closes on Escape, the close button, and a backdrop click; while open, `document.body` gets `overflow: hidden`.
     - `ToastHost()` and `toast(message: string): void` — `toast` dispatches `new CustomEvent('ui-toast', { detail: message })`; `ToastHost` shows the latest message for 3 s above the tab bar with `role="status"`.
@@ -149,6 +149,10 @@ describe('stepValue', () => {
     expect(stepValue(0, -1, {})).toBe(0);
     expect(stepValue(5, -1, { step: 10, min: 1 })).toBe(1);
   });
+  it('never goes above max', () => {
+    expect(stepValue(7, 1, { min: 1, max: 7 })).toBe(7);
+    expect(stepValue(1, -1, { min: 1, max: 7 })).toBe(1);
+  });
 });
 ```
 
@@ -171,7 +175,7 @@ describe('stepValue', () => {
   - `parseRoute(hash: string): Route` — `''`, unknown and `'today'` → `{ screen: 'home' }`; the other names map one to one; `library/<id>` keeps its current decoding and malformed-escape behaviour.
   - `tabFor(route: Route): 'home' | 'plan' | 'workout' | 'progress' | 'more'` — moved from `App.tsx` to `route.ts` and exported. `library`, `exercise`, `history`, `settings`, `credits` → `'more'`; `onboarding` → `'home'`; the five tab screens map to themselves.
 
-- [ ] **Step 1: Update the tests** in `src/app/route.test.ts`: change the existing "defaults to today" expectations to `{ screen: 'home' }`, and add:
+- [ ] **Step 1: Update the tests** in `src/app/route.test.ts`: change the import to `import { parseRoute, tabFor } from './route';`, change the existing "defaults to today" expectations to `{ screen: 'home' }`, and add:
 
 ```ts
 it('old #/today links land on home', () => {
@@ -204,26 +208,26 @@ describe('tabFor', () => {
 - [ ] **Step 7: Create `src/app/MoreScreen.tsx`:** a list of `Tile`s for Library (`BookOpen`), History (`History`), Settings (`Settings`), Credits (`Info`).
 - [ ] **Step 8: Change the onboarding redirect** from `'#/today'` to `'#/home'`, and `APP_URL` in `src/sw.ts` (notification click target) from `#/today` to `#/home`. Then `grep -rn "#/today" src worker` → only the alias test in `route.test.ts` remains.
 - [ ] **Step 9: Verify** `npm test && npm run typecheck && npm run lint && npm run build` → all green.
-- [ ] **Step 10: Commit** — `git add -A && git commit -m "feat(nav): Home · Plan · Train · Progress · More tab bar"`.
+- [ ] **Step 10: Commit** — `git add src/app src/App.tsx src/modules/onboarding/Onboarding.tsx src/sw.ts package.json package-lock.json docs/CREDITS.md && git commit -m "feat(nav): Home · Plan · Train · Progress · More tab bar"`.
 
 ### Task 5: Exercise sheet shell
 
 **Files:**
 - Create: `src/modules/library/ExerciseInfo.tsx`, `src/modules/library/ExerciseSheet.tsx`, `src/modules/library/open-exercise.ts`
-- Modify: `src/modules/library/ExerciseDetail.tsx`, `src/App.tsx`, `src/modules/training/PlanScreen.tsx`, `src/modules/training/WorkoutScreen.tsx` (exercise name only), `src/modules/training/HistoryScreen.tsx`
+- Modify: `src/modules/library/ExerciseDetail.tsx`, `src/App.tsx`, `src/modules/training/PlanScreen.tsx`, `src/modules/training/WorkoutScreen.tsx` (exercise name only), `src/modules/training/HistoryScreen.tsx`, `src/modules/coach/CoachCards.tsx` (exercise names only)
 
 **Interfaces:**
 - Produces:
   - `OPEN_EXERCISE_EVENT = 'open-exercise'` and `openExercise(id: string): void` in `open-exercise.ts` — dispatches `new CustomEvent(OPEN_EXERCISE_EVENT, { detail: id })` on `window`.
-  - `ExerciseInfo(props: { id: string })` — the body of today's `ExerciseDetail` (facts, instructions, source line) including its "Exercise not found" branch. U2 adds media, body map, tips, history and Swap here.
-  - `ExerciseSheet()` — listens for `OPEN_EXERCISE_EVENT`, renders `Sheet` titled with the exercise name (or "Exercise") containing `ExerciseInfo`; one instance mounted in `App`.
+  - `ExerciseInfo(props: { id: string })` — the body of today's `ExerciseDetail` (facts, instructions, source line); for an unknown id it renders only "Exercise not found." with no link. The "Back to the library" link stays in `ExerciseDetail`. U2 adds media, body map, tips, history and Swap here.
+  - `ExerciseSheet()` — listens for `OPEN_EXERCISE_EVENT`, renders `Sheet` titled with the exercise name (or "Exercise") containing `ExerciseInfo`; closes on `hashchange` (a tapped link or browser Back must not leave the modal on top); one instance mounted in `App`.
   - `ExerciseName(props: { id: string; name: string })` — exported from `ExerciseSheet.tsx`; a text-styled button calling `openExercise(id)`.
 
 - [ ] **Step 1: Extract `ExerciseInfo`** from `ExerciseDetail.tsx`; `ExerciseDetail` becomes a back link plus `<ExerciseInfo id={id} />`. Restyle the facts list as a `Card` with chips for equipment, mechanic and level.
 - [ ] **Step 2: Implement** `open-exercise.ts`, `ExerciseSheet` and `ExerciseName`; mount `<ExerciseSheet />` in `App`.
-- [ ] **Step 3: Replace plain exercise names** with `<ExerciseName …/>` in `PlanScreen.tsx`, `WorkoutScreen.tsx` (the `<h2>{name}</h2>` heading only) and `HistoryScreen.tsx`. In the library list, rows keep navigating to `#/library/<id>`.
-- [ ] **Step 4: Verify** `npm run typecheck && npm run lint && npm run build` → green. Manual: in `npm run dev` at 375 px, tap a name in Plan, Workout and History → the sheet opens; it closes via the close button, the backdrop and Escape; the page behind does not scroll; `openExercise('missing')` from the console shows "Exercise not found".
-- [ ] **Step 5: Commit** — `git add -A && git commit -m "feat(library): exercise sheet from every exercise name"`.
+- [ ] **Step 3: Replace plain exercise names** with `<ExerciseName …/>` in `PlanScreen.tsx`, `WorkoutScreen.tsx` (the `<h2>{name}</h2>` heading only), `HistoryScreen.tsx` and `CoachCards.tsx` (the card heading and the swap target's name). In the library list, rows keep navigating to the `#/library/<id>` detail page.
+- [ ] **Step 4: Verify** `npm run typecheck && npm run lint && npm run build` → green. Manual: in `npm run dev` at 375 px, tap a name in Plan, Workout and History → the sheet opens; it closes via the close button, the backdrop and Escape; the page behind does not scroll; tapping the source link or browser Back closes it; `openExercise('missing')` from the console shows "Exercise not found".
+- [ ] **Step 5: Commit** — `git add src/modules/library src/App.tsx src/modules/training/PlanScreen.tsx src/modules/training/WorkoutScreen.tsx src/modules/training/HistoryScreen.tsx src/modules/coach/CoachCards.tsx && git commit -m "feat(library): exercise sheet from every exercise name"`.
 
 ### Task 6: Move Settings and push settings onto components
 
@@ -233,7 +237,7 @@ describe('tabFor', () => {
 **Interfaces:**
 - Consumes: `Button`, `Card`, `SegmentedControl`, `Stepper`, `toast` from `src/ui/`.
 
-- [ ] **Step 1: Restructure Settings** into `Card` sections (Training, Account & sync, Notifications, Data). Days per week and rest seconds use `Stepper` (rest step 15 s, min 0). Theme uses `SegmentedControl` with System / Dark / Light; it sets `document.documentElement.dataset.theme` (removed for System) and saves the choice in `localStorage` key `theme`, read in a try/catch on start in `main.tsx`. Save confirmations use `toast`. Owned weights stay as they are (U3 replaces them with the chip grid).
+- [ ] **Step 1: Restructure Settings** into `Card` sections (Training, Account & sync, Notifications, Data). Days per week and rest seconds use `Stepper` (days `min: 1, max: 7`, matching `parseSettingsForm`; rest step 15 s, min 0). Theme uses `SegmentedControl` with System / Dark / Light; it sets `document.documentElement.dataset.theme` (removed for System) and saves the choice in `localStorage` key `theme`, read in a try/catch on start in `main.tsx`. Save confirmations use `toast`. Owned weights stay as they are (U3 replaces them with the chip grid).
 - [ ] **Step 2: Restyle `PushSettings`** with `Card` + `Button`.
 - [ ] **Step 3: Delete** CSS rules in `src/styles.css` that no screen uses any more (`grep -rn "className=\"<name>" src` returns nothing).
 - [ ] **Step 4: Verify** `npm test && npm run typecheck && npm run lint && npm run build` → green; manual: Settings at 375 px in dark and light mode, theme switch persists across reload.

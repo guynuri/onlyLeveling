@@ -605,12 +605,13 @@ in standalone mode before its status says done.
 - Icon set (Lucide, ISC) and the shared components in `src/ui/`.
 - Tabs Home · Plan · ▶ · Progress · More; More holds Library, History, Settings, Credits. Home temporarily shows
   today's existing screen until U6.
-- Exercise sheet opened from every exercise name in Plan, Workout and History (text content for now).
+- Exercise sheet opened from every exercise name in Plan, Workout, History and coach cards (text content for now).
 - Screens not rewritten later (Settings, History, Library list, Credits, coach and review cards, push settings,
   plan proposal) move onto the components. Onboarding, Workout, Home and Progress are left as they are; their
   phases rewrite them.
 - **Done when:** no raw colours or ad-hoc sizes outside `src/styles.css` and `src/ui/`; every tab works one-handed
-  on an iPhone; tapping an exercise name anywhere opens its sheet.
+  on an iPhone; tapping an exercise name in Plan, Workout, History or a coach card opens its sheet (Library rows
+  open the detail page).
 - Detailed plan: `docs/superpowers/plans/2026-11-06-u1-design-foundation.md`.
 
 ## U2: Library and media (§3)
