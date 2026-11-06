@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { blockOf, blockWeek, deloaded, isDeloadWeek, materializeBlock, nextSession, targetOf } from './block';
+import { blockOf, blockWeek, deloaded, isDeloadWeek, materializeBlock, nextSession, sessionsInBlock, targetOf } from './block';
 import type { Plan } from './plan';
 import type { Exercise } from './exercise';
 import type { TemplateDay } from './template';
@@ -117,5 +117,31 @@ describe('materializeBlock', () => {
   it('returns the same plan when it already has a block', () => {
     const p = plan({ block: { weeks: 4, startedAt: 7, deloadLastWeek: true } });
     expect(materializeBlock(p)).toBe(p);
+  });
+});
+
+describe('nextSession: what is already done', () => {
+  const weekly = plan({ schedule: 'weekdays', weekdays: [1, 3, 5] }); // Monday, Wednesday, Friday
+  it("weekdays: once today's session is logged, the next scheduled weekday is offered", () => {
+    const wed = onWeekday(3);
+    expect(nextSession(weekly, 9, wed, [wed - 3_600_000])?.index).toBe(2);
+  });
+  it('weekdays: a session logged on another day does not skip today', () => {
+    const wed = onWeekday(3);
+    expect(nextSession(weekly, 9, wed, [wed - 2 * 86_400_000])?.index).toBe(1);
+  });
+  it('weekdays: after the last scheduled day is done it wraps to the first', () => {
+    const fri = onWeekday(5);
+    expect(nextSession(weekly, 9, fri, [fri - 1000])?.index).toBe(0);
+  });
+});
+
+describe('sessionsInBlock', () => {
+  it('counts only workouts since the block started, so a new plan starts at its first day', () => {
+    const p = plan({ block: { weeks: 8, startedAt: 100, deloadLastWeek: true } });
+    expect(sessionsInBlock(p, [{ start: 50 }, { start: 100 }, { start: 200 }])).toBe(2);
+  });
+  it('a plan saved before U4 counts from its last save', () => {
+    expect(sessionsInBlock(plan({ updatedAt: 100 }), [{ start: 50 }, { start: 150 }])).toBe(1);
   });
 });

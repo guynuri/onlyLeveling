@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getExercise } from '../../data/exercises';
 import { type TemplateDay } from '../../domain/template';
-import { isDeloadWeek, nextSession } from '../../domain/block';
+import { isDeloadWeek, nextSession, sessionsInBlock } from '../../domain/block';
 import { CoachCards } from '../coach/CoachCards';
 import type { Prescription } from '../../domain/progression';
 import type { SetRow } from '../../domain/session';
@@ -43,7 +43,7 @@ export default function WorkoutScreen() {
       const ws = await repo.listWorkouts();
       const plan = await currentPlan(repo, await getLocalRepo(), s);
       const at = Date.now();
-      const today = nextSession(plan, ws.length, at);
+      const today = nextSession(plan, sessionsInBlock(plan, ws), at, ws.map((w) => w.start));
       if (!today) {
         setLoadError('No plan days yet. Check the days per week in Settings.');
         return;

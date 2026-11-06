@@ -157,6 +157,14 @@ describe('candidates', () => {
       expect(run([ex('a', 'chest'), ex('b', 'chest'), ex('x', 'biceps')], []).filter((c) => c.rule === 'limit')).toEqual([]);
     });
 
+    it('an exercise the owned equipment no longer covers gets a swap card to one it does', () => {
+      const bw = { ...ex('b', 'chest'), equipment: 'bodyweight', requires: [] } as Exercise;
+      const out = candidates({ now: NOW, plan, owned: [], equipment: [], catalogue: [ex('a', 'chest'), bw, ex('x', 'biceps')], workouts: [], stored: [], repMaxFor: () => 15 });
+      const card = out.find((c) => c.rule === 'limit' && c.exerciseId === 'a');
+      expect(card).toMatchObject({ action: { kind: 'swap', toId: 'b' } });
+      expect(card?.reason).toMatch(/equipment/);
+    });
+
     it('accepting the swap removes the old exercise from every day', () => {
       const next = applySuggestion(plan, { ...stored(), rule: 'limit', exerciseId: 'a', action: { kind: 'swap', toId: 'b' } }, 1, [8]);
       expect(next.days.map((d) => d.exerciseIds)).toEqual([['b', 'x'], ['b']]);

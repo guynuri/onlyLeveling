@@ -2,7 +2,7 @@
 // with what the user already decided (Accept, Not now, Never) so a card does not come back against their choice.
 import { COACH } from '../../../config/thresholds';
 import { ownedUp } from '../../../domain/dumbbells';
-import type { Exercise } from '../../../domain/exercise';
+import { usableWith, type Exercise } from '../../../domain/exercise';
 import { deloadWeight, planExerciseIds, type Plan } from '../../../domain/plan';
 import { suggestionId, type Suggestion, type SuggestionAction, type SuggestionRule } from '../../../domain/suggestion';
 import type { EquipmentChoice, Workout } from '../../../domain/types';
@@ -50,13 +50,16 @@ export function candidates(input: CoachInput): Candidate[] {
     const hist = historyOf(workouts, exerciseId);
     // A limit (or the avoid list) added after the plan was made: the plan is never edited by itself, so the exercise
     // stays and a card offers a swap. It needs no history, so it comes before the history checks.
-    if (input.blocked?.has(exerciseId)) {
-      const to = pickSwap({ exercise: ex, catalogue: input.catalogue, inPlan, avoid: input.blocked, equipment: input.equipment, lastUsed, now });
+    const noKit = !usableWith(ex, input.equipment); // equipment removed in Settings after the plan was made
+    if (input.blocked?.has(exerciseId) || noKit) {
+      const to = pickSwap({ exercise: ex, catalogue: input.catalogue, inPlan, avoid: input.blocked ?? new Set(), equipment: input.equipment, lastUsed, now });
       if (to) {
         out.push({
           rule: 'limit',
           exerciseId,
-          reason: `${ex.name}: you listed a limit or avoid this exercise, and it is still in your plan. A swap with the same muscle is suggested. Training guidance, not medical advice.`,
+          reason: input.blocked?.has(exerciseId)
+            ? `${ex.name}: you listed a limit or avoid this exercise, and it is still in your plan. A swap with the same muscle is suggested. Training guidance, not medical advice.`
+            : `${ex.name}: it needs equipment you no longer have selected. A swap with the same muscle is suggested.`,
           action: { kind: 'swap', toId: to.id },
           lastLogged: hist.length > 0 ? hist[hist.length - 1].date : 0,
         });
