@@ -122,10 +122,55 @@ describe('candidates', () => {
       },
     ];
     const cat = [ex('a', 'chest'), ex('b', 'chest')];
-    const out = candidates({ now: NOW, plan, owned: [8], catalogue: cat, workouts, stored: [], repMaxFor: () => 15 });
+    const out = candidates({ now: NOW, plan, owned: [8], equipment: ['dumbbell'], catalogue: cat, workouts, stored: [], repMaxFor: () => 15 });
     expect(out.map((c) => c.rule)).toContain('stale');
     expect(out.find((c) => c.rule === 'stale')?.action).toEqual({ kind: 'swap', toId: 'b' });
   });
+  describe('a limit added after the plan was made', () => {
+    const plan = planFromTemplate(
+      [
+        { index: 0, warmup: [], exerciseIds: ['a', 'x'], cooldown: [] },
+        { index: 1, warmup: [], exerciseIds: ['a'], cooldown: [] },
+      ],
+      2,
+      0,
+    );
+    const run = (cat: Exercise[], blocked: string[]) =>
+      candidates({ now: NOW, plan, owned: [8], equipment: ['dumbbell'], catalogue: cat, workouts: [], stored: [], blocked: new Set(blocked), repMaxFor: () => 15 });
+
+    it('a plan exercise that a limit now blocks gets a limit swap card, even with no history', () => {
+      const out = run([ex('a', 'chest'), ex('b', 'chest'), ex('x', 'biceps')], ['a']);
+      const card = out.find((c) => c.rule === 'limit');
+      expect(card).toMatchObject({ exerciseId: 'a', action: { kind: 'swap', toId: 'b' } });
+      expect(card?.reason).toMatch(/not medical advice/);
+    });
+
+    it('no card when there is no swap to offer', () => {
+      expect(run([ex('a', 'chest'), ex('x', 'biceps')], ['a']).filter((c) => c.rule === 'limit')).toEqual([]);
+    });
+
+    it('a blocked exercise is never the swap target', () => {
+      expect(run([ex('a', 'chest'), ex('b', 'chest'), ex('x', 'biceps')], ['a', 'b']).filter((c) => c.rule === 'limit')).toEqual([]);
+    });
+
+    it('an exercise that is not blocked gets no limit card', () => {
+      expect(run([ex('a', 'chest'), ex('b', 'chest'), ex('x', 'biceps')], []).filter((c) => c.rule === 'limit')).toEqual([]);
+    });
+
+    it('an exercise the owned equipment no longer covers gets a swap card to one it does', () => {
+      const bw = { ...ex('b', 'chest'), equipment: 'bodyweight', requires: [] } as Exercise;
+      const out = candidates({ now: NOW, plan, owned: [], equipment: [], catalogue: [ex('a', 'chest'), bw, ex('x', 'biceps')], workouts: [], stored: [], repMaxFor: () => 15 });
+      const card = out.find((c) => c.rule === 'limit' && c.exerciseId === 'a');
+      expect(card).toMatchObject({ action: { kind: 'swap', toId: 'b' } });
+      expect(card?.reason).toMatch(/equipment/);
+    });
+
+    it('accepting the swap removes the old exercise from every day', () => {
+      const next = applySuggestion(plan, { ...stored(), rule: 'limit', exerciseId: 'a', action: { kind: 'swap', toId: 'b' } }, 1, [8]);
+      expect(next.days.map((d) => d.exerciseIds)).toEqual([['b', 'x'], ['b']]);
+    });
+  });
+
   it('after an accepted deload, the next stall offers a swap, on the next load too', () => {
     const plan = planFromTemplate([{ index: 0, warmup: [], exerciseIds: ['a'], cooldown: [] }], 1, 0);
     const set = { w: 8, r: 8, done: true, phase: 'work' as const, at: 0 };
@@ -147,11 +192,11 @@ describe('candidates', () => {
       status: 'accepted',
       deloadTried: true,
     };
-    const first = candidates({ now: NOW, plan, owned: [8], catalogue: cat, workouts, stored: [tried], repMaxFor: () => 12 });
+    const first = candidates({ now: NOW, plan, owned: [8], equipment: ['dumbbell'], catalogue: cat, workouts, stored: [tried], repMaxFor: () => 12 });
     expect(first.find((c) => c.rule === 'stall')?.action).toEqual({ kind: 'swap', toId: 'b' });
     // The card comes back and is saved; the flag must survive, so the next load still offers the swap.
     const saved = reconcile([tried], first, NOW).save.find((s) => s.id === 'stall:a')!;
-    const second = candidates({ now: NOW, plan, owned: [8], catalogue: cat, workouts, stored: [saved], repMaxFor: () => 12 });
+    const second = candidates({ now: NOW, plan, owned: [8], equipment: ['dumbbell'], catalogue: cat, workouts, stored: [saved], repMaxFor: () => 12 });
     expect(second.find((c) => c.rule === 'stall')?.action).toEqual({ kind: 'swap', toId: 'b' });
   });
 });

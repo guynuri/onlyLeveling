@@ -644,7 +644,7 @@ in standalone mode before its status says done.
 ## U4: Plan v2 (§5, §6.5 planning)
 - Plan model gains `block: { weeks: 4|6|8|12; startedAt; deloadLastWeek }`, `schedule: 'rotation' | 'weekdays'`,
   per-exercise sets and rep range, cardio days and post-lift cardio / mobility blocks. Existing plan → 8-week
-  block from ship date. Migration `0080_plan_v2.sql`.
+  block from `plan.updatedAt`. No migration: the plan is stored whole as JSON.
 - Pure: `blockWeek(plan, now)`, `isDeloadWeek`, `nextSession(plan, history)` for rotation and weekdays,
   starter templates filtered by equipment, validation of AI plans against equipment, limits, blend table.
   Dumbbells are optional: plans, AI candidates and swaps use the equipment the user picked, and with none picked
@@ -657,6 +657,8 @@ in standalone mode before its status says done.
   the block week.
 
 ## U5: Workout v2 and cardio logging (§6.4, §6.5)
+- Moved from U4 (owner, 2026-11-07): edit the plan in place from a session's detail and the pre-workout preview
+  (reuse U4's `DayEditor`), and standalone cardio days in the plan (U4 only stores post-lift cardio and mobility minutes).
 - Focus view (default) and list view (setting), current exercise and set highlighted, `Stepper` on `stepOwned`,
   one-tap ✓ on pre-filled sets (3-tap rule kept), timed sets for `mode: 'time'`.
 - RIR picker 0–4+ with colours and one plain line per level. Rest timer as pinned bar/overlay (existing timer).
@@ -708,7 +710,7 @@ in standalone mode before its status says done.
 | U1 Design foundation, navigation | 3 | implemented (PR #22): tokens, `src/ui/` components, tab bar, exercise sheet, kept screens moved over; Settings save no longer drops onboarding answers. Browser-checked at 375 px; iPhone standalone check not done |
 | U2 Library and media | 3 | implemented: 1,984 exercises (876 free-exercise-db, 399 RepDB, 709 openGym text), 442 with RepDB pictures fetched at build (never committed), MuscleMap body map, exercise sheet v2, library filters, pictures cached on first view. Browser-checked at 375 px incl. offline; iPhone standalone check not done |
 | U3 Onboarding v2 | 3 | implemented: settings v2 (goals, about, equipment, kettlebell weights, limits); nine-step onboarding with multi-picks and the weight chip grid; pre-v2 accounts re-run all nine steps, pre-filled; Settings edits the same answers; limits filter plans, swaps, the AI list and replace lists; library defaults to owned equipment. Browser-checked; iPhone standalone check not done |
-| U4 Plan v2 | 3 | not started |
+| U4 Plan v2 | 3 | implemented: plans, swaps, AI candidates and progression follow owned equipment (nothing picked → bodyweight only; band and bodyweight reps-only); blocks of 4/6/8/12 weeks with Week X of N, deload week, rotation or weekday schedule; rules plan builder with full-body / upper-lower / push-pull-legs templates and the goal blend (cardio and mobility minutes); AI plans validated per exercise loads; Plan screen: generate, templates, preview beside the current plan and confirm before replacing, edit in place, end-of-block extend or rebuild; coach limit swap cards. Browser-checked on desktop; iPhone standalone check not done. Editing from the session preview and standalone cardio days are in U5 |
 | U5 Workout v2, cardio | 3 | not started |
 | U6 Home hub, Progress v2 | 3 | not started |
 | U7 Game layer | 3 | not started |

@@ -5,7 +5,7 @@ import { getExercise, listExercises } from '../../data/exercises';
 import type { Exercise } from '../../domain/exercise';
 import type { Plan } from '../../domain/plan';
 import { replaceExercise, planExerciseIds } from '../../domain/plan';
-import type { Workout } from '../../domain/types';
+import type { EquipmentChoice, Workout } from '../../domain/types';
 import { pickSwap } from '../coach/domain/swap';
 import { getRepo } from '../training/data';
 import { readSheetContext, type SheetContext } from './sheet-context';
@@ -38,6 +38,7 @@ function SwapButton({
   plan,
   workouts,
   avoid,
+  equipment,
   now,
   onSwapped,
 }: {
@@ -45,6 +46,7 @@ function SwapButton({
   plan: Plan;
   workouts: Workout[];
   avoid: string[];
+  equipment: EquipmentChoice[];
   now: number;
   onSwapped: (p: Plan) => void;
 }) {
@@ -52,7 +54,7 @@ function SwapButton({
   if (!inPlan.has(ex.id)) return null;
   const lastUsed = new Map<string, number>();
   for (const w of workouts) for (const e of w.entries) lastUsed.set(e.exerciseId, Math.max(lastUsed.get(e.exerciseId) ?? 0, w.start));
-  const to = pickSwap({ exercise: ex, catalogue: listExercises(), inPlan, avoid: new Set(avoid), lastUsed, now });
+  const to = pickSwap({ exercise: ex, catalogue: listExercises(), inPlan, avoid: new Set(avoid), equipment, lastUsed, now });
   if (!to) return null;
   const swap = async () => {
     try {
@@ -129,7 +131,7 @@ export default function ExerciseInfo({ id }: { id: string }) {
       )}
 
       <div className="ui-row">
-        {ctx?.plan && <SwapButton ex={ex} plan={ctx.plan} workouts={ctx.workouts} avoid={ctx.blocked} now={ctx.now} onSwapped={(plan) => setCtx({ ...ctx, plan })} />}
+        {ctx?.plan && <SwapButton ex={ex} plan={ctx.plan} workouts={ctx.workouts} avoid={ctx.blocked} equipment={ctx.equipment} now={ctx.now} onSwapped={(plan) => setCtx({ ...ctx, plan })} />}
         <a className="ui-btn ui-btn--ghost ui-btn--md" href={youtubeSearchUrl(ex.name)} target="_blank" rel="noopener noreferrer">
           Watch a demo
         </a>

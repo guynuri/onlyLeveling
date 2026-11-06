@@ -11,19 +11,26 @@ export interface Adjustment {
   at: number; // set when accepted; cleared once a session with this exercise is logged after it
 }
 
+// A training block (UX design §5): its length, when it started, and whether its last week is a planned deload.
+export interface Block {
+  weeks: number; // 4, 6, 8 or 12 when made (BLOCK.lengths); an extension can land in between, up to BLOCK.maxWeeks
+  startedAt: number; // epoch ms
+  deloadLastWeek: boolean;
+}
+
 export interface Plan {
   daysPerWeek: number;
   days: TemplateDay[];
   adjustments: Adjustment[];
+  // U4. All optional: a plan saved before U4 is read through domain/block.ts.
+  block?: Block;
+  schedule?: 'rotation' | 'weekdays';
+  weekdays?: number[]; // 0 = Sunday … 6; one per day, ascending (schedule 'weekdays')
   updatedAt: number; // the missed-session count restarts from here
 }
 
 export function planFromTemplate(days: TemplateDay[], daysPerWeek: number, now: number): Plan {
   return { daysPerWeek, days, adjustments: [], updatedAt: now };
-}
-
-export function planIsCurrent(plan: Plan, daysPerWeek: number): boolean {
-  return plan.daysPerWeek === daysPerWeek;
 }
 
 export function planExerciseIds(plan: Plan): string[] {

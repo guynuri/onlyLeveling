@@ -37,6 +37,38 @@ export const E1RM = {
   maxReps: 12,
 } as const;
 
+// Training blocks (UX design §5, U4): a plan runs for one of these lengths; an older plan counts as the default.
+export const BLOCK = {
+  defaultWeeks: 8,
+  lengths: [4, 6, 8, 12],
+  weekMs: 7 * 86_400_000,
+  maxWeeks: 12, // extending a block never goes past this
+} as const;
+
+// Starter templates (UX design §5, U4). A day's slots say which part of the body each exercise comes from; the slots
+// repeat to fill the day. Lower body = these muscles; push/pull follow an exercise's force.
+export const LOWER_SLUGS = ['quadriceps', 'hamstring', 'gluteal', 'calves', 'adductors', 'hip-flexors', 'tibialis'] as const;
+export const TEMPLATES = {
+  'full-body': { cycle: [{ name: 'Full body', slots: ['upper', 'lower'] }] },
+  'upper-lower': {
+    cycle: [
+      { name: 'Upper', slots: ['upper'] },
+      { name: 'Lower', slots: ['lower'] },
+    ],
+  },
+  'push-pull-legs': {
+    cycle: [
+      { name: 'Push', slots: ['push'] },
+      { name: 'Pull', slots: ['pull'] },
+      { name: 'Legs', slots: ['lower'] },
+    ],
+  },
+} as const;
+// Which template "auto" picks: up to this many days a week → full body, then upper/lower, then push/pull/legs.
+export const AUTO_TEMPLATE = { fullBodyMaxDays: 3, upperLowerMaxDays: 4 } as const;
+// Goals shift the rep range (both ends): strength heavier, endurance lighter. Never below the floor.
+export const REP_BIAS = { heavier: -2, lighter: 3, floor: 3 } as const;
+
 // Template plans (PLAN Phase 3). Session length limits exercises per day.
 export const TEMPLATE = {
   exercisesPerDay: 4,

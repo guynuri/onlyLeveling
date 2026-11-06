@@ -22,6 +22,7 @@ export interface ProgressionConfig {
   owned: readonly number[]; // owned weights, kg; empty = use the grid
   gridStep: number; // kg step when there is no owned list
   startWeight: number; // kg, for the first session
+  weighted?: boolean; // false (bands, bodyweight): reps only, weight is always 0
 }
 
 // Next session's prescription from history. Rules:
@@ -33,6 +34,7 @@ export interface ProgressionConfig {
 //  - Miss: same weight, same target.
 export function nextPrescription(history: readonly HistorySession[], cfg: ProgressionConfig): Prescription {
   const sets = cfg.sets;
+  if (cfg.weighted === false) return nextRepsOnly(history, cfg);
   if (history.length === 0) {
     return { w: snapWeight(cfg.startWeight, cfg), reps: cfg.repMin, sets };
   }
@@ -61,4 +63,15 @@ function nextWeightUp(w: number, cfg: ProgressionConfig): number | null {
 // Always an owned weight when a list exists; otherwise the weight as given.
 function snapWeight(w: number, cfg: ProgressionConfig): number {
   return cfg.owned.length > 0 ? ownedFloor(cfg.owned, w) : w;
+}
+
+// Reps only: the same hit rule, but nothing heavier to move to, so the top of the range holds.
+function nextRepsOnly(history: readonly HistorySession[], cfg: ProgressionConfig): Prescription {
+  const sets = cfg.sets;
+  if (history.length === 0) return { w: 0, reps: cfg.repMin, sets };
+  const last = [...history].sort((a, b) => a.date - b.date).at(-1)!;
+  const decisive = last.sets.filter((s) => s.phase === 'work').slice(0, last.target.sets);
+  const reps = last.target.reps;
+  const allHit = decisive.length > 0 && decisive.every((s) => isHit(s, reps));
+  return { w: 0, reps: allHit ? Math.min(reps + 1, cfg.repMax) : reps, sets };
 }

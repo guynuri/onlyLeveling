@@ -88,3 +88,18 @@ describe('nextPrescription: double progression', () => {
     expect(nextPrescription(fixed, CFG).w).toBe(8);
   });
 });
+
+describe('nextPrescription: unweighted exercises (bands, bodyweight)', () => {
+  const REPS_ONLY: ProgressionConfig = { ...CFG, owned: [], weighted: false };
+  it('starts at the bottom of the range with no weight', () => {
+    expect(nextPrescription([], REPS_ONLY)).toEqual({ w: 0, reps: 8, sets: 3 });
+  });
+  it('a hit below the top adds a rep', () => {
+    const h = [session(1, 0, [8, 8, 8], { w: 0, reps: 8, sets: 3 })];
+    expect(nextPrescription(h, REPS_ONLY)).toEqual({ w: 0, reps: 9, sets: 3 });
+  });
+  it('a hit at the top stays at the top: there is no heavier weight to move to', () => {
+    const h = [session(1, 0, [12, 12, 12], { w: 0, reps: 12, sets: 3 })];
+    expect(nextPrescription(h, REPS_ONLY)).toEqual({ w: 0, reps: 12, sets: 3 });
+  });
+});

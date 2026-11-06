@@ -57,10 +57,19 @@ export function isEquipmentFree(ex: Pick<Exercise, 'equipment' | 'requires'>): b
   return ex.equipment === 'bodyweight' && ex.requires.length === 0;
 }
 
-// Plans and swaps stay on exercises done with dumbbells or nothing at all until U4 reads the owned equipment.
-// A dumbbell exercise that also needs a bench, or a bodyweight one that needs a bar, does not count.
-export function isDumbbellCompatible(ex: Pick<Exercise, 'equipment' | 'requires'>): boolean {
-  return (ex.equipment === 'dumbbell' || ex.equipment === 'bodyweight') && ex.requires.every((k) => k === 'dumbbell');
+// Usable with what the user owns: equipment-free exercises always; dumbbell, kettlebell and band exercises when that
+// kit is owned; every kit in `requires` must be owned too. Barbell, cable, machine, other and unknown never are.
+export function usableWith(ex: Pick<Exercise, 'equipment' | 'requires'>, equipment: readonly Kit[]): boolean {
+  if (!ex.requires.every((k) => equipment.includes(k))) return false;
+  if (ex.equipment === 'bodyweight') return true;
+  return (ex.equipment === 'dumbbell' || ex.equipment === 'kettlebell' || ex.equipment === 'band') && equipment.includes(ex.equipment);
+}
+
+// What the weight means for an exercise: owned dumbbell or kettlebell weights, or none (bands, bodyweight).
+export function loadKind(ex: Pick<Exercise, 'equipment' | 'requires'>): 'dumbbell' | 'kettlebell' | 'none' {
+  if (ex.equipment === 'dumbbell' || ex.requires.includes('dumbbell')) return 'dumbbell';
+  if (ex.equipment === 'kettlebell' || ex.requires.includes('kettlebell')) return 'kettlebell';
+  return 'none';
 }
 
 // Derived from force only. Force null means unknown, shown visibly, never guessed.

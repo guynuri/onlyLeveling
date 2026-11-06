@@ -1,12 +1,13 @@
 // Rules-based plan (SPEC §5.6 fallback; PLAN Phase 3). Deterministic: same input, same plan.
-import { isDumbbellCompatible, movementPattern, type Exercise } from './exercise';
-import { ROUTINE } from '../config/thresholds';
+import { movementPattern, usableWith, type Exercise } from './exercise';
+import type { EquipmentChoice } from './types';
 
 export interface TemplateInput {
   daysPerWeek: number;
   exercisesPerDay: number;
   avoid: readonly string[]; // exercise ids or names
   catalogue: readonly Exercise[];
+  equipment: readonly EquipmentChoice[]; // what the user owns; nothing → bodyweight only
 }
 
 // A timed routine item (warm-up or cool-down). Never an exercise, never a set.
@@ -15,8 +16,19 @@ export interface RoutineItem {
   seconds: number;
 }
 
+// What one exercise asks for in a plan: sets and a rep range (U4). Absent: the library default for the exercise.
+export interface Target {
+  sets: number;
+  repMin: number;
+  repMax: number;
+}
+
 export interface TemplateDay {
   index: number;
+  label?: string; // e.g. "Upper", "Pull"
+  targets?: Record<string, Target>; // by exercise id
+  postCardioMinutes?: number; // a cardio block after the lifting (U5 logs it)
+  mobilityMinutes?: number;
   warmup: RoutineItem[];
   exerciseIds: string[]; // catalogue ids only
   cooldown: RoutineItem[];
@@ -26,12 +38,12 @@ export interface Template {
   days: TemplateDay[];
 }
 
-// Candidates: dumbbell-compatible, a known movement pattern, not avoided. Compound lifts first, then ones with
+// Candidates: usable with the owned equipment, a known movement pattern, not avoided. Compound lifts first, then ones with
 // pictures (UX design §3.2), then by id.
 export function candidates(input: TemplateInput): Exercise[] {
   const avoid = new Set(input.avoid);
   return input.catalogue
-    .filter((ex) => isDumbbellCompatible(ex))
+    .filter((ex) => usableWith(ex, input.equipment))
     .filter((ex) => movementPattern(ex) !== 'unknown')
     // A starter plan: rep-based strength work, nothing expert (U4 replaces this builder).
     .filter((ex) => ex.category === 'strength' && ex.mode === 'reps' && ex.level !== 'expert')
@@ -43,25 +55,4 @@ export function candidates(input: TemplateInput): Exercise[] {
       const mb = b.media ? 0 : 1;
       return ca - cb || ma - mb || a.id.localeCompare(b.id);
     });
-}
-
-// Each day takes the next exercisesPerDay candidates in a rotating window, so days differ and
-// no exercise repeats within a day.
-export function buildTemplate(input: TemplateInput): Template {
-  const pool = candidates(input);
-  const per = Math.min(input.exercisesPerDay, pool.length);
-  const days: TemplateDay[] = [];
-  for (let d = 0; d < input.daysPerWeek; d++) {
-    const ids: string[] = [];
-    for (let k = 0; k < per; k++) {
-      ids.push(pool[(d * per + k) % pool.length].id);
-    }
-    days.push({
-      index: d,
-      warmup: ROUTINE.warmup.map((r) => ({ ...r })),
-      exerciseIds: ids,
-      cooldown: ROUTINE.cooldown.map((r) => ({ ...r })),
-    });
-  }
-  return { days };
 }

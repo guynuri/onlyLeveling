@@ -17,6 +17,9 @@ export interface Candidate {
   name: string;
   repMin: number;
   repMax: number;
+  // The weights this exercise can be loaded with. Omitted: the plan's `owned` dumbbells (older apps). null: no weight
+  // (bands, bodyweight), so `w` must be 0. A list: snap to it.
+  loads?: readonly number[] | null;
 }
 
 export interface PlanInput {
@@ -108,7 +111,7 @@ export function validateAiPlan(raw: unknown, input: PlanInput): ValidationResult
         errors.push(`${p} needs exerciseId and reason`);
         return;
       }
-      if (!isFiniteNum(ex.w) || ex.w <= 0 || !isFiniteNum(ex.reps) || !isFiniteNum(ex.sets)) {
+      if (!isFiniteNum(ex.w) || ex.w < 0 || !isFiniteNum(ex.reps) || !isFiniteNum(ex.sets)) {
         errors.push(`${p} needs numeric w, reps and sets`);
         return;
       }
@@ -131,11 +134,21 @@ export function validateAiPlan(raw: unknown, input: PlanInput): ValidationResult
       }
 
       // Corrections (not errors): snap the weight to an owned bell, clamp reps to the range.
+      const loads = cand.loads === undefined ? input.owned : cand.loads;
+      if (loads !== null && ex.w <= 0) {
+        errors.push(`${p} needs numeric w, reps and sets`);
+        return;
+      }
       let w = ex.w;
-      if (input.owned.length > 0) {
-        const snapped = ownedFloor(input.owned, ex.w);
+      if (loads === null) {
+        if (ex.w !== 0) {
+          corrections.push({ path: `${p}.w`, from: ex.w, to: 0, why: 'this exercise carries no weight' });
+          w = 0;
+        }
+      } else if (loads.length > 0) {
+        const snapped = ownedFloor(loads, ex.w);
         if (snapped !== ex.w) {
-          corrections.push({ path: `${p}.w`, from: ex.w, to: snapped, why: 'snapped to an owned dumbbell' });
+          corrections.push({ path: `${p}.w`, from: ex.w, to: snapped, why: 'snapped to an owned weight' });
           w = snapped;
         }
       }

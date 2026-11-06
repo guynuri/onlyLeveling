@@ -38,7 +38,12 @@ export function parsePlanRequest(body: unknown): PlanRequest | null {
   const candidates: Record<string, Candidate> = {};
   for (const [id, c] of entries) {
     if (!isObj(c) || typeof c.name !== 'string' || !intIn(c.repMin, 1, 50) || !intIn(c.repMax, 1, 50)) return null;
-    candidates[id] = { name: c.name, repMin: c.repMin as number, repMax: c.repMax as number };
+    // `loads` is optional (older apps omit it): null = no weight, a list = snap to it.
+    let loads: Candidate['loads'];
+    if (c.loads === null) loads = null;
+    else if (Array.isArray(c.loads) && c.loads.length <= 100 && c.loads.every((n) => typeof n === 'number' && n > 0)) loads = c.loads as number[];
+    else if (c.loads !== undefined) return null;
+    candidates[id] = { name: c.name, repMin: c.repMin as number, repMax: c.repMax as number, ...(loads === undefined ? {} : { loads }) };
   }
   return {
     summary: body.summary,

@@ -3,7 +3,7 @@ import { listExercises, getExercise } from '../../data/exercises';
 import { applySuggestion, planExerciseIds } from '../../domain/plan';
 import { notNowUntil, candidates, reconcile } from './domain/suggest';
 import type { Suggestion } from '../../domain/suggestion';
-import { blockedIds } from '../../domain/profile';
+import { blockedIds, equipmentOf } from '../../domain/profile';
 import { getRepo, getLocalRepo, defaultSettings, currentPlan, repRangeFor } from '../training/data';
 
 // Cards to show now. Saves any new or changed suggestion records, so they sync like other data.
@@ -18,6 +18,7 @@ export async function loadCoachCards(now = Date.now()): Promise<Suggestion[]> {
     now,
     plan,
     owned: s.owned,
+    equipment: equipmentOf(s),
     catalogue,
     workouts,
     stored,

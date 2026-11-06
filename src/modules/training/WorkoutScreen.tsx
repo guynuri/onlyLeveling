@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
 import { getExercise } from '../../data/exercises';
 import { type TemplateDay } from '../../domain/template';
-import { activeAdjustment } from '../../domain/plan';
+import { isDeloadWeek, nextSession, sessionsInBlock } from '../../domain/block';
 import { CoachCards } from '../coach/CoachCards';
-import { nextPrescription, type Prescription } from '../../domain/progression';
+import type { Prescription } from '../../domain/progression';
 import type { SetRow } from '../../domain/session';
 import type { Settings, Workout, Entry } from '../../domain/types';
 import { startRest, remainingMs, type RestTimer } from './rest-timer';
 import { scheduleRestAlert, cancelRestAlert } from '../push/actions';
 import { WeeklyReview } from '../review/ui/WeeklyReview';
-import { getRepo, getLocalRepo, defaultSettings, historyFor, progressionConfigFor, currentPlan } from './data';
-import { parseSetInput, todayFromTemplate } from './validate';
+import { getRepo, getLocalRepo, defaultSettings, currentPlan } from './data';
+import { prescribeFor } from './prescribe';
+import { parseSetInput } from './validate';
 import { ExerciseName } from '../library/ExerciseSheet';
 
 interface ExercisePlan {
@@ -32,6 +33,7 @@ export default function WorkoutScreen() {
   const [now, setNow] = useState(() => Date.now());
   const [status, setStatus] = useState('');
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [deload, setDeload] = useState(false);
 
   // Load settings, history and today's day. Any failure is shown, never left as a silent "Loading…".
   useEffect(() => {
@@ -40,7 +42,8 @@ export default function WorkoutScreen() {
       const s = (await repo.getSettings()) ?? defaultSettings();
       const ws = await repo.listWorkouts();
       const plan = await currentPlan(repo, await getLocalRepo(), s);
-      const today = todayFromTemplate(plan, ws.length);
+      const at = Date.now();
+      const today = nextSession(plan, sessionsInBlock(plan, ws), at, ws.map((w) => w.start));
       if (!today) {
         setLoadError('No plan days yet. Check the days per week in Settings.');
         return;
@@ -48,13 +51,12 @@ export default function WorkoutScreen() {
       setSettings(s);
       setWorkouts(ws);
       setDay(today);
+      setDeload(isDeloadWeek(plan, at));
       setExercises(
         today.exerciseIds.map((id) => {
           const ex = getExercise(id)!;
-          const next = nextPrescription(historyFor(ws, id), progressionConfigFor(ex, s.owned));
-          // An accepted coach change sets the weight for this session only (plan.ts activeAdjustment).
-          const adj = activeAdjustment(plan, id, ws);
-          const p = adj === null ? next : { ...next, w: adj };
+          // The plan's target, an accepted coach weight (this session only) and the planned deload (prescribe.ts).
+          const p = prescribeFor({ plan, day: today, ex, settings: s, workouts: ws, now: at });
           return { exerciseId: id, prescription: p, sets: [], weight: String(p.w), reps: String(p.reps) };
         }),
       );
@@ -123,7 +125,8 @@ export default function WorkoutScreen() {
 
   return (
     <section>
-      <h1>Today · Day {(workouts.length % settings.daysPerWeek) + 1}</h1>
+      <h1>Today · {day.label ?? `Day ${day.index + 1}`}</h1>
+      {deload && <p className="muted">Deload week: lighter work so you come back fresh.</p>}
       <WeeklyReview />
       <CoachCards />
       <p className="small">
@@ -175,6 +178,13 @@ export default function WorkoutScreen() {
           </article>
         );
       })}
+
+      {(day.postCardioMinutes || day.mobilityMinutes) && (
+        <p className="muted">
+          {day.postCardioMinutes ? `After lifting: ${day.postCardioMinutes} min of easy cardio. ` : ''}
+          {day.mobilityMinutes ? `Mobility: ${day.mobilityMinutes} min.` : ''}
+        </p>
+      )}
 
       <h3>Cool-down</h3>
       <ul className="routine">

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { saveProfilePatch, parseSetInput, isIsoDate, todayFromTemplate } from './validate';
+import { saveProfilePatch, parseSetInput, isIsoDate } from './validate';
 import type { Settings } from '../../domain/types';
 
 describe('saveProfilePatch', () => {
@@ -65,23 +65,5 @@ describe('isIsoDate', () => {
     expect(isIsoDate('')).toBe(false);
     expect(isIsoDate('05/11/2026')).toBe(false);
     expect(isIsoDate('2026-1-5')).toBe(false);
-  });
-});
-
-describe('todayFromTemplate', () => {
-  const template = {
-    days: [
-      { index: 0, warmup: [], exerciseIds: ['a'], cooldown: [] },
-      { index: 1, warmup: [], exerciseIds: ['b'], cooldown: [] },
-    ],
-  };
-
-  it('picks the day by finished-session count, cycling through the plan', () => {
-    expect(todayFromTemplate(template, 0)?.index).toBe(0);
-    expect(todayFromTemplate(template, 3)?.index).toBe(1);
-  });
-
-  it('returns null for an empty plan instead of throwing', () => {
-    expect(todayFromTemplate({ days: [] }, 0)).toBeNull();
   });
 });

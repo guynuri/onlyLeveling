@@ -2,10 +2,10 @@
 // with what the user already decided (Accept, Not now, Never) so a card does not come back against their choice.
 import { COACH } from '../../../config/thresholds';
 import { ownedUp } from '../../../domain/dumbbells';
-import type { Exercise } from '../../../domain/exercise';
+import { usableWith, type Exercise } from '../../../domain/exercise';
 import { deloadWeight, planExerciseIds, type Plan } from '../../../domain/plan';
 import { suggestionId, type Suggestion, type SuggestionAction, type SuggestionRule } from '../../../domain/suggestion';
-import type { Workout } from '../../../domain/types';
+import type { EquipmentChoice, Workout } from '../../../domain/types';
 import { pickSwap } from './swap';
 import { detectStale, detectStall, detectTooEasy, historyOf, missedSessions } from './rules';
 
@@ -23,6 +23,7 @@ export interface CoachInput {
   now: number;
   plan: Plan;
   owned: readonly number[];
+  equipment: readonly EquipmentChoice[];
   catalogue: readonly Exercise[];
   workouts: readonly Workout[];
   stored: readonly Suggestion[];
@@ -47,13 +48,30 @@ export function candidates(input: CoachInput): Candidate[] {
     const ex = byId.get(exerciseId);
     if (!ex) continue;
     const hist = historyOf(workouts, exerciseId);
+    // A limit (or the avoid list) added after the plan was made: the plan is never edited by itself, so the exercise
+    // stays and a card offers a swap. It needs no history, so it comes before the history checks.
+    const noKit = !usableWith(ex, input.equipment); // equipment removed in Settings after the plan was made
+    if (input.blocked?.has(exerciseId) || noKit) {
+      const to = pickSwap({ exercise: ex, catalogue: input.catalogue, inPlan, avoid: input.blocked ?? new Set(), equipment: input.equipment, lastUsed, now });
+      if (to) {
+        out.push({
+          rule: 'limit',
+          exerciseId,
+          reason: input.blocked?.has(exerciseId)
+            ? `${ex.name}: you listed a limit or avoid this exercise, and it is still in your plan. A swap with the same muscle is suggested. Training guidance, not medical advice.`
+            : `${ex.name}: it needs equipment you no longer have selected. A swap with the same muscle is suggested.`,
+          action: { kind: 'swap', toId: to.id },
+          lastLogged: hist.length > 0 ? hist[hist.length - 1].date : 0,
+        });
+      }
+    }
     if (hist.length === 0) continue;
     const last = hist[hist.length - 1];
     const lastW = last.target.w;
     const name = ex.name;
     const base = { exerciseId, lastLogged: last.date };
     const swapTo = () =>
-      pickSwap({ exercise: ex, catalogue: input.catalogue, inPlan, avoid: input.blocked ?? new Set(), lastUsed, now });
+      pickSwap({ exercise: ex, catalogue: input.catalogue, inPlan, avoid: input.blocked ?? new Set(), equipment: input.equipment, lastUsed, now });
     const deload: SuggestionAction = { kind: 'deload', w: deloadWeight(lastW, owned, factor) };
 
     const stall = detectStall(hist, now);

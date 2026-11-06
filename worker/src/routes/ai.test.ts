@@ -91,6 +91,14 @@ describe('parsePlanRequest (shape only)', () => {
   it('accepts the request the app sends', () => {
     expect(parsePlanRequest(req)).not.toBeNull();
   });
+  it('keeps per-exercise loads: null for no weight, a list to snap to', () => {
+    const body = { ...req, candidates: { a: { name: 'Push-up', repMin: 8, repMax: 12, loads: null }, b: { name: 'Swing', repMin: 8, repMax: 12, loads: [12, 16] } } };
+    expect(parsePlanRequest(body)?.candidates).toEqual(body.candidates);
+  });
+  it('rejects loads that are not null or a list of positive numbers', () => {
+    expect(parsePlanRequest({ ...req, candidates: { a: { name: 'x', repMin: 8, repMax: 12, loads: 'heavy' } } })).toBeNull();
+    expect(parsePlanRequest({ ...req, candidates: { a: { name: 'x', repMin: 8, repMax: 12, loads: [0] } } })).toBeNull();
+  });
   it('rejects a missing field, a bad day count, and an oversized candidate list', () => {
     expect(parsePlanRequest({ ...req, daysPerWeek: 0 })).toBeNull();
     expect(parsePlanRequest({ ...req, summary: undefined })).toBeNull();
