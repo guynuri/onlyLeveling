@@ -338,3 +338,18 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
 @media (prefers-reduced-motion: reduce) {
   .ui-media--loop .ui-media-peak { animation: none; opacity: 1; }
 }
+
+/* Library rows */
+.ui-scroll-x { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.ui-scroll-x::-webkit-scrollbar { display: none; }
+.ui-scroll-x > * { flex: none; }
+.ui-ex-row { flex-direction: row; align-items: center; gap: var(--s-3); }
+.ui-ex-thumb {
+  flex: none; width: 56px; height: 56px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--r-md); overflow: hidden;
+  background: var(--surface-2);
+}
+.ui-ex-thumb img { width: 100%; height: 100%; object-fit: contain; }
+.ui-ex-thumb .ui-body--sm { height: 52px; gap: 2px; }
+.ui-ex-text { display: flex; flex-direction: column; min-width: 0; }
