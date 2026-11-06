@@ -7,6 +7,7 @@ import { replaceExercise } from '../../../domain/plan';
 import type { Exercise } from '../../../domain/exercise';
 import type { Settings } from '../../../domain/types';
 import type { ValidPlan } from '../../../../shared/ai-plan';
+import { buildPrompt } from '../../../../shared/ai-prompt';
 
 const ex = (over: Partial<Exercise>): Exercise =>
   ({
@@ -73,6 +74,21 @@ describe('what leaves the device (SPEC §5.3)', () => {
     const r = buildPlanRequest(settings, catalogue, 4);
     expect(Object.keys(r).sort()).toEqual(['avoid', 'candidates', 'daysPerWeek', 'exercisesPerDay', 'owned', 'summary']);
     expect(r.exercisesPerDay).toBe(4);
+  });
+});
+
+describe('RepDB content never reaches the AI (CLAUDE.md data table)', () => {
+  it('the prompt carries the name but not the description, tips or picture paths', () => {
+    const rich = ex({
+      id: 'rp_made-up-press',
+      name: 'Made Up Press',
+      description: 'UNIQUE-DESCRIPTION-TEXT',
+      tips: ['UNIQUE-TIP-TEXT'],
+      media: { stills: ['media/repdb/UNIQUE-STILL.webp'] },
+    });
+    const prompt = buildPrompt(buildPlanRequest(settings, [rich], 4));
+    expect(prompt).toContain('Made Up Press');
+    expect(prompt).not.toMatch(/UNIQUE-DESCRIPTION-TEXT|UNIQUE-TIP-TEXT|UNIQUE-STILL|webp/);
   });
 });
 

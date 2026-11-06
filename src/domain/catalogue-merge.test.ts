@@ -127,6 +127,18 @@ describe('mergeCatalogue', () => {
     expect(out[0].tips).toEqual(['Breathe.']);
   });
 
+  it('the same name with different equipment stays two exercises (a kettlebell picture never lands on a dumbbell one)', () => {
+    const out = mergeCatalogue(
+      [fx('fx_Goblet_Squat', 'Goblet Squat')],
+      [mapRepdb(rp({ id: 'goblet-squat', name_en: 'Goblet Squat', equipment: 'kettlebell' }), BASE)!],
+      [],
+      {},
+    );
+    expect(out.map((e) => e.id)).toEqual(['fx_Goblet_Squat', 'rp_goblet-squat']);
+    expect(out[0].media).toBeUndefined();
+    expect(out[0].requires).toEqual(['dumbbell']);
+  });
+
   it('an alias links differently named records', () => {
     const out = mergeCatalogue([fx('fx_A', 'Flat Press')], [mapRepdb(rp({ id: 'other-name' }), BASE)!], [], { 'rp_other-name': 'fx_A' });
     expect(out.map((e) => e.id)).toEqual(['fx_A']);

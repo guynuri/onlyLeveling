@@ -179,7 +179,15 @@ export function mergeCatalogue(
   const byName = new Map(out.map((e, i) => [normaliseName(e.name), i] as const));
   const byId = new Map(out.map((e, i) => [e.id, i] as const));
   for (const r of repdb) {
-    const i = aliases[r.id] !== undefined ? byId.get(aliases[r.id]) : byName.get(normaliseName(r.name));
+    // A name match counts only with the same equipment: RepDB's kettlebell goblet squat is not our dumbbell one.
+    // An alias is an explicit decision and needs no check.
+    const byNameHit = byName.get(normaliseName(r.name));
+    const i =
+      aliases[r.id] !== undefined
+        ? byId.get(aliases[r.id])
+        : byNameHit !== undefined && out[byNameHit].equipment === r.equipment
+          ? byNameHit
+          : undefined;
     if (i === undefined) {
       byName.set(normaliseName(r.name), out.length);
       out.push(r);

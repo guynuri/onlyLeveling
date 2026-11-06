@@ -48,6 +48,8 @@ SOFTWARE.
 | source | licence | what we use | link |
 |---|---|---|---|
 | free-exercise-db | Unlicense (public domain) | exercise text: names, muscles, equipment, instructions. Images not used (no licence stated). Import script: `scripts/import-exercises.ts`. | https://github.com/yuhonas/free-exercise-db |
+| RepDB free tier | RepDB Free Tier License v1.0 (attribution: "Exercise data by RepDB (repdb.co)") | exercise pictures (start/peak), names, muscles, instructions, tips. **Fetched at build time, never committed** (`scripts/fetch-repdb.ts`, pinned commit). Never sent to an LLM. | https://github.com/RepDB/exercise-dataset |
+| openGym catalogue | AGPL-3.0 (openGym text) / MIT (ExerciseDB text, © 2026 Hasan Emir Yıldırım) | extra dumbbell exercises, text only (`src/data/opengym.json`, `scripts/import-opengym.ts`). Never `catalogue/media` (© Gym visual). | https://github.com/DuarteSantos8/openGym |
 
 ## openGym reference (read, not copied)
 
