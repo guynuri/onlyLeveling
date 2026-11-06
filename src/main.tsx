@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
 import App from './App';
 import './styles.css';
+import './ui/ui.css';
 
 // registerType 'autoUpdate' (vite.config.ts): the SW scope follows its file location under BASE,
 // so no explicit scope is passed.
