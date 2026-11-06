@@ -307,3 +307,13 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
 
 /* Expandable card */
 .ui-details > summary { cursor: pointer; font-weight: 600; min-height: var(--tap); display: flex; align-items: center; }
+
+/* Body map (MuscleMap geometry) */
+.ui-body { display: flex; justify-content: center; gap: var(--s-2); }
+.ui-body--md { height: 220px; }
+.ui-body--sm { height: 120px; }
+.ui-body-view { height: 100%; width: auto; }
+.ui-body-sil { fill: var(--border); }
+.ui-body-m { fill: var(--surface-2); stroke: var(--bg); stroke-width: 2; }
+.ui-body-m--secondary { fill: var(--accent); fill-opacity: 0.4; }
+.ui-body-m--primary { fill: var(--accent); }
