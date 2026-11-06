@@ -59,7 +59,7 @@ export function AboutStep(props: { value: AboutDraft; onChange: (v: AboutDraft) 
         options={[
           { value: 'male', label: 'Male' },
           { value: 'female', label: 'Female' },
-          { value: '', label: 'Skip' },
+          { value: '', label: 'Rather not say' },
         ]}
         value={props.value.sex}
         onChange={(sex) => props.onChange({ ...props.value, sex })}
@@ -143,7 +143,7 @@ export function EquipmentStep(props: { value: readonly EquipmentChoice[]; onChan
 export function WeightsStep(props: { label: string; grid: readonly number[]; value: readonly number[]; onChange: (v: number[]) => void }) {
   const sorted = (xs: number[]) => [...xs].sort((a, b) => a - b);
   return (
-    <div className="ui-stack">
+    <div className="ui-stack ob-weights">
       <ChipGroup
         label={props.label}
         options={props.grid.map((w) => ({ value: w, label: `${w}` }))}

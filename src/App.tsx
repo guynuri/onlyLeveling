@@ -15,7 +15,8 @@ import HistoryScreen from './modules/training/HistoryScreen';
 import SettingsScreen from './modules/training/SettingsScreen';
 import ProgressScreen from './modules/progress/ProgressScreen';
 import Onboarding from './modules/onboarding/Onboarding';
-import { getRepo } from './modules/training/data';
+import { getRepo, defaultSettings } from './modules/training/data';
+import { onboardingSteps } from './domain/profile';
 
 // Shell: top bar, screen, tab bar (UX design §6.1). Hash routing only (CLAUDE.md): no server rewrites on GitHub Pages.
 const TABS: ReadonlyArray<{ tab: Tab; label: string; icon: ReactNode }> = [
@@ -67,11 +68,13 @@ export default function App() {
     window.addEventListener(SYNC_EVENT, refresh);
     window.addEventListener('online', onOnline);
     refresh();
-    // First run: no finished onboarding means the interview comes first (SPEC §2).
+    // Unanswered onboarding steps come first: the whole interview on a first run, the v2 questions for an account
+    // onboarded before them (UX design §4, §8).
     getRepo()
       .then((r) => r.getSettings())
       .then((s) => {
-        if (!s?.onboardedAt && !window.location.hash.startsWith('#/onboarding')) window.location.hash = '#/onboarding';
+        const pending = onboardingSteps(s ?? defaultSettings()).length > 0;
+        if (pending && !window.location.hash.startsWith('#/onboarding')) window.location.hash = '#/onboarding';
       })
       .catch(() => undefined);
     // Pull on open: the app shows local data at once, and the server's changes arrive a moment later.

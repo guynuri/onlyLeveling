@@ -1,206 +1,235 @@
-// First-run interview (SPEC §2, §8.2 screen 1). Each answer is saved as it is given, so nothing is lost if the user
-// leaves. Finishing sets onboardedAt and moves on to Today. The questions are the core six plus bodyweight (decided).
+// Onboarding v2 (UX design §4). The steps come from onboardingSteps(): all nine for a new account, the five new ones
+// for an account onboarded before v2 (pre-filled from what it already has). Each Continue saves that step's answer
+// on top of the stored settings, so leaving halfway loses nothing.
 import { useEffect, useState } from 'react';
-import { listExercises } from '../../data/exercises';
+import { PROFILE } from '../../config/thresholds';
+import { equipmentOf, goalsOf, onboardingSteps, parseAbout, validateWeights, type Step } from '../../domain/profile';
+import type { BodyPart, EquipmentChoice, Goal, Settings } from '../../domain/types';
+import { Button } from '../../ui/primitives';
 import { getRepo, defaultSettings } from '../training/data';
-import { parseSettingsForm } from '../training/validate';
-import type { Settings } from '../../domain/types';
+import { saveProfilePatch } from '../training/validate';
 import { ProposePlan } from '../ai/ui/ProposePlan';
-
-const STEPS = ['goal', 'days', 'session', 'owned', 'experience', 'avoid', 'bodyweight', 'plan'] as const;
-type Step = (typeof STEPS)[number];
+import {
+  AboutStep,
+  DaysStep,
+  EquipmentStep,
+  ExperienceStep,
+  GoalsStep,
+  LimitsStep,
+  SessionStep,
+  StepFrame,
+  WeightsStep,
+  type AboutDraft,
+} from './steps';
 
 const todayIso = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
+interface Draft {
+  goals: Goal[];
+  about: AboutDraft;
+  experience: Settings['experience'];
+  days: number;
+  session: number | undefined;
+  equipment: EquipmentChoice[];
+  owned: number[];
+  kettlebells: number[];
+  limits: { parts: BodyPart[]; note: string };
+}
+
+function draftFrom(s: Settings): Draft {
+  return {
+    goals: s.goals ?? (s.goal ? goalsOf(s) : []),
+    about: {
+      sex: s.about?.sex ?? '',
+      age: s.about?.age?.toString() ?? '',
+      heightCm: s.about?.heightCm?.toString() ?? '',
+      weightKg: '',
+    },
+    experience: s.experience,
+    days: s.daysPerWeek,
+    session: s.sessionMinutes,
+    equipment: equipmentOf(s),
+    owned: [...s.owned],
+    kettlebells: [...(s.ownedKettlebells ?? [])],
+    limits: s.limits ?? { parts: [], note: '' },
+  };
+}
+
 export default function Onboarding() {
+  const [steps, setSteps] = useState<Step[] | null>(null);
+  const [draft, setDraft] = useState<Draft | null>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [i, setI] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [draft, setDraft] = useState({ days: '3', owned: '', avoid: '', bodyweight: '' });
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      const repo = await getRepo();
-      const s = (await repo.getSettings()) ?? defaultSettings();
-      setSettings(s);
-      setDraft((d) => ({ ...d, days: String(s.daysPerWeek), owned: s.owned.join(', ') }));
-    })().catch(() => setError('Could not load your settings. Reload to try again.'));
+    getRepo()
+      .then((r) => r.getSettings())
+      .then((saved) => {
+        const s = saved ?? defaultSettings();
+        const list = onboardingSteps(s);
+        setSettings(s);
+        setDraft(draftFrom(s));
+        setSteps(list.length > 0 ? list : ['goals', 'about', 'equipment', 'weights', 'limits']);
+      })
+      .catch(() => setError('Could not load your settings. Reload to try again.'));
   }, []);
 
-  if (!settings) return <p className="muted">{error ?? 'Loading…'}</p>;
-  const step: Step = STEPS[i];
+  if (!steps || !draft || !settings) return <p className="muted">{error ?? 'Loading…'}</p>;
+  const step = steps[i];
+  const isLast = i === steps.length - 1;
+  const v2Done = !steps.slice(i + 1).some((s) => s !== 'plan');
+  const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft({ ...draft, [k]: v });
 
-  // Saves the answer for this step, then moves on. Returns false (and says why) when the answer is not usable.
-  const next = async (patch?: () => Promise<Partial<Settings> | null> | Partial<Settings> | null | false): Promise<void> => {
-    setError(null);
-    try {
-      const result = patch ? await patch() : {};
-      if (result === false) return;
-      if (result) {
-        const repo = await getRepo();
-        const merged = { ...settings, ...result };
-        await repo.saveSettings(merged);
-        setSettings(merged);
+  // What this step saves, or an error that keeps the user on it.
+  const patchFor = async (): Promise<Partial<Settings> | string> => {
+    switch (step) {
+      case 'goals':
+        return draft.goals.length > 0 ? { goals: draft.goals } : 'Pick at least one goal.';
+      case 'about': {
+        const r = parseAbout(draft.about);
+        if (!r.ok) return r.error;
+        if (r.value.weightKg !== null) await (await getRepo()).addBodyweight(todayIso(), r.value.weightKg);
+        return { about: r.value.about };
       }
-      setI((n) => Math.min(n + 1, STEPS.length - 1));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not save that. Try again.');
+      case 'experience':
+        return draft.experience ? { experience: draft.experience } : 'Pick the one that fits best.';
+      case 'days':
+        return { daysPerWeek: draft.days };
+      case 'session':
+        return draft.session ? { sessionMinutes: draft.session } : 'Pick a session length.';
+      case 'equipment':
+        return { equipment: draft.equipment };
+      case 'weights': {
+        const err = validateWeights(draft.equipment, draft.owned, draft.kettlebells);
+        return err ?? { owned: draft.owned, ownedKettlebells: draft.kettlebells };
+      }
+      case 'limits':
+        return { limits: { parts: draft.limits.parts, note: draft.limits.note.slice(0, PROFILE.limitsNoteMax) } };
+      case 'plan':
+        return {};
     }
   };
 
-  const setGoal = (goal: NonNullable<Settings['goal']>) => next(() => ({ goal }));
-  const setSession = (sessionMinutes: number) => next(() => ({ sessionMinutes }));
-  const setExperience = (experience: NonNullable<Settings['experience']>) => next(() => ({ experience }));
-
-  const saveDays = () => {
-    const parsed = parseSettingsForm({ days: draft.days, rest: String(settings.restSec), owned: settings.owned.join(', ') });
-    if (!parsed.ok) {
-      setError(parsed.error);
-      return false as const;
+  const next = async () => {
+    setError(null);
+    setBusy(true);
+    try {
+      const patch = await patchFor();
+      if (typeof patch === 'string') {
+        setError(patch);
+        return;
+      }
+      // The last v2 question marks the new steps answered; a full first run finishes after the plan step.
+      const saved = await saveProfilePatch(await getRepo(), { ...patch, ...(v2Done ? { onboardedV2At: Date.now() } : {}) });
+      setSettings(saved);
+      if (isLast) window.location.hash = '#/home';
+      else setI(i + 1);
+    } catch {
+      setError('Could not save that. Try again.');
+    } finally {
+      setBusy(false);
     }
-    return { daysPerWeek: parsed.value.daysPerWeek };
   };
 
-  const saveOwned = () => {
-    const parsed = parseSettingsForm({ days: String(settings.daysPerWeek), rest: String(settings.restSec), owned: draft.owned });
-    if (!parsed.ok) {
-      setError(parsed.error);
-      return false as const;
-    }
-    return { owned: parsed.value.owned };
-  };
-
-  // Avoid list: names matched to the library. Anything not found is shown, never dropped silently.
-  const saveAvoid = () => {
-    const names = draft.avoid
-      .split(',')
-      .map((t) => t.trim().toLowerCase())
-      .filter((t) => t.length > 0);
-    const byName = new Map(listExercises().map((e) => [e.name.toLowerCase(), e.id]));
-    const missing = names.filter((n) => !byName.has(n));
-    if (missing.length > 0) {
-      setError(`Not in the library: ${missing.join(', ')}. Fix the names or leave them out.`);
-      return false as const;
-    }
-    return { avoid: names.map((n) => byName.get(n) as string) };
-  };
-
-  const saveBodyweight = async () => {
-    const t = draft.bodyweight.trim();
-    if (t === '') return {};
-    const kg = Number(t);
-    if (!Number.isFinite(kg) || kg <= 0) {
-      setError('Bodyweight is a number in kg, or leave it empty.');
-      return false as const;
-    }
-    await (await getRepo()).addBodyweight(todayIso(), kg);
-    return {};
-  };
+  const skippable = step === 'about' || step === 'limits';
 
   return (
-    <section>
-      <p className="muted small">
-        Step {i + 1} of {STEPS.length}
-      </p>
+    <section className="ob-pad">
+      <div className="ob-dots" aria-label={`Step ${i + 1} of ${steps.length}`}>
+        {steps.map((s, k) => (
+          <span key={s} className="ob-dot" data-on={k <= i} />
+        ))}
+      </div>
 
-      {step === 'goal' && (
-        <Question title="What do you want most?">
-          <Choice onPick={() => setGoal('build-muscle')} label="Build muscle (strength is secondary)" />
-          <Choice onPick={() => setGoal('strength')} label="Get stronger (muscle is secondary)" />
-        </Question>
+      {step === 'goals' && (
+        <StepFrame eyebrow="Your goals" title="What are you training for?" why="Pick as many as you like. They count equally and shape your plan.">
+          <GoalsStep value={draft.goals} onChange={(v) => set('goals', v)} />
+        </StepFrame>
       )}
-
-      {step === 'days' && (
-        <Question title="How many days a week can you train?">
-          <input type="number" min={1} max={7} value={draft.days} onChange={(e) => setDraft({ ...draft, days: e.target.value })} aria-label="Days per week" />
-          <button type="button" onClick={() => next(saveDays)}>
-            Next
-          </button>
-        </Question>
+      {step === 'about' && (
+        <StepFrame eyebrow="About you" title="A little about you" why="Picks your body figure and starts your bodyweight log. Skip anything.">
+          <AboutStep value={draft.about} onChange={(v) => set('about', v)} />
+        </StepFrame>
       )}
-
-      {step === 'session' && (
-        <Question title="How long is a session?">
-          <Choice onPick={() => setSession(30)} label="About 30 minutes" />
-          <Choice onPick={() => setSession(45)} label="About 45 minutes" />
-          <Choice onPick={() => setSession(60)} label="About an hour" />
-        </Question>
-      )}
-
-      {step === 'owned' && (
-        <Question title="Which dumbbell weights do you own (kg)?">
-          <p className="muted small">Separate them with commas, for example 4, 6, 8, 10, 12, 14, 16.</p>
-          <input value={draft.owned} onChange={(e) => setDraft({ ...draft, owned: e.target.value })} aria-label="Owned weights" />
-          <button type="button" onClick={() => next(saveOwned)}>
-            Next
-          </button>
-        </Question>
-      )}
-
       {step === 'experience' && (
-        <Question title="How much training have you done recently?">
-          <Choice onPick={() => setExperience('returning')} label="I am returning after a break" />
-          <Choice onPick={() => setExperience('beginner')} label="I am new to this" />
-          <Choice onPick={() => setExperience('intermediate')} label="I train regularly" />
-        </Question>
+        <StepFrame eyebrow="Experience" title="Where are you starting from?" why="Sets how light to start and how fast to progress.">
+          <ExperienceStep value={draft.experience} onChange={(v) => set('experience', v)} />
+        </StepFrame>
       )}
-
-      {step === 'avoid' && (
-        <Question title="Any exercises to avoid? (optional)">
-          <p className="muted small">Exercise names, separated by commas. Leave empty if none.</p>
-          <input value={draft.avoid} onChange={(e) => setDraft({ ...draft, avoid: e.target.value })} aria-label="Exercises to avoid" />
-          <button type="button" onClick={() => next(saveAvoid)}>
-            Next
-          </button>
-        </Question>
+      {step === 'days' && (
+        <StepFrame eyebrow="Schedule" title="How many days a week?" why="Pick what you will actually keep, not your best week.">
+          <DaysStep value={draft.days} onChange={(v) => set('days', v)} />
+        </StepFrame>
       )}
-
-      {step === 'bodyweight' && (
-        <Question title="Your bodyweight in kg (optional)">
-          <p className="muted small">Used for strength ranks. You can add it later in Progress.</p>
-          <input type="number" value={draft.bodyweight} onChange={(e) => setDraft({ ...draft, bodyweight: e.target.value })} aria-label="Bodyweight" />
-          <button type="button" onClick={() => next(saveBodyweight)}>
-            Next
-          </button>
-        </Question>
+      {step === 'session' && (
+        <StepFrame eyebrow="Session length" title="How long is a session?" why="The plan fits the work, including rest, into this time.">
+          <SessionStep value={draft.session} onChange={(v) => set('session', v)} />
+        </StepFrame>
       )}
-
+      {step === 'equipment' && (
+        <StepFrame eyebrow="Equipment" title="What do you have at home?" why="The library and your plans only offer what you can do.">
+          <EquipmentStep value={draft.equipment} onChange={(v) => set('equipment', v)} />
+        </StepFrame>
+      )}
+      {step === 'weights' && (
+        <StepFrame eyebrow="Weights" title="Which weights do you own?" why="Progression only ever suggests a weight you have. Tap each one.">
+          {draft.equipment.includes('dumbbell') && (
+            <WeightsStep label="Dumbbell weights, kg" grid={PROFILE.dumbbellGrid} value={draft.owned} onChange={(v) => set('owned', v)} />
+          )}
+          {draft.equipment.includes('kettlebell') && (
+            <WeightsStep label="Kettlebell weights, kg" grid={PROFILE.kettlebellGrid} value={draft.kettlebells} onChange={(v) => set('kettlebells', v)} />
+          )}
+          {!draft.equipment.includes('dumbbell') && !draft.equipment.includes('kettlebell') && (
+            <p className="muted">No weights to pick: your equipment has no dumbbells or kettlebells.</p>
+          )}
+        </StepFrame>
+      )}
+      {step === 'limits' && (
+        <StepFrame eyebrow="Limits" title="Anything to work around?" why="Sore joints, old injuries, movements you avoid. Optional.">
+          <LimitsStep value={draft.limits} onChange={(v) => set('limits', v)} />
+        </StepFrame>
+      )}
       {step === 'plan' && (
         <ProposePlan
           settings={settings}
           onSaved={async () => {
-            await (await getRepo()).saveSettings({ ...settings, onboardedAt: Date.now() });
+            await saveProfilePatch(await getRepo(), { onboardedAt: Date.now() });
             window.location.hash = '#/home';
           }}
         />
       )}
 
-      {error && <p className="error">{error}</p>}
-      {i > 0 && step !== 'plan' && (
-        <button type="button" onClick={() => setI(i - 1)}>
-          Back
-        </button>
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+
+      {step !== 'plan' && (
+        <div className="ob-foot">
+          {i > 0 ? (
+            <Button variant="ghost" onClick={() => setI(i - 1)} disabled={busy}>
+              Back
+            </Button>
+          ) : (
+            <span />
+          )}
+          <Button onClick={next} disabled={busy}>
+            {skippable && isBlank(step, draft) ? 'Skip' : isLast ? 'Done' : 'Continue'}
+          </Button>
+        </div>
       )}
     </section>
   );
 }
 
-function Question(props: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="question">
-      <h2>{props.title}</h2>
-      {props.children}
-    </div>
-  );
-}
-
-function Choice(props: { label: string; onPick: () => void }) {
-  return (
-    <button type="button" className="choice" onClick={props.onPick}>
-      {props.label}
-    </button>
-  );
+function isBlank(step: Step, d: Draft): boolean {
+  if (step === 'about') return !d.about.sex && !d.about.age && !d.about.heightCm && !d.about.weightKg;
+  if (step === 'limits') return d.limits.parts.length === 0 && !d.limits.note.trim();
+  return false;
 }

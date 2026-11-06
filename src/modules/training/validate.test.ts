@@ -1,6 +1,42 @@
 import { describe, it, expect } from 'vitest';
-import { parseSettingsForm, applySettingsForm, saveSettingsForm, parseSetInput, isIsoDate, todayFromTemplate } from './validate';
+import { parseSettingsForm, applySettingsForm, saveSettingsForm, saveProfilePatch, parseSetInput, isIsoDate, todayFromTemplate } from './validate';
 import type { Settings } from '../../domain/types';
+
+describe('saveProfilePatch', () => {
+  it('merges the patch into the stored settings and keeps everything else', async () => {
+    let stored: Settings = { daysPerWeek: 3, restSec: 90, owned: [4], onboardedAt: 5, reminder: { enabled: true, time: '07:00' } };
+    const repo = {
+      getSettings: async () => stored,
+      saveSettings: async (s: Settings) => {
+        stored = s;
+      },
+    };
+    const out = await saveProfilePatch(repo, { goals: ['lose-fat'], equipment: ['dumbbell', 'band'] });
+    expect(stored).toEqual({
+      daysPerWeek: 3,
+      restSec: 90,
+      owned: [4],
+      onboardedAt: 5,
+      reminder: { enabled: true, time: '07:00' },
+      goals: ['lose-fat'],
+      equipment: ['dumbbell', 'band'],
+    });
+    expect(out).toEqual(stored);
+  });
+
+  it('starts from defaults when nothing is stored yet', async () => {
+    let stored: Settings | undefined;
+    const repo = {
+      getSettings: async () => stored,
+      saveSettings: async (s: Settings) => {
+        stored = s;
+      },
+    };
+    await saveProfilePatch(repo, { goals: ['health'] });
+    expect(stored?.goals).toEqual(['health']);
+    expect(stored?.daysPerWeek).toBeGreaterThan(0);
+  });
+});
 
 describe('saveSettingsForm', () => {
   it('merges into the stored settings at save time, not a copy taken when the screen opened', async () => {
