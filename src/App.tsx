@@ -74,6 +74,7 @@ export default function App() {
         .catch(() => undefined);
     const onHash = () => {
       setRoute(parseRoute(window.location.hash));
+      window.scrollTo(0, 0); // hash navigation keeps the old scroll offset; every screen starts at the top
       void recheck();
     };
     const refresh = () => readSyncState().then(setSync).catch(() => undefined);
