@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Goals are a set with equal weight: `build-muscle`, `strength`, `lose-fat`, `endurance`, `mobility`, `health`. Old `goal` reads as a one-item list.
-- About you (sex, age, height) is optional and never leaves the device; weight becomes a bodyweight log entry (already never sent to AI). Sex picks the body figure.
+- About you (sex, age, height) is optional; sex, age, height and the latest bodyweight are sent to the AI as `body` (owner decision 2026-11-06). Weight also becomes a bodyweight log entry. Sex picks the body figure.
 - Equipment: multi-select of `none` (always implied), `dumbbell`, `kettlebell`, `bench`, `pullup_bar`, `band`. Plans and swaps stay dumbbell/equipment-free until U4 (U1/U2 rule); U3 uses equipment for the library default only.
 - Weights: chip grid only (user decision), dumbbells 1–50 kg; kettlebells shown only when owned.
 - Limits: tappable body parts + optional note. A limit removes exercises from plans, the AI candidate list, swaps and Plan's replace list. A limit never edits a saved plan (coach cards for that are U4). Wording: training guidance, not medical advice.

@@ -14,7 +14,7 @@ export interface Settings {
   owned: number[]; // owned dumbbell weights, kg
   // Onboarding v2 (UX design §4). All optional: older records are read through domain/profile.ts accessors.
   goals?: Goal[];
-  about?: { sex?: 'male' | 'female'; age?: number; heightCm?: number }; // never leaves the device
+  about?: { sex?: 'male' | 'female'; age?: number; heightCm?: number }; // sent to the AI as summary.body (owner decision 2026-11-06)
   equipment?: EquipmentChoice[];
   ownedKettlebells?: number[]; // kg
   limits?: { parts: BodyPart[]; note: string };
