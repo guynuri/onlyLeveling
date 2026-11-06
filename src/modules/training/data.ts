@@ -4,14 +4,14 @@ import { createRepo } from '../../data/idb-repo';
 import type { Repo } from '../../data/repo';
 import { createOutbox, type Outbox } from '../../data/outbox';
 import { createSyncedRepo } from '../../data/synced-repo';
-import { TRAINING, TEMPLATE } from '../../config/thresholds';
+import { BLOCK, TRAINING } from '../../config/thresholds';
 import type { Exercise } from '../../domain/exercise';
 import type { HistorySession, ProgressionConfig } from '../../domain/progression';
 import type { Settings, Workout } from '../../domain/types';
-import { planFromTemplate, planIsCurrent, type Plan } from '../../domain/plan';
-import { buildTemplate } from '../../domain/template';
+import { planFromTemplate, type Plan } from '../../domain/plan';
+import { buildRulesPlan } from '../../domain/plan-builder';
 import { listExercises } from '../../data/exercises';
-import { blockedIds, equipmentOf } from '../../domain/profile';
+
 import { loadKind } from '../../domain/exercise';
 
 // Caches one open handle. A failed open is not cached, so the next call retries. reset() drops the handle,
@@ -53,23 +53,18 @@ export async function getRepo(): Promise<Repo> {
   return createSyncedRepo(createRepo(db), createOutbox(db));
 }
 
-// The saved plan. Built from the rules once, then kept as is: it is rebuilt only when days per week changes.
-// Accepted coach suggestions edit it (coach/actions.ts). Never rebuilt on every open.
+// The saved plan. Built from the rules once (an 8-week block), then kept exactly as saved: the user and the coach edit
+// it, so a change to days per week never replaces it (the Plan screen offers to regenerate instead).
 // A plan built here is derived from settings, so it is saved locally only and never queued for the server:
 // a new device must not push its default over the plan already on the server.
+// When nothing the user owns fits, an empty plan is returned and nothing is saved.
 export async function currentPlan(repo: Repo, local: Repo, s: Settings, now = Date.now()): Promise<Plan> {
   const saved = await repo.getPlan();
-  if (saved && planIsCurrent(saved, s.daysPerWeek)) return saved;
-  const t = buildTemplate({
-    daysPerWeek: s.daysPerWeek,
-    exercisesPerDay: TEMPLATE.exercisesPerDay,
-    avoid: [...blockedIds(s, listExercises())],
-    catalogue: listExercises(),
-    equipment: equipmentOf(s),
-  });
-  const plan = planFromTemplate(t.days, s.daysPerWeek, now);
-  await local.savePlan(plan);
-  return plan;
+  if (saved) return saved;
+  const built = buildRulesPlan({ settings: s, catalogue: listExercises(), kind: 'auto', weeks: BLOCK.defaultWeeks, now });
+  if (!built.ok) return planFromTemplate([], s.daysPerWeek, now);
+  await local.savePlan(built.plan);
+  return built.plan;
 }
 
 export function defaultSettings(): Settings {

@@ -33,10 +33,6 @@ export function planFromTemplate(days: TemplateDay[], daysPerWeek: number, now: 
   return { daysPerWeek, days, adjustments: [], updatedAt: now };
 }
 
-export function planIsCurrent(plan: Plan, daysPerWeek: number): boolean {
-  return plan.daysPerWeek === daysPerWeek;
-}
-
 export function planExerciseIds(plan: Plan): string[] {
   return [...new Set(plan.days.flatMap((d) => d.exerciseIds))];
 }

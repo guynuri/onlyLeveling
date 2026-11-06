@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildTemplate, candidates, type TemplateInput } from './template';
+import { candidates, type TemplateInput } from './template';
 import type { Exercise } from './exercise';
 import { blockedIds } from './profile';
 
@@ -46,53 +46,6 @@ const INPUT = (over: Partial<TemplateInput> = {}): TemplateInput => ({
   catalogue: CATALOGUE,
   equipment: ['dumbbell'],
   ...over,
-});
-
-describe('buildTemplate', () => {
-  it('day count equals days per week', () => {
-    expect(buildTemplate(INPUT({ daysPerWeek: 4 })).days).toHaveLength(4);
-    expect(buildTemplate(INPUT({ daysPerWeek: 2 })).days).toHaveLength(2);
-  });
-
-  it('never picks non-dumbbell equipment (bodyweight is allowed, per D9)', () => {
-    const plan = buildTemplate(INPUT({ daysPerWeek: 3, exercisesPerDay: 5 }));
-    const ids = plan.days.flatMap((d) => d.exerciseIds);
-    expect(ids).not.toContain('BAR_Bench');
-    expect(ids).not.toContain('MACH_Leg');
-  });
-
-  it('excludes avoided exercises by id', () => {
-    const plan = buildTemplate(INPUT({ avoid: ['DB_Press'], exercisesPerDay: 5 }));
-    expect(plan.days.flatMap((d) => d.exerciseIds)).not.toContain('DB_Press');
-  });
-
-  it('never picks an exercise whose movement pattern is unknown', () => {
-    const plan = buildTemplate(INPUT({ daysPerWeek: 3, exercisesPerDay: 5 }));
-    expect(plan.days.flatMap((d) => d.exerciseIds)).not.toContain('DB_Unknown');
-  });
-
-  it('no exercise repeats inside one day', () => {
-    for (const day of buildTemplate(INPUT({ exercisesPerDay: 5 })).days) {
-      expect(new Set(day.exerciseIds).size).toBe(day.exerciseIds.length);
-    }
-  });
-
-  it('warm-up and cool-down are separate blocks, not exercises', () => {
-    for (const day of buildTemplate(INPUT()).days) {
-      expect(day.warmup.length).toBeGreaterThan(0);
-      expect(day.cooldown.length).toBeGreaterThan(0);
-      // Routine items are never in the exercise list, and exercise ids are catalogue ids only.
-      const routineNames = [...day.warmup, ...day.cooldown].map((r) => r.name);
-      for (const id of day.exerciseIds) {
-        expect(routineNames).not.toContain(id);
-        expect(CATALOGUE.map((c) => c.id)).toContain(id);
-      }
-    }
-  });
-
-  it('is deterministic for the same input', () => {
-    expect(buildTemplate(INPUT())).toEqual(buildTemplate(INPUT()));
-  });
 });
 
 describe('candidates suit a starter dumbbell plan', () => {

@@ -2,14 +2,14 @@
 // the plan the user picked. Nothing is saved until the user chooses.
 import { listExercises } from '../../data/exercises';
 import { readSyncState } from '../sync/actions';
-import { buildTemplate } from '../../domain/template';
-import { planFromTemplate, type Plan } from '../../domain/plan';
+import { buildRulesPlan } from '../../domain/plan-builder';
+import type { Plan } from '../../domain/plan';
 import type { Settings } from '../../domain/types';
-import { TEMPLATE } from '../../config/thresholds';
+import { BLOCK, TEMPLATE } from '../../config/thresholds';
 import type { Correction, ValidPlan } from '../../../shared/ai-plan';
 import { buildPlanRequest } from './domain/request';
 import { getRepo, defaultSettings } from '../training/data';
-import { blockedIds, equipmentOf } from '../../domain/profile';
+
 
 export type Proposal =
   | { status: 'ai'; provider: string; plan: ValidPlan; corrections: Correction[] }
@@ -48,15 +48,9 @@ export async function requestProposal(s: Settings, fetchImpl: typeof fetch = fet
 }
 
 // The rules-based plan (SPEC §5.6): always available, and the fallback label applies to it.
-export function rulesPlan(s: Settings, now: number): Plan {
-  const t = buildTemplate({
-    daysPerWeek: s.daysPerWeek,
-    exercisesPerDay: TEMPLATE.exercisesPerDay,
-    avoid: [...blockedIds(s, listExercises())],
-    catalogue: listExercises(),
-    equipment: equipmentOf(s),
-  });
-  return planFromTemplate(t.days, s.daysPerWeek, now);
+export function rulesPlan(s: Settings, now: number): Plan | null {
+  const built = buildRulesPlan({ settings: s, catalogue: listExercises(), kind: 'auto', weeks: BLOCK.defaultWeeks, now });
+  return built.ok ? built.plan : null;
 }
 
 export async function saveChosenPlan(plan: Plan): Promise<void> {

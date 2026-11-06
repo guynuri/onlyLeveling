@@ -1,7 +1,6 @@
 // Rules-based plan (SPEC §5.6 fallback; PLAN Phase 3). Deterministic: same input, same plan.
 import { movementPattern, usableWith, type Exercise } from './exercise';
 import type { EquipmentChoice } from './types';
-import { ROUTINE } from '../config/thresholds';
 
 export interface TemplateInput {
   daysPerWeek: number;
@@ -56,25 +55,4 @@ export function candidates(input: TemplateInput): Exercise[] {
       const mb = b.media ? 0 : 1;
       return ca - cb || ma - mb || a.id.localeCompare(b.id);
     });
-}
-
-// Each day takes the next exercisesPerDay candidates in a rotating window, so days differ and
-// no exercise repeats within a day.
-export function buildTemplate(input: TemplateInput): Template {
-  const pool = candidates(input);
-  const per = Math.min(input.exercisesPerDay, pool.length);
-  const days: TemplateDay[] = [];
-  for (let d = 0; d < input.daysPerWeek; d++) {
-    const ids: string[] = [];
-    for (let k = 0; k < per; k++) {
-      ids.push(pool[(d * per + k) % pool.length].id);
-    }
-    days.push({
-      index: d,
-      warmup: ROUTINE.warmup.map((r) => ({ ...r })),
-      exerciseIds: ids,
-      cooldown: ROUTINE.cooldown.map((r) => ({ ...r })),
-    });
-  }
-  return { days };
 }

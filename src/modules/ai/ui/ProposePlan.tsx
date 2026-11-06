@@ -59,7 +59,14 @@ export function ProposePlan(props: { settings: Settings; onSaved: () => void }) 
     try {
       const now = Date.now();
       if (plan?.kind === 'ai') await saveChosenPlan(planFromProposal(plan.plan, props.settings.daysPerWeek, now));
-      else await saveChosenPlan(rulesPlan(props.settings, now));
+      else {
+        const rules = rulesPlan(props.settings, now);
+        if (!rules) {
+          setError('No exercises fit your equipment and limits. Change them in Settings.');
+          return;
+        }
+        await saveChosenPlan(rules);
+      }
       props.onSaved();
     } catch {
       setError('Could not save the plan. Try again.');
