@@ -22,6 +22,10 @@ interface ClickLike {
 interface ActivateLike {
   waitUntil(p: Promise<unknown>): void;
 }
+interface FetchLike {
+  request: Request;
+  respondWith(r: Promise<Response>): void;
+}
 
 // The server sends only what the app knows how to show. Anything else gets a plain, safe default.
 function readMessage(raw: unknown): Message {
@@ -48,7 +52,25 @@ const sw = self as unknown as {
   addEventListener(type: 'activate', listener: (e: ActivateLike) => void): void;
   addEventListener(type: 'push', listener: (e: PushLike) => void): void;
   addEventListener(type: 'notificationclick', listener: (e: ClickLike) => void): void;
+  addEventListener(type: 'fetch', listener: (e: FetchLike) => void): void;
 };
+
+// Exercise pictures (U2): too many to precache (~12 MB), so each one is cached the first time it is shown and served
+// from the cache after that, offline included. Registered after precacheAndRoute, which handles app files first.
+const MEDIA_CACHE = 'repdb-media-v1';
+sw.addEventListener('fetch', (e) => {
+  const url = new URL(e.request.url);
+  if (e.request.method !== 'GET' || url.origin !== location.origin || !url.pathname.includes('/media/repdb/')) return;
+  e.respondWith(
+    caches.open(MEDIA_CACHE).then(async (cache) => {
+      const hit = await cache.match(e.request);
+      if (hit) return hit;
+      const res = await fetch(e.request);
+      if (res.ok) await cache.put(e.request, res.clone());
+      return res;
+    }),
+  );
+});
 
 // autoUpdate (vite.config.ts): a new build takes over on its own.
 sw.addEventListener('install', () => {

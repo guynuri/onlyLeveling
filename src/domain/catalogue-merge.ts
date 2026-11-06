@@ -11,7 +11,7 @@ export interface RepdbRaw {
   force_type?: string;
   mechanic?: string;
   difficulty?: string;
-  equipment: string | null;
+  equipment?: string | null;
   primary_muscles?: string[];
   secondary_muscles?: string[];
   is_unilateral?: boolean;
@@ -49,8 +49,9 @@ export const REPDB_KIT: Readonly<Record<string, Kit[] | null>> = {
   resistance_band: ['band'],
 };
 
-function repdbKit(eq: string | null): Kit[] | null {
-  if (eq === null) return [];
+// RepDB leaves the key out (or sets null) for equipment-free exercises.
+function repdbKit(eq: string | null | undefined): Kit[] | null {
+  if (eq == null) return [];
   return REPDB_KIT[eq] ?? null;
 }
 

@@ -68,6 +68,12 @@ describe('mapRepdb', () => {
     expect(mapRepdb(rp({ equipment: null }), BASE)?.requires).toEqual([]);
   });
 
+  it('an entry with no equipment key at all is an equipment-free exercise', () => {
+    const raw: RepdbRaw = { ...rp({}) };
+    delete (raw as Partial<RepdbRaw>).equipment;
+    expect(mapRepdb(raw, BASE)?.requires).toEqual([]);
+  });
+
   it('start and peak become two stills under the base; main becomes one', () => {
     expect(mapRepdb(rp({}), BASE)?.media?.stills).toEqual([`${BASE}test-press-start.webp`, `${BASE}test-press-peak.webp`]);
     expect(mapRepdb(rp({ images: { flat: { main: 'images/flat/test-press.webp' } } }), BASE)?.media?.stills).toEqual([

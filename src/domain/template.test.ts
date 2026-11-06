@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildTemplate, type TemplateInput } from './template';
+import { buildTemplate, candidates, type TemplateInput } from './template';
 import type { Exercise } from './exercise';
 
 const ex = (over: Partial<Exercise> & { id: string }): Exercise => ({
@@ -90,5 +90,17 @@ describe('buildTemplate', () => {
 
   it('is deterministic for the same input', () => {
     expect(buildTemplate(INPUT())).toEqual(buildTemplate(INPUT()));
+  });
+});
+
+describe('candidates prefer exercises with pictures', () => {
+  it('between two otherwise equal candidates, the one with media comes first', () => {
+    const pool = candidates({
+      daysPerWeek: 1,
+      exercisesPerDay: 2,
+      avoid: [],
+      catalogue: [ex({ id: 'A_Plain' }), ex({ id: 'B_Pictured', media: { stills: ['media/repdb/b.webp'] } })],
+    });
+    expect(pool.map((e) => e.id)).toEqual(['B_Pictured', 'A_Plain']);
   });
 });

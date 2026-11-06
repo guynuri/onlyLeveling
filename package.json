@@ -14,7 +14,8 @@
     "lint": "eslint .",
     "test": "vitest run && vitest run -c vitest.worker.config.ts",
     "test:worker": "vitest run -c vitest.worker.config.ts",
-    "icons": "node scripts/make-icons.mjs"
+    "icons": "node scripts/make-icons.mjs",
+    "media": "tsx scripts/fetch-repdb.ts"
   },
   "dependencies": {
     "idb": "^8.0.4",

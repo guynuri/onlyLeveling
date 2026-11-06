@@ -9,3 +9,7 @@ dist/
 .superpowers/
 node_modules/
 *.tsbuildinfo
+
+# RepDB data is fetched at build time and never committed (scripts/fetch-repdb.ts)
+src/data/generated/
+public/media/

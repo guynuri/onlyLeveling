@@ -14,26 +14,37 @@ function walk(dir: string): string[] {
 }
 
 describe('bundled catalogue', () => {
-  it('has the 876 free-exercise-db records', () => {
-    expect(listExercises()).toHaveLength(876);
+  it('keeps all 876 free-exercise-db records with their Unlicense licence and source', () => {
+    const fx = listExercises().filter((e) => e.id.startsWith('fx_'));
+    expect(fx).toHaveLength(876);
+    for (const ex of fx) expect(ex).toMatchObject({ source: 'free-exercise-db', textSource: 'free-exercise-db', license: 'Unlicense' });
   });
 
-  it('every record carries the Unlicense licence and its source', () => {
-    for (const ex of listExercises()) {
-      expect(ex).toMatchObject({
-        source: 'free-exercise-db',
-        textSource: 'free-exercise-db',
-        license: 'Unlicense',
-      });
+  it('adds openGym dumbbell exercises as text-only records', () => {
+    const og = listExercises().filter((e) => e.id.startsWith('og_'));
+    expect(og.length).toBeGreaterThan(0);
+    for (const ex of og) {
+      expect(ex.source).toBe('opengym');
+      expect(ex.media).toBeUndefined();
     }
   });
 
-  it('no record has an images field, and none contains an image path', () => {
+  it('every record with known primary muscles has body-map muscles', () => {
     for (const ex of listExercises()) {
-      expect('images' in ex).toBe(false);
+      if (ex.primaryMuscles.some((m) => m !== 'neck')) expect(ex.muscles.primary.length, ex.id).toBeGreaterThan(0);
     }
-    const text = readFileSync(join(ROOT, 'src', 'data', 'exercises.json'), 'utf8');
-    expect(text).not.toMatch(/\.(jpg|jpeg|png|gif|webp)"/i);
+  });
+
+  it('ids are unique', () => {
+    const ids = listExercises().map((e) => e.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('no committed data file holds an image path (RepDB data is never committed)', () => {
+    for (const f of ['exercises.json', 'opengym.json']) {
+      const text = readFileSync(join(ROOT, 'src', 'data', f), 'utf8');
+      expect(text, f).not.toMatch(/\.(jpg|jpeg|png|gif|webp)"/i);
+    }
   });
 
   it('getExercise returns a record by id and undefined for an unknown id', () => {
