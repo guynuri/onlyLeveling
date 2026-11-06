@@ -126,3 +126,38 @@ describe('validateAiPlan: corrections, not errors', () => {
     expect(r.corrections).toEqual([]);
   });
 });
+
+describe('validateAiPlan: per-exercise loads (equipment)', () => {
+  const eqInput: PlanInput = {
+    ...input,
+    candidates: {
+      fx_a: { name: 'Alpha Press', repMin: 8, repMax: 12 },
+      bw_push: { name: 'Push-up', repMin: 8, repMax: 15, loads: null },
+      kb_swing: { name: 'Swing', repMin: 8, repMax: 12, loads: [12, 16] },
+    },
+  };
+  const two = (a: Record<string, unknown>, b: Record<string, unknown> = {}) =>
+    JSON.stringify({ plan: { name: 'S', days: [{ label: 'A', exercises: [ex(a)] }, { label: 'B', exercises: [ex({ exerciseId: 'fx_a', ...b })] }] }, note: 'Guidance.' });
+
+  it('a weight on a bodyweight exercise becomes 0 and is reported', () => {
+    const r = validateAiPlan(two({ exerciseId: 'bw_push', w: 20 }), eqInput);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.plan.days[0].exercises[0].w).toBe(0);
+    expect(r.corrections).toEqual([expect.objectContaining({ path: 'days[0].exercises[0].w', from: 20, to: 0 })]);
+  });
+
+  it('w 0 on a bodyweight exercise needs no correction', () => {
+    const r = validateAiPlan(two({ exerciseId: 'bw_push', w: 0 }), eqInput);
+    expect(r.ok && r.corrections).toEqual([]);
+  });
+
+  it('w 0 on a weighted exercise is rejected', () => {
+    expect(validateAiPlan(two({ exerciseId: 'fx_a', w: 0 }), eqInput).ok).toBe(false);
+  });
+
+  it('a kettlebell exercise snaps to its own weights, not the dumbbells', () => {
+    const r = validateAiPlan(two({ exerciseId: 'kb_swing', w: 15 }), eqInput);
+    expect(r.ok && r.plan.days[0].exercises[0].w).toBe(12);
+  });
+});

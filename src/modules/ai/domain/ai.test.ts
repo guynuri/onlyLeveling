@@ -93,10 +93,35 @@ describe('what leaves the device (SPEC §5.3)', () => {
     expect(JSON.stringify(summaryOf(settings))).not.toMatch(/birth|username|email|token/i);
   });
 
+  const push = ex({ id: 'bw_push', name: 'Push-up', equipment: 'bodyweight' });
+  const swing = ex({ id: 'kb_swing', name: 'Swing', equipment: 'kettlebell', requires: ['kettlebell'] });
+
+  it('the prompt lists each exercise weights, or says it carries none', () => {
+    const s: Settings = { ...settings, equipment: ['dumbbell'] };
+    const prompt = buildPrompt({ ...buildPlanRequest(s, [...catalogue, push], 4), });
+    expect(prompt).toContain('bw_push | Push-up | reps 6-10 | no weight (w 0)');
+    expect(prompt).toContain('fx_press | Press | reps 6-10 | weights 4, 8, 10');
+    expect(prompt).not.toContain('dumbbells only');
+  });
+
+  it('candidates follow equipment: nothing picked → bodyweight only, with no loads', () => {
+    const bare = candidatesOf([...catalogue, push, swing], [], { ...settings, equipment: [], owned: [] });
+    expect(Object.keys(bare)).toEqual(['bw_push']);
+    expect(bare.bw_push.loads).toBeNull();
+  });
+
+  it('dumbbell candidates carry the owned dumbbells, kettlebell ones the owned kettlebells', () => {
+    const s: Settings = { ...settings, equipment: ['dumbbell', 'kettlebell'], ownedKettlebells: [12, 16] };
+    const c = candidatesOf([...catalogue, push, swing], [], s);
+    expect(c.fx_press.loads).toEqual([4, 8, 10]);
+    expect(c.kb_swing.loads).toEqual([12, 16]);
+    expect(c.bw_push.loads).toBeNull();
+  });
+
   it('only dumbbell exercises with a known pattern, and not avoided ones, reach the AI', () => {
-    const c = candidatesOf(catalogue, ['fx_avoid'], ['dumbbell']);
+    const c = candidatesOf(catalogue, ['fx_avoid'], settings);
     expect(Object.keys(c).sort()).toEqual(['fx_iso', 'fx_press']);
-    expect(c.fx_iso).toEqual({ name: 'Curl', repMin: 10, repMax: 15 });
+    expect(c.fx_iso).toEqual({ name: 'Curl', repMin: 10, repMax: 15, loads: [4, 8, 10] });
   });
 
   it('the request carries the settings and candidates, nothing else', () => {
