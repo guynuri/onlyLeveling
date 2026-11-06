@@ -1,204 +1,382 @@
+// Today's session (UX design §6.4). Three stages: a preview you can edit, logging (focus or list view, one tap per
+// pre-filled set), and the finish summary. The session in progress is kept on the device after every change, so a
+// killed iOS PWA does not lose it; only Finish saves a Workout.
 import { useEffect, useState } from 'react';
-import { getExercise } from '../../data/exercises';
-import { type TemplateDay } from '../../domain/template';
+import { getExercise, listExercises } from '../../data/exercises';
 import { isDeloadWeek, nextSession, sessionsInBlock } from '../../domain/block';
+import { loadKind } from '../../domain/exercise';
+import { buildLive, canFinish, currentPosition, logSet, nextSetDefaults, setRir, toEntries, undoLastSet, type LiveExercise } from '../../domain/live-session';
+import type { Plan } from '../../domain/plan';
+import { blockedIds, equipmentOf, workoutViewOf } from '../../domain/profile';
+import type { BodyweightEntry, Settings, Workout } from '../../domain/types';
 import { CoachCards } from '../coach/CoachCards';
-import type { Prescription } from '../../domain/progression';
-import type { SetRow } from '../../domain/session';
-import type { Settings, Workout, Entry } from '../../domain/types';
-import { startRest, remainingMs, type RestTimer } from './rest-timer';
 import { scheduleRestAlert, cancelRestAlert } from '../push/actions';
 import { WeeklyReview } from '../review/ui/WeeklyReview';
-import { getRepo, getLocalRepo, defaultSettings, currentPlan } from './data';
-import { prescribeFor } from './prescribe';
-import { parseSetInput } from './validate';
+import { isLivePr, summarize, type SessionSummary } from '../xp/domain/sessionSummary';
+import { Button, Card } from '../../ui/primitives';
+import { SegmentedControl } from '../../ui/controls';
 import { ExerciseName } from '../library/ExerciseSheet';
+import { getDb, getRepo, getLocalRepo, defaultSettings, currentPlan, historyFor, repRangeFor } from './data';
+import { clearDraft, isRestorable, readDraft, writeDraft } from './draft';
+import { DayEditor } from './DayEditor';
+import { FinishSummary } from './FinishSummary';
+import { prescribeFor } from './prescribe';
+import { RestBar } from './RestBar';
+import { startRest, type RestTimer } from './rest-timer';
+import { RirPicker } from './RirPicker';
+import { SetControls } from './SetControls';
+import { usePlanEditor } from './usePlanEditor';
 
-interface ExercisePlan {
-  exerciseId: string;
-  prescription: Prescription;
-  sets: SetRow[];
-  weight: string;
-  reps: string;
+type Stage = 'preview' | 'logging' | 'summary';
+type Values = { w: number; r: number };
+
+interface Loaded {
+  settings: Settings;
+  workouts: Workout[];
+  bodyweight: BodyweightEntry[];
+  dayIndex: number;
+  deload: boolean;
 }
 
-// Today's session: the next day of the plan. Warm-up and cool-down are shown, not logged as sets.
+// The clock is read here, outside render.
+const nowMs = () => Date.now();
+
 export default function WorkoutScreen() {
-  const [settings, setSettings] = useState<Settings | null>(null);
-  const [workouts, setWorkouts] = useState<Workout[]>([]);
-  const [exercises, setExercises] = useState<ExercisePlan[]>([]);
-  const [day, setDay] = useState<TemplateDay | null>(null);
-  const [start, setStart] = useState<number>(() => Date.now());
+  const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const [plan, setPlan] = useState<Plan | null>(null);
+  const [stage, setStage] = useState<Stage>('preview');
+  const [live, setLive] = useState<LiveExercise[]>([]);
+  const [startedAt, setStartedAt] = useState(0);
+  const [view, setView] = useState<'focus' | 'list'>('focus');
+  const [focus, setFocus] = useState(0);
+  const [pending, setPending] = useState<Record<string, Values>>({}); // stepper edits before the next ✓
   const [rest, setRest] = useState<RestTimer | null>(null);
-  const [now, setNow] = useState(() => Date.now());
+  const [tick, setTick] = useState(nowMs);
+  const [editing, setEditing] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [status, setStatus] = useState('');
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [deload, setDeload] = useState(false);
+  const { edit, error: saveError } = usePlanEditor(plan, setPlan);
 
-  // Load settings, history and today's day. Any failure is shown, never left as a silent "Loading…".
+  // Load settings, history and today's day, and pick up a session that was in progress. Failures are shown.
   useEffect(() => {
     (async () => {
       const repo = await getRepo();
       const s = (await repo.getSettings()) ?? defaultSettings();
       const ws = await repo.listWorkouts();
-      const plan = await currentPlan(repo, await getLocalRepo(), s);
-      const at = Date.now();
-      const today = nextSession(plan, sessionsInBlock(plan, ws), at, ws.map((w) => w.start));
+      const p = await currentPlan(repo, await getLocalRepo(), s);
+      const at = nowMs();
+      const today = nextSession(p, sessionsInBlock(p, ws), at, ws.map((w) => w.start));
       if (!today) {
-        setLoadError('No plan days yet. Check the days per week in Settings.');
+        setLoadError('No plan days yet. Build a plan on the Plan tab.');
         return;
       }
-      setSettings(s);
-      setWorkouts(ws);
-      setDay(today);
-      setDeload(isDeloadWeek(plan, at));
-      setExercises(
-        today.exerciseIds.map((id) => {
-          const ex = getExercise(id)!;
-          // The plan's target, an accepted coach weight (this session only) and the planned deload (prescribe.ts).
-          const p = prescribeFor({ plan, day: today, ex, settings: s, workouts: ws, now: at });
-          return { exerciseId: id, prescription: p, sets: [], weight: String(p.w), reps: String(p.reps) };
-        }),
-      );
-      setStart(Date.now());
+      setLoaded({ settings: s, workouts: ws, bodyweight: await repo.listBodyweight(), dayIndex: today.index, deload: isDeloadWeek(p, at) });
+      setPlan(p);
+      setView(workoutViewOf(s));
+      const draft = await readDraft(await getDb());
+      if (draft && isRestorable(draft, today.index, p.updatedAt, at)) {
+        setLive(draft.exercises);
+        setStartedAt(draft.startedAt);
+        setStage('logging');
+      }
     })().catch(() => setLoadError('Could not load today’s session. Reload the page to try again.'));
   }, []);
 
-  // Tick once a second while a rest runs, so the countdown shows (wall-clock based, see rest-timer.ts).
+  // Keep the session in progress on the device after every change.
+  useEffect(() => {
+    if (stage !== 'logging' || !loaded || !plan) return;
+    void getDb().then((db) => writeDraft(db, { dayIndex: loaded.dayIndex, planUpdatedAt: plan.updatedAt, startedAt, exercises: live }));
+  }, [live, stage, startedAt, loaded, plan]);
+
+  // Tick once a second while a rest runs (wall-clock based, see rest-timer.ts).
   useEffect(() => {
     if (!rest) return;
-    const t = setInterval(() => setNow(Date.now()), 1000);
+    const t = setInterval(() => setTick(nowMs()), 1000);
     return () => clearInterval(t);
   }, [rest]);
 
   if (loadError) return <p className="muted">{loadError}</p>;
-  if (!settings || !day) return <p className="muted">Loading…</p>;
+  if (!loaded || !plan) return <p className="muted">Loading…</p>;
 
-  function logSet(index: number) {
-    const ex = exercises[index];
-    const parsed = parseSetInput(ex.weight, ex.reps);
-    if (!parsed.ok) {
-      setStatus(parsed.error); // refused: nothing is logged as done
+  const { settings } = loaded;
+  const day = plan.days.find((d) => d.index === loaded.dayIndex) ?? plan.days[0];
+  const owned = settings.owned;
+  const names = Object.fromEntries(listExercises().map((e) => [e.id, e.name]));
+
+  const prescriptions = () =>
+    day.exerciseIds.map((id) => {
+      const ex = getExercise(id);
+      return { exercise: ex, prescription: ex ? prescribeFor({ plan, day, ex, settings, workouts: loaded.workouts, now: nowMs() }) : { w: 0, reps: 0, sets: 0 } };
+    });
+
+  const start = () => {
+    const items = buildLive(prescriptions());
+    if (items.length === 0) {
+      setStatus('Nothing in this day can be logged. Edit the day first.');
       return;
     }
+    setLive(items);
+    setStartedAt(nowMs());
+    setFocus(0);
+    setEditing(false);
     setStatus('');
-    const at = Date.now();
-    const row: SetRow = { w: parsed.value.w, r: parsed.value.r, done: true, phase: 'work', at };
-    setExercises((prev) => prev.map((e, i) => (i === index ? { ...e, sets: [...e.sets, row] } : e)));
-    const timer = startRest(at, settings!.restSec);
+    setStage('logging');
+  };
+
+  const valuesFor = (le: LiveExercise): Values => pending[le.exerciseId] ?? nextSetDefaults(le);
+
+  const log = (i: number) => {
+    const le = live[i];
+    const at = nowMs();
+    setLive(live.map((x, k) => (k === i ? logSet(x, valuesFor(x), at) : x)));
+    setPending(({ [le.exerciseId]: _used, ...others }) => others);
+    setConfirmDiscard(false);
+    const timer = startRest(at, settings.restSec);
     setRest(timer);
-    setNow(at);
+    setTick(at);
     // The rest-end push (PLAN Phase 9). The on-screen timer runs either way; a failure is said, not hidden.
     if (timer) {
       scheduleRestAlert(timer.endsAt).catch((e: unknown) =>
         setStatus(`Rest alert not scheduled: ${e instanceof Error ? e.message : 'unknown error'}`),
       );
     } else {
-      // Rest is off: an alert from an earlier set must not fire now.
       cancelRestAlert().catch(() => undefined);
     }
-  }
+  };
 
-  function update(index: number, field: 'weight' | 'reps', value: string) {
-    setExercises((prev) => prev.map((ex, i) => (i === index ? { ...ex, [field]: value } : ex)));
-  }
+  // The set logged most recently, across exercises: what Undo takes back and what the RIR picker belongs to.
+  let last: { exercise: number; set: number; at: number } | null = null;
+  live.forEach((e, i) => {
+    const s = e.sets.at(-1);
+    if (s && (!last || s.at > last.at)) last = { exercise: i, set: e.sets.length - 1, at: s.at };
+  });
+  const lastSet = last as { exercise: number; set: number; at: number } | null;
 
-  async function finish() {
-    const entries: Entry[] = exercises
-      .filter((ex) => ex.sets.length > 0)
-      .map((ex) => ({ exerciseId: ex.exerciseId, planned: ex.prescription, sets: ex.sets }));
-    if (entries.length === 0) {
-      setStatus('Log at least one set first.');
+  const undo = () => {
+    if (!lastSet) return;
+    setLive(live.map((x, k) => (k === lastSet.exercise ? undoLastSet(x) : x)));
+    setRest(null);
+    cancelRestAlert().catch(() => undefined);
+  };
+
+  const finish = async () => {
+    const ok = canFinish(live);
+    if (!ok.ok) {
+      setStatus(ok.error);
       return;
     }
-    const workout: Workout = { id: `w_${start}`, start, end: Date.now(), entries };
-    const repo = await getRepo();
-    await repo.saveWorkout(workout);
-    // A finished workout ends any pending rest alert. A failed cancel must not block saving, so it is ignored.
+    try {
+      const workout: Workout = { id: `w_${startedAt}`, start: startedAt, end: nowMs(), entries: toEntries(live) };
+      const repo = await getRepo();
+      await repo.saveWorkout(workout);
+      // A finished workout ends any pending rest alert and the draft. A failed cancel must not block saving.
+      cancelRestAlert().catch(() => undefined);
+      await clearDraft(await getDb());
+      setSummary(
+        summarize({
+          workouts: loaded.workouts,
+          workout,
+          exerciseById: getExercise,
+          bodyweight: loaded.bodyweight,
+          daysPerWeek: settings.daysPerWeek,
+          repMaxFor: (id) => {
+            const ex = getExercise(id);
+            return ex ? repRangeFor(ex).max : 0;
+          },
+          now: nowMs(),
+        }),
+      );
+      setRest(null);
+      setStage('summary');
+    } catch {
+      setStatus('Could not save the workout. Nothing was lost: try Finish again.');
+    }
+  };
+
+  const discard = async () => {
+    await clearDraft(await getDb());
     cancelRestAlert().catch(() => undefined);
-    setWorkouts([workout, ...workouts]);
-    setStatus('Saved on this device. Last synced: never.');
-    setExercises([]);
+    setLive([]);
+    setRest(null);
+    setConfirmDiscard(false);
+    setStage('preview');
+  };
+
+  if (stage === 'summary' && summary) {
+    return (
+      <FinishSummary
+        summary={summary}
+        names={names}
+        sex={settings.about?.sex ?? 'male'}
+        onDone={() => {
+          window.location.hash = '#/home';
+        }}
+      />
+    );
   }
 
-  const restLeft = rest ? Math.ceil(remainingMs(rest, now) / 1000) : 0;
+  const title = day.label ?? `Day ${day.index + 1}`;
 
+  if (stage === 'preview') {
+    const items = prescriptions();
+    return (
+      <section className="ui-stack">
+        <h1>Today · {title}</h1>
+        {loaded.deload && <p className="muted">Deload week: lighter work so you come back fresh.</p>}
+        <WeeklyReview />
+        <CoachCards />
+        <Card title="Warm-up">
+          <ul className="ui-list">
+            {day.warmup.map((r) => (
+              <li key={r.name}>
+                <span>{r.name}</span>
+                <span className="muted small">{Math.round(r.seconds / 60)} min</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+        <Card
+          title="Exercises"
+          action={
+            <Button size="sm" variant="ghost" onClick={() => setEditing(!editing)}>
+              {editing ? 'Done editing' : 'Edit day'}
+            </Button>
+          }
+        >
+          {editing ? (
+            <DayEditor plan={plan} day={day} equipment={equipmentOf(settings)} blocked={[...blockedIds(settings, listExercises())]} onEdit={edit} />
+          ) : (
+            <ol className="ui-list ui-list--numbered">
+              {items.map(({ exercise, prescription }, i) => (
+                <li key={day.exerciseIds[i]} className="ui-list-stack">
+                  <ExerciseName id={day.exerciseIds[i]} name={exercise?.name ?? day.exerciseIds[i]} />
+                  <span className="muted small">
+                    {prescription.sets} × {prescription.reps}
+                    {exercise && loadKind(exercise) !== 'none' ? ` at ${prescription.w} kg` : ''}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+          {saveError && <p className="error">{saveError}</p>}
+        </Card>
+        {(day.postCardioMinutes || day.mobilityMinutes) && (
+          <p className="muted">
+            {day.postCardioMinutes ? `After lifting: ${day.postCardioMinutes} min of easy cardio. ` : ''}
+            {day.mobilityMinutes ? `Mobility: ${day.mobilityMinutes} min.` : ''}
+          </p>
+        )}
+        {status && <p className="error">{status}</p>}
+        <Button block onClick={start}>
+          Start workout
+        </Button>
+      </section>
+    );
+  }
+
+  const pos = currentPosition(live);
+  const card = (le: LiveExercise, i: number) => {
+    const open = i === focus;
+    const ex = getExercise(le.exerciseId);
+    const weighted = !!ex && loadKind(ex) !== 'none';
+    const history = historyFor(loaded.workouts, le.exerciseId);
+    const isCurrent = pos?.exercise === i;
+    const done = le.sets.length >= le.prescription.sets;
+    const v = valuesFor(le);
+    const target = le.mode === 'time' ? `${le.prescription.sets} × ${le.prescription.reps} s` : `${le.prescription.sets} × ${le.prescription.reps}${weighted ? ` at ${le.prescription.w} kg` : ''}`;
+    return (
+      <article key={le.exerciseId} className={`ui-card ui-live${isCurrent ? ' ui-live--current' : ''}${done && !open ? ' ui-live--idle' : ''}`}>
+        <h2 onClick={() => setFocus(i)}>
+          <ExerciseName id={le.exerciseId} name={names[le.exerciseId] ?? le.exerciseId} />
+        </h2>
+        <p className="muted">Target {target}</p>
+        <div className="ui-set-chips">
+          {le.sets.map((s, k) => (
+            <span key={`${s.at}-${k}`} className="ui-set-chip">
+              {le.mode === 'time' ? `${s.r} s` : `${weighted ? `${s.w} × ` : ''}${s.r}`}
+              {s.rir !== undefined && ` · ${s.rir === 4 ? '4+' : s.rir} left`}
+              {isLivePr(le, history, k) && <span className="ui-pr-badge">PR</span>}
+            </span>
+          ))}
+          {!done && <span className="ui-set-chip ui-set-chip--next">Set {le.sets.length + 1}</span>}
+        </div>
+        {open && (
+          <>
+            <SetControls
+              mode={le.mode}
+              weighted={weighted}
+              w={v.w}
+              r={v.r}
+              owned={owned}
+              setNumber={le.sets.length + 1}
+              setsTotal={le.prescription.sets}
+              onChange={(nv) => setPending({ ...pending, [le.exerciseId]: nv })}
+              onLog={() => log(i)}
+            />
+            {lastSet && lastSet.exercise === i && (
+              <RirPicker value={le.sets[lastSet.set]?.rir} onChange={(rir) => setLive(live.map((x, k) => (k === i ? setRir(x, lastSet.set, rir) : x)))} />
+            )}
+          </>
+        )}
+      </article>
+    );
+  };
+
+  const shown = view === 'focus' ? [focus] : live.map((_, i) => i);
+  const logged = live.reduce((n, e) => n + e.sets.length, 0);
   return (
-    <section>
-      <h1>Today · {day.label ?? `Day ${day.index + 1}`}</h1>
-      {deload && <p className="muted">Deload week: lighter work so you come back fresh.</p>}
-      <WeeklyReview />
-      <CoachCards />
-      <p className="small">
-        <a href="#/progress">Progress and XP</a>
-      </p>
-
-      <h3>Warm-up</h3>
-      <ul className="routine">
-        {day.warmup.map((r) => (
-          <li key={r.name}>
-            {r.name} · {Math.round(r.seconds / 60)} min
-          </li>
-        ))}
-      </ul>
-
-      {rest && restLeft > 0 && (
-        <div className="rest" role="timer" aria-live="off">
-          Rest {Math.floor(restLeft / 60)}:{String(restLeft % 60).padStart(2, '0')}
+    <section className="ui-stack ui-pad-rest">
+      <h1>
+        {title} · {logged} {logged === 1 ? 'set' : 'sets'}
+      </h1>
+      <SegmentedControl
+        label="Workout view"
+        options={[
+          { value: 'focus', label: 'Focus' },
+          { value: 'list', label: 'List' },
+        ]}
+        value={view}
+        onChange={setView}
+      />
+      {shown.map((i) => card(live[i], i))}
+      {view === 'focus' && (
+        <div className="ui-row">
+          <Button variant="secondary" disabled={focus === 0} onClick={() => setFocus(focus - 1)}>
+            Previous
+          </Button>
+          <span className="muted">
+            Exercise {focus + 1} of {live.length}
+          </span>
+          <Button variant="secondary" disabled={focus >= live.length - 1} onClick={() => setFocus(focus + 1)}>
+            Next
+          </Button>
         </div>
       )}
-
-      {exercises.map((ex, i) => {
-        const name = getExercise(ex.exerciseId)?.name ?? ex.exerciseId;
-        return (
-          <article key={ex.exerciseId} className="exercise-card">
-            <h2>
-              <ExerciseName id={ex.exerciseId} name={name} />
-            </h2>
-            <p className="muted">
-              Target {ex.prescription.sets} × {ex.prescription.reps} at {ex.prescription.w} kg
-            </p>
-            <div className="row">
-              <label>
-                kg
-                <input
-                  inputMode="decimal"
-                  value={ex.weight}
-                  onChange={(e) => update(i, 'weight', e.target.value)}
-                />
-              </label>
-              <label>
-                reps
-                <input inputMode="numeric" value={ex.reps} onChange={(e) => update(i, 'reps', e.target.value)} />
-              </label>
-              <button type="button" className="log" onClick={() => logSet(i)}>
-                Log set ({ex.sets.length}/{ex.prescription.sets})
-              </button>
-            </div>
-          </article>
-        );
-      })}
-
       {(day.postCardioMinutes || day.mobilityMinutes) && (
         <p className="muted">
           {day.postCardioMinutes ? `After lifting: ${day.postCardioMinutes} min of easy cardio. ` : ''}
           {day.mobilityMinutes ? `Mobility: ${day.mobilityMinutes} min.` : ''}
         </p>
       )}
-
-      <h3>Cool-down</h3>
-      <ul className="routine">
-        {day.cooldown.map((r) => (
-          <li key={r.name}>
-            {r.name} · {Math.round(r.seconds / 60)} min
-          </li>
-        ))}
-      </ul>
-
-      <button type="button" onClick={finish}>
-        Finish workout
-      </button>
-      <p className="muted">{status}</p>
+      {status && <p className="error">{status}</p>}
+      <div className="ui-row">
+        <Button variant="secondary" disabled={!lastSet} onClick={undo}>
+          Undo last set
+        </Button>
+        <Button onClick={finish}>Finish workout</Button>
+        {confirmDiscard ? (
+          <Button variant="danger" onClick={discard}>
+            Yes, discard
+          </Button>
+        ) : (
+          <Button variant="ghost" onClick={() => setConfirmDiscard(true)}>
+            Discard
+          </Button>
+        )}
+      </div>
+      {rest && <RestBar endsAt={rest.endsAt} now={tick} onSkip={() => { setRest(null); cancelRestAlert().catch(() => undefined); }} />}
     </section>
   );
 }

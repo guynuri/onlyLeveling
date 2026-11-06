@@ -422,5 +422,7 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
   border-radius: var(--r-pill); background: var(--warn); color: var(--bg);
   font-size: var(--fs-xs); font-weight: var(--fw-bold);
 }
-.ui-pad-rest { padding-bottom: calc(var(--tap) + var(--s-6)); }
+.ui-set-controls .ui-row > div { display: flex; flex-direction: column; gap: var(--s-1); }
+/* Room under the last button for the pinned rest bar and the tab bar */
+.ui-pad-rest { padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + var(--tap) + var(--s-6)); }
 @media (prefers-reduced-motion: reduce) { .ui-restbar { box-shadow: var(--shadow); } }

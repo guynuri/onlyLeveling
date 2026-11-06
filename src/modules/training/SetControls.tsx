@@ -47,7 +47,7 @@ export function SetControls(props: {
         </div>
       </div>
       <Button block className="ui-log" onClick={props.onLog}>
-        ✓ Log set {Math.min(props.setNumber, props.setsTotal)} of {props.setsTotal}
+        {props.setNumber > props.setsTotal ? '✓ Log extra set' : `✓ Log set ${props.setNumber} of ${props.setsTotal}`}
       </Button>
     </div>
   );
