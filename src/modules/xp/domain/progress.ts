@@ -3,6 +3,7 @@
 import { XP } from '../../../config/thresholds';
 import type { Exercise } from '../../../domain/exercise';
 import type { BodyweightEntry, Workout } from '../../../domain/types';
+import { cardioXp, countsForStreak, type CardioSession } from '../../../domain/cardio';
 import { e1rm } from '../../../domain/onerm';
 import { BENCHMARK, GROUPS, bellsFor, type Group } from './muscles';
 import { emptyGroupXp, sessionXp, type GroupXp, type SessionEntry } from './sessionXp';
@@ -16,7 +17,8 @@ export interface ProgressInput {
   workouts: readonly Workout[];
   exerciseById: (id: string) => Exercise | undefined;
   bodyweight: readonly BodyweightEntry[];
-  daysPerWeek: number;
+  cardio?: readonly CardioSession[]; // cardio XP, and planned cardio days for the streak
+  daysPerWeek: number; // the plan's sessions per week, cardio days included
   repMaxFor: (exerciseId: string) => number;
   now: number;
 }
@@ -30,7 +32,9 @@ export interface MuscleProgress {
 
 export interface ProgressState {
   muscles: Record<Group, MuscleProgress>;
-  sessions: number;
+  sessions: number; // lifting sessions
+  cardioXp: number; // never added to a muscle
+  cardioSessions: number;
   streak: number;
   badges: string[];
   flaggedSets: number;
@@ -153,14 +157,15 @@ export function computeProgress(input: ProgressInput): ProgressState {
   ) as Record<Group, MuscleProgress>;
 
   const sessions = sorted.length;
+  const cardio = input.cardio ?? [];
+  // A lifting session fills a slot, and so does a finished planned cardio day; an extra or post-lift one does not.
+  const slotStarts = [...sorted.map((w) => w.start), ...cardio.filter(countsForStreak).map((c) => c.start)];
   return {
     muscles,
     sessions,
-    streak: streakWeeks(
-      sorted.map((w) => w.start),
-      input.daysPerWeek,
-      input.now,
-    ),
+    cardioXp: cardio.reduce((sum, c) => sum + cardioXp(c), 0),
+    cardioSessions: cardio.length,
+    streak: streakWeeks(slotStarts, input.daysPerWeek, input.now),
     badges: earnedBadges({ sessions, firstPr, rankUp, maxRank }),
     flaggedSets,
     usedDefaultBodyweight,
