@@ -8,6 +8,7 @@ import { signOutRequest } from './auth-client';
 import type { BodyweightEntry, Settings, Workout } from '../domain/types';
 import type { Plan } from '../domain/plan';
 import type { Suggestion } from '../domain/suggestion';
+import type { CardioSession } from '../domain/cardio';
 
 // What is stored: address and token only. A fetch function cannot be stored, so it is added at sync time.
 export interface ServerConfig {
@@ -57,6 +58,7 @@ interface PullBody {
   plan?: Plan | null;
   suggestions?: Suggestion[];
   badges?: { badgeKey: string; earnedAt: number }[];
+  cardio?: CardioSession[]; // absent from a Worker that does not know cardio yet
   serverTime: number;
 }
 
@@ -102,6 +104,9 @@ export async function syncNow(args: {
   const pending = await outbox.pendingKeys();
   for (const w of body.workouts) {
     if (!pending.has(w.id)) await local.saveWorkout(w);
+  }
+  for (const c of body.cardio ?? []) {
+    if (!pending.has(c.id)) await local.saveCardio(c);
   }
   if (body.settings && !pending.has('settings')) await local.saveSettings(body.settings);
   for (const b of body.bodyweight) {

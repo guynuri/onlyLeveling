@@ -21,11 +21,11 @@ describe('IndexedDB schema v2', () => {
     newer.close();
   });
 
-  it('opens at version 2 with every store PLAN §3.3 lists', async () => {
+  it('opens at the current version with every store PLAN §3.3 lists, and the cardio store (U5b)', async () => {
     const db = await openAppDb(fresh());
     expect(db.version).toBe(DB_VERSION);
     expect([...db.objectStoreNames].sort()).toEqual(
-      ['aiCache', 'badges', 'bodyweight', 'meta', 'outbox', 'plans', 'settings', 'suggestions', 'workouts'].sort(),
+      ['aiCache', 'badges', 'bodyweight', 'cardio', 'meta', 'outbox', 'plans', 'settings', 'suggestions', 'workouts'].sort(),
     );
     db.close();
   });

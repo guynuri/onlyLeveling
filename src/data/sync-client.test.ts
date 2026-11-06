@@ -114,3 +114,10 @@ describe('pushDue', () => {
     expect(called).toBe(false);
   });
 });
+
+describe('toOp: cardio', () => {
+  it('maps saveCardio to the cardio kind', () => {
+    const op = toOp({ id: 3, op: 'saveCardio', key: 'c1', payload: { id: 'c1', start: 1, minutes: 30, type: 'run' }, createdAt: 50, attempts: 0, lastError: null, nextTryAt: 0 });
+    expect(op).toMatchObject({ kind: 'cardio', updatedAt: 50, data: { id: 'c1' } });
+  });
+});
