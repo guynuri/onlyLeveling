@@ -37,6 +37,13 @@ export const E1RM = {
   maxReps: 12,
 } as const;
 
+// The workout screen (UX design §6.4, U5).
+export const WORKOUT = {
+  draftMaxHours: 12, // a session in progress is restored on reopen only if it was started this recently
+  timedStepSec: 5, // seconds per tap on a timed set
+  timedMaxSec: 600,
+} as const;
+
 // Training blocks (UX design §5, U4): a plan runs for one of these lengths; an older plan counts as the default.
 export const BLOCK = {
   defaultWeeks: 8,
