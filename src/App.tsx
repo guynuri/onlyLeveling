@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { ClipboardList, House, Menu, Play, TrendingUp } from 'lucide-react';
 import { allowedWhileOnboarding, parseRoute, tabFor, type Route, type Tab } from './app/route';
 import { onboardingDone } from './domain/profile';
@@ -27,6 +27,10 @@ const TABS: ReadonlyArray<{ tab: Tab; label: string; icon: ReactNode }> = [
   { tab: 'progress', label: 'Progress', icon: <TrendingUp /> },
   { tab: 'more', label: 'More', icon: <Menu /> },
 ];
+
+// Scroll offset per screen (by hash), so Back returns to where the list was; a screen not seen before starts at the top.
+const scrollByHash = new Map<string, number>();
+const hashOf = (url: string) => new URL(url).hash;
 
 function Screen({ route }: { route: Route }) {
   switch (route.screen) {
@@ -60,6 +64,7 @@ export default function App() {
   const [sync, setSync] = useState<SyncState | null>(null);
   // Onboarding is required: while it is unfinished the tab bar is hidden and other screens lead back to it.
   const [mustOnboard, setMustOnboard] = useState(false);
+  const nextScroll = useRef(0);
 
   useEffect(() => {
     const readSettings = () => getRepo().then((r) => r.getSettings());
@@ -72,7 +77,9 @@ export default function App() {
       readSettings()
         .then((s) => enforce(!onboardingDone(s ?? defaultSettings())))
         .catch(() => undefined);
-    const onHash = () => {
+    const onHash = (e: HashChangeEvent) => {
+      scrollByHash.set(hashOf(e.oldURL), window.scrollY);
+      nextScroll.current = scrollByHash.get(hashOf(e.newURL)) ?? 0;
       setRoute(parseRoute(window.location.hash));
       void recheck();
     };
@@ -99,6 +106,10 @@ export default function App() {
       window.removeEventListener('online', onOnline);
     };
   }, []);
+
+  // Hash navigation keeps the old offset, so set it once the new screen is in the DOM.
+  // ponytail: a list that fills in after an async read may be too short to restore fully; wait-for-height if it shows up.
+  useLayoutEffect(() => window.scrollTo(0, nextScroll.current), [route]);
 
   const active = tabFor(route);
 
