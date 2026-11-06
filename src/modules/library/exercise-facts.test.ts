@@ -50,9 +50,12 @@ describe('sourceLine', () => {
       'Text and pictures: Exercise data by RepDB (repdb.co) · RepDB Free Tier License v1.0',
     );
   });
-  it('credits RepDB pictures on a free-exercise-db record that gained them', () => {
-    expect(sourceLine({ ...base, source: 'free-exercise-db', license: 'Unlicense', media: { stills: ['x'] } })).toBe(
-      'Text: free-exercise-db · Unlicense. Pictures: Exercise data by RepDB (repdb.co)',
+  it('a plain free-exercise-db record credits only free-exercise-db', () => {
+    expect(sourceLine({ ...base, source: 'free-exercise-db', license: 'Unlicense' })).toBe('Text: free-exercise-db · Unlicense');
+  });
+  it('credits RepDB text on a free-exercise-db record that took RepDB description or tips, even without pictures', () => {
+    expect(sourceLine({ ...base, source: 'free-exercise-db', license: 'Unlicense', extrasFrom: 'repdb' })).toBe(
+      'Steps: free-exercise-db · Unlicense. Description, tips and pictures: Exercise data by RepDB (repdb.co)',
     );
   });
   it('names openGym and the text licence', () => {

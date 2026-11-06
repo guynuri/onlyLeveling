@@ -206,6 +206,7 @@ export function mergeCatalogue(
     const { media, tips, description, unilateral, variationGroup, tags, muscles, requires } = r;
     out[i] = {
       ...out[i],
+      extrasFrom: 'repdb',
       requires,
       muscles,
       ...(media ? { media } : {}),

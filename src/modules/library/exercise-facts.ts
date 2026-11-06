@@ -36,8 +36,10 @@ const TEXT_SOURCE: Record<Exercise['source'], string> = {
 };
 
 // Where the text and pictures come from, with the licence (CLAUDE.md: every exercise shows its source).
-export function sourceLine(ex: Pick<Exercise, 'source' | 'license' | 'media'>): string {
+// A free-exercise-db record that took RepDB extras keeps its own licence for its steps only; the description, tips
+// and pictures are RepDB's and are credited as such.
+export function sourceLine(ex: Pick<Exercise, 'source' | 'license' | 'extrasFrom'>): string {
   if (ex.source === 'repdb') return `Text and pictures: ${REPDB_CREDIT} · ${ex.license}`;
-  const text = `Text: ${TEXT_SOURCE[ex.source]} · ${ex.license}`;
-  return ex.media ? `${text}. Pictures: ${REPDB_CREDIT}` : text;
+  if (ex.extrasFrom === 'repdb') return `Steps: ${TEXT_SOURCE[ex.source]} · ${ex.license}. Description, tips and pictures: ${REPDB_CREDIT}`;
+  return `Text: ${TEXT_SOURCE[ex.source]} · ${ex.license}`;
 }

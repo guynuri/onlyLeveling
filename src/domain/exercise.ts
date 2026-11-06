@@ -43,11 +43,18 @@ export interface Exercise {
   unilateral?: boolean;
   variationGroup?: string;
   tags?: string[];
+  extrasFrom?: 'repdb'; // a free-exercise-db record that took RepDB's description, tips or pictures (credit line)
   source: ExerciseSource;
   textSource: ExerciseSource;
   license: string;
   author: string | null;
   sourceUrl: string | null;
+}
+
+// Needs nothing at all. `requires` is empty for barbell, cable and machine records too (no Kit for them), so the
+// equipment field decides.
+export function isEquipmentFree(ex: Pick<Exercise, 'equipment' | 'requires'>): boolean {
+  return ex.equipment === 'bodyweight' && ex.requires.length === 0;
 }
 
 // Plans and swaps stay on exercises done with dumbbells or nothing at all until U4 reads the owned equipment.

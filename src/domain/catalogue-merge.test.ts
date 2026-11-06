@@ -136,6 +136,7 @@ describe('mergeCatalogue', () => {
     expect(out[0].instructions).toEqual(['fx text']);
     expect(out[0].media?.stills).toHaveLength(2);
     expect(out[0].tips).toEqual(['Breathe.']);
+    expect(out[0].extrasFrom).toBe('repdb');
   });
 
   it('the same name with different equipment stays two exercises (a kettlebell picture never lands on a dumbbell one)', () => {

@@ -1,5 +1,5 @@
 // Display text for the library. Unknown values are shown as "Unknown", never guessed (PLAN Phase 2 risks).
-import type { Equipment, Exercise, Kit, Level, MovementPattern } from '../../domain/exercise';
+import { isEquipmentFree, type Equipment, type Exercise, type Kit, type Level, type MovementPattern } from '../../domain/exercise';
 
 export const KIT_LABEL: Record<Kit, string> = {
   dumbbell: 'Dumbbells',
@@ -9,9 +9,10 @@ export const KIT_LABEL: Record<Kit, string> = {
   band: 'Band',
 };
 
-// What the exercise needs, in words: "Dumbbells + Bench", or "No equipment".
-export function kitLabel(ex: Pick<Exercise, 'requires'>): string {
-  return ex.requires.length === 0 ? 'No equipment' : ex.requires.map((k) => KIT_LABEL[k]).join(' + ');
+// What the exercise needs, in words: "Dumbbells + Bench", "No equipment", or the equipment name ("Barbell").
+export function kitLabel(ex: Pick<Exercise, 'equipment' | 'requires'>): string {
+  if (ex.requires.length > 0) return ex.requires.map((k) => KIT_LABEL[k]).join(' + ');
+  return isEquipmentFree(ex) ? 'No equipment' : EQUIPMENT_LABEL[ex.equipment];
 }
 
 // The event Plan listens for when the exercise sheet changes the saved plan (a swap).

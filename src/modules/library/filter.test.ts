@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { filterLibrary } from './filter';
+import { kitLabel } from './labels';
 import type { Exercise } from '../../domain/exercise';
 
 const ex = (id: string, over: Partial<Exercise> = {}): Exercise =>
@@ -13,12 +14,30 @@ const ex = (id: string, over: Partial<Exercise> = {}): Exercise =>
   }) as Exercise;
 
 const ALL = [
-  ex('Bench Press', { requires: ['dumbbell', 'bench'], muscles: { primary: ['chest'], secondary: [] } }),
-  ex('Floor Press', { requires: ['dumbbell'], muscles: { primary: ['chest'], secondary: [] } }),
-  ex('Push-up', { requires: [], muscles: { primary: ['chest'], secondary: [] }, aliases: ['press-up'] }),
-  ex('Pull-up', { requires: ['pullup_bar'], muscles: { primary: ['upper-back'], secondary: [] } }),
-  ex('Goblet Squat', { requires: ['dumbbell'], media: { stills: ['x.webp'] }, muscles: { primary: ['quadriceps'], secondary: [] } }),
+  ex('Bench Press', { equipment: 'dumbbell', requires: ['dumbbell', 'bench'], muscles: { primary: ['chest'], secondary: [] } }),
+  ex('Floor Press', { equipment: 'dumbbell', requires: ['dumbbell'], muscles: { primary: ['chest'], secondary: [] } }),
+  ex('Push-up', { equipment: 'bodyweight', requires: [], muscles: { primary: ['chest'], secondary: [] }, aliases: ['press-up'] }),
+  ex('Pull-up', { equipment: 'bodyweight', requires: ['pullup_bar'], muscles: { primary: ['upper-back'], secondary: [] } }),
+  ex('Goblet Squat', { equipment: 'dumbbell', requires: ['dumbbell'], media: { stills: ['x.webp'] }, muscles: { primary: ['quadriceps'], secondary: [] } }),
 ];
+
+describe('equipment the app does not support', () => {
+  const barbell = ex('Barbell Squat', { equipment: 'barbell', requires: [], muscles: { primary: ['quadriceps'], secondary: [] } });
+
+  it('is never "No equipment": hidden whenever any equipment chip is selected', () => {
+    expect(filterLibrary([...ALL, barbell], { text: '', kit: ['none', 'dumbbell'], muscle: null }).map((e) => e.name)).not.toContain('Barbell Squat');
+  });
+
+  it('still shows when no equipment filter is set', () => {
+    expect(filterLibrary([...ALL, barbell], { text: '', kit: [], muscle: null }).map((e) => e.name)).toContain('Barbell Squat');
+  });
+
+  it('is labelled by its equipment, not "No equipment"', () => {
+    expect(kitLabel(barbell)).toBe('Barbell');
+    expect(kitLabel(ALL[2])).toBe('No equipment');
+    expect(kitLabel(ALL[0])).toBe('Dumbbells + Bench');
+  });
+});
 
 const ids = (xs: readonly Exercise[]) => xs.map((e) => e.name);
 

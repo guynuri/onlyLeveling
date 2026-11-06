@@ -1,5 +1,5 @@
 // Library search and filters (UX design §3.3, §6). Pure, tested.
-import type { Exercise, Kit } from '../../domain/exercise';
+import { isEquipmentFree, type Exercise, type Kit } from '../../domain/exercise';
 import type { BodySlug } from '../../domain/muscle-map';
 
 export type KitChoice = Kit | 'none';
@@ -11,10 +11,11 @@ export interface LibraryQuery {
 }
 
 // Doable with the selected kit: every item the exercise needs is selected, and an equipment-free exercise shows
-// only when "None" is selected.
-function fitsKit(ex: Pick<Exercise, 'requires'>, kit: readonly KitChoice[]): boolean {
+// only when "None" is selected. Equipment the app has no chip for (barbell, cable, machine) shows only unfiltered.
+function fitsKit(ex: Pick<Exercise, 'equipment' | 'requires'>, kit: readonly KitChoice[]): boolean {
   if (kit.length === 0) return true;
-  if (ex.requires.length === 0) return kit.includes('none');
+  if (isEquipmentFree(ex)) return kit.includes('none');
+  if (ex.requires.length === 0) return false;
   return ex.requires.every((k) => kit.includes(k));
 }
 
