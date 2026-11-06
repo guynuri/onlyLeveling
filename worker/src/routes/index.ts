@@ -5,13 +5,14 @@ import type { Principal } from '../auth';
 import { WAVE2_MODULE_IDS } from '../../../shared/wave2';
 import { aiSlot } from './ai';
 import { pushSlot } from './push';
+import { reviewSlot } from './review';
 
 export const ROUTE_SLOTS = WAVE2_MODULE_IDS;
 
 export type SlotHandler = (req: Request, env: Env, principal: Principal) => Promise<Response | null>;
 
 // Handlers a Wave 2 phase adds here, one line each.
-export const SLOT_HANDLERS: readonly SlotHandler[] = [aiSlot, pushSlot];
+export const SLOT_HANDLERS: readonly SlotHandler[] = [aiSlot, reviewSlot, pushSlot];
 
 // Runs the handlers in order and returns the first Response. A handler that throws rejects this call, so the
 // caller's error handler (JSON body and CORS headers) still applies.

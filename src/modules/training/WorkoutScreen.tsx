@@ -8,6 +8,7 @@ import type { SetRow } from '../../domain/session';
 import type { Settings, Workout, Entry } from '../../domain/types';
 import { startRest, remainingMs, type RestTimer } from './rest-timer';
 import { scheduleRestAlert, cancelRestAlert } from '../push/actions';
+import { WeeklyReview } from '../review/ui/WeeklyReview';
 import { getRepo, getLocalRepo, defaultSettings, historyFor, progressionConfigFor, currentPlan } from './data';
 import { parseSetInput, todayFromTemplate } from './validate';
 
@@ -122,6 +123,7 @@ export default function WorkoutScreen() {
   return (
     <section>
       <h1>Today · Day {(workouts.length % settings.daysPerWeek) + 1}</h1>
+      <WeeklyReview />
       <CoachCards />
       <p className="small">
         <a href="#/progress">Progress and XP</a>

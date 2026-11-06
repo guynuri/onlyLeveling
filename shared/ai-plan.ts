@@ -56,7 +56,7 @@ const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object
 const isFiniteNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
 // Plain text only (SPEC §5.4): no HTML tags, no Markdown links or code, no bare URLs.
-const MARKUP = /<[^>]*>|\]\(|https?:\/\/|`/;
+export const MARKUP = /<[^>]*>|\]\(|https?:\/\/|`/;
 
 export function validateAiPlan(raw: unknown, input: PlanInput): ValidationResult {
   let data: unknown = raw;

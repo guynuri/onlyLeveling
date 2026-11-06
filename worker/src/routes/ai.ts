@@ -84,7 +84,7 @@ export async function proposePlan(db: D1Database, userId: string, req: PlanReque
 }
 
 // Counts this call for the day and returns the new total.
-async function incrementUsage(db: D1Database, userId: string, day: string): Promise<number> {
+export async function incrementUsage(db: D1Database, userId: string, day: string): Promise<number> {
   const row = await db
     .prepare(
       `INSERT INTO ai_usage (user_id, day, calls) VALUES (?, ?, 1)
@@ -96,7 +96,7 @@ async function incrementUsage(db: D1Database, userId: string, day: string): Prom
   return row?.calls ?? 0;
 }
 
-async function record(
+export async function record(
   db: D1Database,
   userId: string,
   hash: string,
@@ -110,7 +110,7 @@ async function record(
     .run();
 }
 
-async function sha256Hex(text: string): Promise<string> {
+export async function sha256Hex(text: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
@@ -125,7 +125,8 @@ export const aiSlot: SlotHandler = async (req: Request, env: Env, principal: Pri
       status,
       headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) },
     });
-  if (url.pathname !== '/api/ai/plan') return send({ error: 'not found' }, 404);
+  // Other /api/ai paths belong to other slots (the weekly review); the router answers 404 for any left over.
+  if (url.pathname !== '/api/ai/plan') return null;
   if (req.method !== 'POST') return send({ error: 'method not allowed' }, 405);
 
   let body: unknown;
