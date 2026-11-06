@@ -22,9 +22,13 @@ async function call(method: 'POST' | 'DELETE', path: string, body?: unknown): Pr
   if (!res.ok) throw new Error(`Notifications: the server answered ${res.status}. Try again.`);
 }
 
+// The registration if one is active. `ready` would wait forever where no worker is active (dev builds), so the
+// lookup does not use it.
 async function registration(): Promise<ServiceWorkerRegistration> {
   if (!('serviceWorker' in navigator)) throw new Error('This browser has no service worker.');
-  return navigator.serviceWorker.ready;
+  const reg = await navigator.serviceWorker.getRegistration();
+  if (!reg) throw new Error('The app’s background worker is not active yet. Reload and try again.');
+  return reg;
 }
 
 // The browser's side of push, for the settings screen.
@@ -36,7 +40,8 @@ export async function pushFacts(): Promise<PushFacts> {
   let subscribed = false;
   if (hasPushManager) {
     try {
-      subscribed = (await (await navigator.serviceWorker.ready).pushManager.getSubscription()) !== null;
+      const reg = await navigator.serviceWorker.getRegistration();
+      subscribed = reg ? (await reg.pushManager.getSubscription()) !== null : false;
     } catch {
       subscribed = false;
     }
@@ -59,6 +64,15 @@ export async function turnOnPush(): Promise<void> {
   const json = sub.toJSON();
   if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) throw new Error('The browser gave an incomplete subscription.');
   await call('POST', '/api/push/subscribe', { endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth } });
+}
+
+// Turns notifications off: the server forgets this device, then the browser drops its subscription.
+export async function turnOffPush(): Promise<void> {
+  const reg = await registration();
+  const sub = await reg.pushManager.getSubscription();
+  if (!sub) return;
+  await call('POST', '/api/push/unsubscribe', { endpoint: sub.endpoint });
+  await sub.unsubscribe();
 }
 
 // The reminder setting: saved on this device, then on the server (the server does the sending).

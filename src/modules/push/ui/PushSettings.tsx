@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getRepo, defaultSettings } from '../../training/data';
 import { PUSH_COPY, type PushState } from '../domain/support';
-import { currentPushState, turnOnPush, saveReminder } from '../actions';
+import { currentPushState, turnOnPush, turnOffPush, saveReminder } from '../actions';
 
 export function PushSettings() {
   const [state, setState] = useState<PushState | null>(null);
@@ -39,7 +39,8 @@ export function PushSettings() {
     }
   };
 
-  if (!state) return <p className="muted">Checking notifications…</p>;
+  // A failed read shows its message here; the spinner is only for a read still in progress.
+  if (!state) return error ? <p className="error">{error}</p> : <p className="muted">Checking notifications…</p>;
 
   return (
     <section aria-label="Notifications">
@@ -49,6 +50,12 @@ export function PushSettings() {
       {state === 'off' && (
         <button type="button" disabled={busy} onClick={() => run(turnOnPush, 'Notifications are on.')}>
           Turn on notifications
+        </button>
+      )}
+
+      {state === 'on' && (
+        <button type="button" disabled={busy} onClick={() => run(turnOffPush, 'Notifications are off.')}>
+          Turn off notifications
         </button>
       )}
 

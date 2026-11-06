@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, vi, afterEach } from 'vitest';
 import { env } from 'cloudflare:test';
 import { runDue } from './run';
 import { b64uEncode, type VapidConfig } from './webpush';
@@ -7,6 +7,12 @@ import type { Env } from '../env';
 import type { Principal } from '../auth';
 
 const db = (env as unknown as Env).DB;
+
+// A real P-256 private key, made once per run: the routes check that the key imports. Test-only, never stored.
+let TEST_JWK = {} as JsonWebKey;
+beforeAll(async () => {
+  TEST_JWK = (await vapid()).privateJwk;
+});
 const U = 'u_push';
 const NOW = Date.parse('2026-11-05T16:00:00Z'); // 18:00 in Asia/Jerusalem, a Thursday
 
@@ -114,8 +120,8 @@ describe('workout reminder', () => {
 describe('push routes: input rules', () => {
   const principal = { userId: U } as unknown as Principal;
   // The routes need the keys to be set on the server; the test environment has them.
-  const withKeys = { ...(env as unknown as Env), VAPID_PUBLIC: 'pub', VAPID_PRIVATE_JWK: '{}' } as Env;
-  const call = (path: string, body: unknown, method = 'POST', e: Env = withKeys) =>
+  const keyed = (): Env => ({ ...(env as unknown as Env), VAPID_PUBLIC: 'pub', VAPID_PRIVATE_JWK: JSON.stringify(TEST_JWK) }) as Env;
+  const call = (path: string, body: unknown, method = 'POST', e: Env = keyed()) =>
     pushSlot(
       new Request(`https://api.test${path}`, {
         method,
@@ -126,6 +132,19 @@ describe('push routes: input rules', () => {
       principal,
     ) as Promise<Response>;
 
+  it('a private key that is valid JSON but not a key gets 503 at subscribe time', async () => {
+    const bad = { ...(env as unknown as Env), VAPID_PUBLIC: 'pub', VAPID_PRIVATE_JWK: '{}' } as Env;
+    const res = await call('/api/push/subscribe', { endpoint: 'https://fcm.googleapis.com/fcm/send/x', keys: { p256dh: 'a', auth: 'b' } }, 'POST', bad);
+    expect(res.status).toBe(503);
+  });
+
+  it('only the browsers’ push services are accepted as endpoints', async () => {
+    const keys = { p256dh: 'a', auth: 'b' };
+    expect((await call('/api/push/subscribe', { endpoint: 'https://example.com/x', keys })).status).toBe(400);
+    expect((await call('/api/push/subscribe', { endpoint: 'https://fcm.googleapis.com/fcm/send/x', keys })).status).toBe(200);
+    expect((await call('/api/push/subscribe', { endpoint: 'https://web.push.apple.com/abc', keys })).status).toBe(200);
+  });
+
   it('without the server keys, subscribing says so (503) and stores nothing', async () => {
     const noKeys = { ...(env as unknown as Env), VAPID_PUBLIC: undefined, VAPID_PRIVATE_JWK: undefined } as Env;
     const res = await call('/api/push/subscribe', { endpoint: 'https://push.example.test/x', keys: { p256dh: 'a', auth: 'b' } }, 'POST', noKeys);
@@ -134,7 +153,7 @@ describe('push routes: input rules', () => {
   });
 
   it('a subscription is stored once per endpoint', async () => {
-    const sub = { endpoint: 'https://push.example.test/dev1', keys: { p256dh: 'BPk', auth: 'auth' } };
+    const sub = { endpoint: 'https://fcm.googleapis.com/fcm/send/dev1', keys: { p256dh: 'BPk', auth: 'auth' } };
     expect((await call('/api/push/subscribe', sub)).status).toBe(200);
     expect((await call('/api/push/subscribe', sub)).status).toBe(200);
     expect(await db.prepare('SELECT COUNT(*) AS n FROM push_subscriptions WHERE user_id = ?').bind(U).first()).toEqual({ n: 1 });
@@ -155,6 +174,29 @@ describe('push routes: input rules', () => {
     expect((await call('/api/push/rest', { fireAt: Date.now() - 60_000 })).status).toBe(400);
     expect((await call('/api/push/rest', { fireAt: Date.now() + 10 * 60 * 60_000 })).status).toBe(400);
     expect((await call('/api/push/rest', { fireAt: Date.now() + 90_000 })).status).toBe(200);
+  });
+
+  it('a rest, then a cancel (workout finished), then the due run sends nothing', async () => {
+    await subscribe();
+    const principal = { userId: U } as unknown as Principal;
+    const fireAt = Date.now() + 1_000;
+    const post = (path: string, body: unknown, method = 'POST') =>
+      pushSlot(
+        new Request(`https://api.test${path}`, {
+          method,
+          headers: { 'Content-Type': 'application/json', Origin: 'https://guynuri.github.io' },
+          body: method === 'DELETE' ? undefined : JSON.stringify(body),
+        }),
+        { ...(env as unknown as Env), VAPID_PUBLIC: 'pub', VAPID_PRIVATE_JWK: JSON.stringify(TEST_JWK) } as Env,
+        principal,
+      ) as Promise<Response>;
+    expect((await post('/api/push/rest', { fireAt })).status).toBe(200);
+    expect((await post('/api/push/rest', undefined, 'DELETE')).status).toBe(200);
+    const fetchSpy = vi.fn(async () => new Response(null, { status: 201 }));
+    vi.stubGlobal('fetch', fetchSpy);
+    const r = await runDue(db, await vapid(), fireAt + 5_000);
+    expect(r.sent).toBe(0);
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it('a new rest replaces the pending one; cancel clears it', async () => {

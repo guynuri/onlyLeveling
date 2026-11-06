@@ -38,9 +38,12 @@ describe('the week', () => {
 describe('reminder rule', () => {
   const r = { time: '18:00', tz: 'Asia/Jerusalem', lastSentDay: null as string | null };
 
-  it('is due at the set minute, once per local day', () => {
+  it('is due from the set minute for the window, once per local day', () => {
     expect(reminderDue(r, at('2026-11-05T16:00:00Z'))).toBe(true); // 18:00 local
-    expect(reminderDue(r, at('2026-11-05T16:01:00Z'))).toBe(false); // 18:01
+    expect(reminderDue(r, at('2026-11-05T16:01:00Z'))).toBe(true); // 18:01: a late cron run still sends
+    expect(reminderDue(r, at('2026-11-05T16:29:00Z'))).toBe(true); // 18:29: still inside the window
+    expect(reminderDue(r, at('2026-11-05T16:30:00Z'))).toBe(false); // 18:30: window over
+    expect(reminderDue(r, at('2026-11-05T15:59:00Z'))).toBe(false); // 17:59: too early
     expect(reminderDue({ ...r, lastSentDay: '2026-11-05' }, at('2026-11-05T16:00:00Z'))).toBe(false);
   });
 

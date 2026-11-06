@@ -7,10 +7,13 @@ import { corsHeaders } from '../cors';
 import { readLimitedText, TooLargeError } from '../request';
 import { PUSH } from '../config';
 import { validTimeZone } from '../push/schedule';
-import { vapidFromEnv } from '../push/run';
+import { vapidUsable } from '../push/run';
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+// The push services browsers use: Google (Chrome, Android), Mozilla, Apple (Safari, iOS), Microsoft.
+const PUSH_SERVICE =
+  /^https:\/\/(fcm\.googleapis\.com|updates\.push\.services\.mozilla\.com|web\.push\.apple\.com|[a-z0-9-]+\.notify\.windows\.com)\/./;
 
 export const pushSlot: SlotHandler = async (req: Request, env: Env, principal: Principal) => {
   const url = new URL(req.url);
@@ -28,7 +31,7 @@ export const pushSlot: SlotHandler = async (req: Request, env: Env, principal: P
 
   if (req.method !== 'POST') return send({ error: 'method not allowed' }, 405);
   // Without the keys nothing would ever be sent. Say so now, rather than store a subscription that does nothing.
-  if (!vapidFromEnv(env)) return send({ error: 'push is not set up on the server yet' }, 503);
+  if (!(await vapidUsable(env))) return send({ error: 'push is not set up on the server yet' }, 503);
   let body: unknown;
   try {
     body = JSON.parse(await readLimitedText(req));
@@ -41,7 +44,8 @@ export const pushSlot: SlotHandler = async (req: Request, env: Env, principal: P
     const { endpoint, keys } = body;
     const p256dh = keys.p256dh;
     const auth = keys.auth;
-    if (!/^https:\/\/.{1,490}$/.test(endpoint as string) || typeof p256dh !== 'string' || typeof auth !== 'string') {
+    // Only the push services browsers use. Otherwise the Worker would POST, signed, to any host a user names.
+    if (typeof endpoint !== 'string' || !PUSH_SERVICE.test(endpoint) || typeof p256dh !== 'string' || typeof auth !== 'string') {
       return send({ error: 'bad request' }, 400);
     }
     if (p256dh.length > 200 || auth.length > 100) return send({ error: 'bad request' }, 400);

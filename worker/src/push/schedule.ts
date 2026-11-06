@@ -1,4 +1,5 @@
 // Reminder timing in the user's own time zone (PLAN Phase 9). Pure: the caller passes the clock and the zone.
+import { PUSH } from '../config';
 // The week runs Monday to Sunday in that zone. A reminder is due at the set minute, once per local day, and only while
 // the week's finished sessions are below days per week.
 
@@ -39,9 +40,18 @@ export function sessionsThisWeek(starts: readonly number[], tz: string, nowMs: n
   }).length;
 }
 
+// Due from the set minute for the reminder window, once per local day. A cron run that starts a few minutes late
+// still sends; a run after the window does not (so a reminder never arrives hours late).
 export function reminderDue(r: { time: string; tz: string; lastSentDay: string | null }, nowMs: number): boolean {
   const now = localParts(nowMs, r.tz);
-  return now.hm === r.time && now.day !== r.lastSentDay;
+  if (now.day === r.lastSentDay) return false;
+  const late = minutesOf(now.hm) - minutesOf(r.time);
+  return late >= 0 && late < PUSH.reminderWindowMin;
+}
+
+function minutesOf(hm: string): number {
+  const [h, m] = hm.split(':').map(Number);
+  return h * 60 + m;
 }
 
 // Remind while this week's count is short of the plan.

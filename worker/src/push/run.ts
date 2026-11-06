@@ -28,6 +28,18 @@ export function vapidFromEnv(env: { VAPID_PUBLIC?: string; VAPID_PRIVATE_JWK?: s
   }
 }
 
+// True only when the private key really imports as a P-256 signing key. `{}` parses but is not a key.
+export async function vapidUsable(env: { VAPID_PUBLIC?: string; VAPID_PRIVATE_JWK?: string }): Promise<boolean> {
+  const v = vapidFromEnv(env);
+  if (!v) return false;
+  try {
+    await crypto.subtle.importKey('jwk', v.privateJwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function runDue(db: D1Database, vapid: VapidConfig | null, now: number): Promise<RunResult> {
   const result: RunResult = { sent: 0, removed: 0 };
   // Not configured: nothing is sent. The app shows that push is off, so this never fails silently.
@@ -94,7 +106,8 @@ async function notify(db: D1Database, userId: string, message: Message, vapid: V
     try {
       const status = await sendPush(sub, message, vapid, now);
       if (status === 201 || status === 200) out.sent++;
-      else if (status === 404 || status === 410) {
+      // Gone (404, 410) or refused for good (any other 4xx but 429, which is a retry): remove the subscription.
+      else if (status >= 400 && status < 500 && status !== 429) {
         await db.prepare('DELETE FROM push_subscriptions WHERE user_id = ? AND endpoint = ?').bind(userId, sub.endpoint).run();
         out.removed++;
       }
