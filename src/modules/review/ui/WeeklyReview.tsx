@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { loadWeeklyReview, type ReviewView } from '../actions';
 import { showReviewCard } from '../domain/review';
+import { Button, Card } from '../../../ui/primitives';
 
 const LAST_SHOWN_KEY = 'weekly-review-last-shown';
 
@@ -38,14 +39,17 @@ export function WeeklyReview() {
   if (!view) return null;
 
   return (
-    <section className="weekly-review" aria-label="Last week">
-      <h2>Last week</h2>
+    <Card
+      title="Last week"
+      action={
+        <Button variant="ghost" size="sm" onClick={() => setView(null)}>
+          Dismiss
+        </Button>
+      }
+    >
       <p>{view.text}</p>
       {view.label === 'rules' && <p className="muted small">Built by rules; AI unavailable.</p>}
       <p className="muted small">Training guidance, not medical advice.</p>
-      <button type="button" onClick={() => setView(null)}>
-        Dismiss
-      </button>
-    </section>
+    </Card>
   );
 }

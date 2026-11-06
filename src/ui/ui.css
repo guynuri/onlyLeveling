@@ -8,6 +8,7 @@
   border-radius: var(--r-md);
   border: 1px solid transparent;
   font: inherit; font-weight: 600; font-size: var(--fs-md);
+  text-decoration: none;
   cursor: pointer;
   transition: box-shadow 0.15s, transform 0.1s, background 0.15s;
 }
@@ -166,6 +167,8 @@
   color: var(--fg);
   box-shadow: var(--shadow);
 }
+/* Beats the browser's dialog:modal max-width/height, which would leave gaps at the sides on a phone. */
+dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
 .ui-sheet::backdrop { background: rgb(0 0 0 / 55%); }
 .ui-sheet[open] { animation: ui-sheet-up 0.25s ease-out; }
 @keyframes ui-sheet-up { from { transform: translateY(100%); } to { transform: none; } }
@@ -267,3 +270,36 @@
 /* Checkbox with its label */
 .ui-check { display: flex; align-items: center; gap: var(--s-2); min-height: var(--tap); }
 .ui-check input { width: 22px; height: 22px; min-height: 0; accent-color: var(--accent); }
+
+/* Lists inside cards */
+.ui-list { list-style: none; margin: 0 0 var(--s-3); padding: 0; }
+.ui-list > li {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+  min-height: var(--tap);
+  padding: var(--s-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+.ui-list > li:last-child { border-bottom: 0; }
+.ui-list--numbered { counter-reset: item; }
+.ui-list--numbered > li { counter-increment: item; justify-content: flex-start; }
+.ui-list--numbered > li::before { content: counter(item); color: var(--accent); font-weight: var(--fw-bold); min-width: 1.5em; align-self: flex-start; }
+.ui-list > li.ui-list-stack { flex-wrap: wrap; }
+.ui-list-stack > *:not(:first-child) { flex-basis: calc(100% - 1.5em); max-width: calc(100% - 1.5em); margin-left: 1.5em; }
+.ui-list--rows > li { padding: 0; }
+.ui-list-link {
+  display: flex; flex-direction: column; justify-content: center;
+  width: 100%; min-height: 56px; padding: var(--s-2) 0;
+  color: var(--fg); text-decoration: none;
+}
+.ui-select-sm { min-height: 36px; padding: var(--s-1) var(--s-2); font-size: var(--fs-sm); width: auto; max-width: 100%; color: var(--muted); }
+
+/* Sticky search/filter bar */
+.ui-sticky {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; flex-direction: column; gap: var(--s-2);
+  padding: var(--s-2) 0 var(--s-3);
+  background: var(--bg);
+}
+
+/* Expandable card */
+.ui-details > summary { cursor: pointer; font-weight: 600; min-height: var(--tap); display: flex; align-items: center; }

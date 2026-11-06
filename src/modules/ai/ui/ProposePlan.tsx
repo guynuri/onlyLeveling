@@ -10,6 +10,8 @@ import { planFromProposal } from '../domain/apply';
 import { listExercises } from '../../../data/exercises';
 import { requestProposal, rulesPlan, saveChosenPlan, type Proposal } from '../actions';
 import { CopyPasteFallback } from './CopyPasteFallback';
+import { Button, Card } from '../../../ui/primitives';
+import { ExerciseName } from '../../library/ExerciseSheet';
 
 type Preview = { kind: 'ai'; plan: ValidPlan; corrections: Correction[] } | { kind: 'rules'; reason: string };
 
@@ -58,18 +60,20 @@ export function ProposePlan(props: { settings: Settings; onSaved: () => void }) 
   };
 
   return (
-    <section>
+    <section className="ui-stack">
       <h2>Your first plan</h2>
       {!preview && (
-        <>
+        <Card>
           <p className="muted">The AI proposes a plan from your answers. Your rules plan is always there as an alternative.</p>
-          <button type="button" onClick={propose} disabled={busy}>
-            Propose a plan
-          </button>
-          <button type="button" onClick={() => save(null)} disabled={busy}>
-            Use the rules plan
-          </button>
-        </>
+          <div className="ui-row">
+            <Button onClick={propose} disabled={busy}>
+              Propose a plan
+            </Button>
+            <Button variant="secondary" onClick={() => save(null)} disabled={busy}>
+              Use the rules plan
+            </Button>
+          </div>
+        </Card>
       )}
 
       {preview?.kind === 'rules' && (
@@ -82,17 +86,19 @@ export function ProposePlan(props: { settings: Settings; onSaved: () => void }) 
         <>
           <h3>{preview.plan.name}</h3>
           {preview.plan.days.map((d) => (
-            <div key={d.label} className="plan-day">
-              <h4>{d.label}</h4>
-              <ol>
+            <Card key={d.label} title={d.label}>
+              <ol className="ui-list ui-list--numbered">
                 {d.exercises.map((e) => (
-                  <li key={e.exerciseId}>
-                    {getExercise(e.exerciseId)?.name ?? e.exerciseId} · {e.w} kg · {e.sets} × {e.reps}
-                    <div className="muted small">{e.reason}</div>
+                  <li key={e.exerciseId} className="ui-list-stack">
+                    <span>
+                      <ExerciseName id={e.exerciseId} name={getExercise(e.exerciseId)?.name ?? e.exerciseId} /> · {e.w} kg ·{' '}
+                      {e.sets} × {e.reps}
+                    </span>
+                    <span className="muted small">{e.reason}</span>
                   </li>
                 ))}
               </ol>
-            </div>
+            </Card>
           ))}
           {preview.corrections.length > 0 && (
             <div className="muted small">
@@ -111,18 +117,18 @@ export function ProposePlan(props: { settings: Settings; onSaved: () => void }) 
       )}
 
       {preview && (
-        <div className="choices">
+        <div className="ui-row">
           {preview.kind === 'ai' && (
-            <button type="button" onClick={() => save(preview)} disabled={busy}>
+            <Button onClick={() => save(preview)} disabled={busy}>
               Use this plan
-            </button>
+            </Button>
           )}
-          <button type="button" onClick={() => save({ kind: 'rules', reason: '' })} disabled={busy}>
+          <Button variant={preview.kind === 'ai' ? 'secondary' : 'primary'} onClick={() => save({ kind: 'rules', reason: '' })} disabled={busy}>
             Use the rules plan
-          </button>
-          <button type="button" onClick={propose} disabled={busy}>
+          </Button>
+          <Button variant="ghost" onClick={propose} disabled={busy}>
             Propose again
-          </button>
+          </Button>
         </div>
       )}
 

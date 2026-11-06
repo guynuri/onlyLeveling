@@ -150,7 +150,8 @@ input, textarea, select {
 .code { font-family: var(--font-mono); font-size: var(--fs-lg); letter-spacing: 0.05em; }
 .source { display: block; margin-top: var(--s-4); color: var(--muted); font-size: var(--fs-sm); }
 
-/* Legacy screen classes, kept until their screens move onto src/ui/ (U1 Tasks 6–7) or are rewritten (U3, U5, U6). */
+/* Legacy screen classes for the screens that U3 (Onboarding), U5 (Workout) and U6 (Progress) rewrite. Plain
+   <button>s there still use this default look until then. */
 button {
   font: inherit;
   font-weight: 600;
@@ -163,32 +164,16 @@ button {
   cursor: pointer;
 }
 button:disabled { opacity: 0.5; cursor: default; }
-button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
 
-.bottom-nav {
-  position: fixed; inset: auto 0 0 0;
-  display: flex; justify-content: space-around; background: var(--surface);
-  padding: var(--s-2) 0 calc(var(--s-2) + env(safe-area-inset-bottom));
-}
-.bottom-nav a { color: var(--muted); text-decoration: none; font-size: var(--fs-sm); padding: var(--s-1) var(--s-2); }
-.bottom-nav a[aria-current='page'] { color: var(--accent); }
-
-.toggle { display: flex; gap: var(--s-2); align-items: center; margin-bottom: var(--s-2); }
-.exercise-list { list-style: none; padding: 0; margin: 0; }
-.exercise-list li { display: flex; flex-direction: column; padding: var(--s-3) 0; border-bottom: 1px solid var(--border); }
-.exercise-list a { color: var(--fg); text-decoration: none; font-weight: 500; }
 .facts { display: grid; grid-template-columns: max-content 1fr; gap: var(--s-1) var(--s-3); }
 .facts dt { color: var(--muted); }
 .facts dd { margin: 0; }
-.credit { padding: var(--s-2) 0; border-bottom: 1px solid var(--border); }
-.credit h2 { font-size: var(--fs-md); margin: 0 0 var(--s-1); }
 
 .field { display: flex; flex-direction: column; gap: var(--s-1); margin-bottom: var(--s-3); }
 .row { display: flex; gap: var(--s-2); align-items: flex-end; flex-wrap: wrap; }
 .row label { display: flex; flex-direction: column; gap: var(--s-1); flex: 1; min-width: 80px; }
 
 .question { display: flex; flex-direction: column; gap: var(--s-3); margin-bottom: var(--s-4); }
-.choices { display: flex; flex-direction: column; gap: var(--s-2); }
 .choice { text-align: left; background: var(--surface); color: var(--fg); border: 1px solid var(--border); }
 
 .exercise-card {
@@ -206,18 +191,6 @@ button.ghost { background: transparent; color: var(--accent); border: 1px solid 
   background: var(--surface-2); border-radius: var(--r-md); box-shadow: var(--glow);
 }
 .routine { color: var(--muted); }
-.history { list-style: none; padding: 0; }
-.history li { padding: var(--s-2) 0; border-bottom: 1px solid var(--border); }
-.plan-day { border-bottom: 1px solid var(--border); padding-bottom: var(--s-3); margin-bottom: var(--s-3); }
-
-.coach-card, .weekly-review, .copy-paste {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg);
-  padding: var(--s-4);
-  margin-bottom: var(--s-3);
-}
-.coach-actions { display: flex; gap: var(--s-2); flex-wrap: wrap; }
 
 .progress-top { display: flex; gap: var(--s-4); align-items: flex-start; flex-wrap: wrap; }
 .progress-detail { flex: 1; min-width: 160px; }
