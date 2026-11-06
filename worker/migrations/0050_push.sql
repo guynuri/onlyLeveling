@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   p256dh     TEXT    NOT NULL,          -- the device's public key (base64url)
   auth       TEXT    NOT NULL,          -- the device's auth secret (base64url)
   created_at INTEGER NOT NULL,
+  failures   INTEGER NOT NULL DEFAULT 0, -- sends in a row that did not reach the push service; reset on success
   PRIMARY KEY (user_id, endpoint)
 );
 

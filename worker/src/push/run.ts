@@ -50,10 +50,12 @@ export async function runDue(db: D1Database, vapid: VapidConfig | null, now: num
     .bind(now)
     .all<{ user_id: string; fire_at: number }>();
   for (const row of rests.results) {
-    await db.prepare('DELETE FROM rest_alerts WHERE user_id = ?').bind(row.user_id).run();
     // A rest alert that is late by more than the limit is dropped: a "rest is over" minutes later is noise.
-    if (now - row.fire_at > PUSH.restStaleMs) continue;
-    add(result, await notify(db, row.user_id, { kind: 'rest', title: 'Rest is over', body: 'Time for your next set.' }, vapid, now));
+    if (now - row.fire_at <= PUSH.restStaleMs) {
+      add(result, await notify(db, row.user_id, { kind: 'rest', title: 'Rest is over', body: 'Time for your next set.' }, vapid, now));
+    }
+    // Cleared only after the send was attempted, so a send that threw does not lose the alert silently.
+    await db.prepare('DELETE FROM rest_alerts WHERE user_id = ?').bind(row.user_id).run();
   }
 
   const reminders = await db
@@ -103,16 +105,22 @@ async function notify(db: D1Database, userId: string, message: Message, vapid: V
     .bind(userId)
     .all<PushSub>();
   for (const sub of subs.results) {
+    let status: number;
     try {
-      const status = await sendPush(sub, message, vapid, now);
-      if (status === 201 || status === 200) out.sent++;
-      // Gone (404, 410) or refused for good (any other 4xx but 429, which is a retry): remove the subscription.
-      else if (status >= 400 && status < 500 && status !== 429) {
-        await db.prepare('DELETE FROM push_subscriptions WHERE user_id = ? AND endpoint = ?').bind(userId, sub.endpoint).run();
-        out.removed++;
-      }
+      status = await sendPush(sub, message, vapid, now);
     } catch {
-      // Unreachable push service: keep the subscription and try again on the next run.
+      status = 0; // unreachable: counted as a failed send below
+    }
+    if (status === 201 || status === 200) {
+      out.sent++;
+      await db.prepare('UPDATE push_subscriptions SET failures = 0 WHERE user_id = ? AND endpoint = ?').bind(userId, sub.endpoint).run();
+    } else if (status >= 400 && status < 500 && status !== 429) {
+      // Gone (404, 410) or refused for good: remove the subscription.
+      await db.prepare('DELETE FROM push_subscriptions WHERE user_id = ? AND endpoint = ?').bind(userId, sub.endpoint).run();
+      out.removed++;
+    } else {
+      // Unreachable, slow or server error: keep it, and count the failure so the app can show it.
+      await db.prepare('UPDATE push_subscriptions SET failures = failures + 1 WHERE user_id = ? AND endpoint = ?').bind(userId, sub.endpoint).run();
     }
   }
   return out;

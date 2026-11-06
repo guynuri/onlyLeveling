@@ -61,6 +61,23 @@ describe('rest alerts', () => {
     expect(await db.prepare('SELECT COUNT(*) AS n FROM push_subscriptions').first()).toEqual({ n: 0 });
   });
 
+  it('a send that does not reach the push service is counted; a later success resets the count', async () => {
+    await subscribe();
+    const failing = async () => {
+      await db.prepare('INSERT INTO rest_alerts (user_id, fire_at) VALUES (?, ?)').bind(U, NOW - 1000).run();
+      vi.stubGlobal('fetch', async () => new Response(null, { status: 500 }));
+      await runDue(db, await vapid(), NOW);
+    };
+    await failing();
+    await failing();
+    expect(await db.prepare('SELECT failures FROM push_subscriptions WHERE user_id = ?').bind(U).first()).toEqual({ failures: 2 });
+
+    await db.prepare('INSERT INTO rest_alerts (user_id, fire_at) VALUES (?, ?)').bind(U, NOW - 1000).run();
+    vi.stubGlobal('fetch', async () => new Response(null, { status: 201 }));
+    await runDue(db, await vapid(), NOW);
+    expect(await db.prepare('SELECT failures FROM push_subscriptions WHERE user_id = ?').bind(U).first()).toEqual({ failures: 0 });
+  });
+
   it('an alert more than the limit late is dropped, not sent', async () => {
     await subscribe();
     await db.prepare('INSERT INTO rest_alerts (user_id, fire_at) VALUES (?, ?)').bind(U, NOW - 60 * 60_000).run();
@@ -174,6 +191,17 @@ describe('push routes: input rules', () => {
     expect((await call('/api/push/rest', { fireAt: Date.now() - 60_000 })).status).toBe(400);
     expect((await call('/api/push/rest', { fireAt: Date.now() + 10 * 60 * 60_000 })).status).toBe(400);
     expect((await call('/api/push/rest', { fireAt: Date.now() + 90_000 })).status).toBe(200);
+  });
+
+  it('the status route reports the failure count for this user', async () => {
+    await subscribe();
+    await db.prepare('UPDATE push_subscriptions SET failures = 3 WHERE user_id = ?').bind(U).run();
+    const res = await pushSlot(
+      new Request('https://api.test/api/push/status', { method: 'GET', headers: { Origin: 'https://guynuri.github.io' } }),
+      { ...(env as unknown as Env), VAPID_PUBLIC: 'pub', VAPID_PRIVATE_JWK: JSON.stringify(TEST_JWK) } as Env,
+      { userId: U } as unknown as Principal,
+    );
+    expect(await (res as Response).json()).toEqual({ failures: 3 });
   });
 
   it('a rest, then a cancel (workout finished), then the due run sends nothing', async () => {

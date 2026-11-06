@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getRepo, defaultSettings } from '../../training/data';
 import { PUSH_COPY, type PushState } from '../domain/support';
-import { currentPushState, turnOnPush, turnOffPush, saveReminder } from '../actions';
+import { currentPushState, turnOnPush, turnOffPush, saveReminder, pushFailures } from '../actions';
 
 export function PushSettings() {
   const [state, setState] = useState<PushState | null>(null);
@@ -12,10 +12,12 @@ export function PushSettings() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [failures, setFailures] = useState(0);
 
   useEffect(() => {
     (async () => {
       setState(await currentPushState());
+      setFailures(await pushFailures().catch(() => 0));
       const s = (await (await getRepo()).getSettings()) ?? defaultSettings();
       if (s.reminder) {
         setEnabled(s.reminder.enabled);
@@ -46,6 +48,11 @@ export function PushSettings() {
     <section aria-label="Notifications">
       <h2>Notifications</h2>
       <p className="muted small">{PUSH_COPY[state]}</p>
+      {failures > 0 && (
+        <p className="error small">
+          The last {failures} {failures === 1 ? 'alert' : 'alerts'} did not reach this device. Check that notifications are on.
+        </p>
+      )}
 
       {state === 'off' && (
         <button type="button" disabled={busy} onClick={() => run(turnOnPush, 'Notifications are on.')}>

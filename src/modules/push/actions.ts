@@ -66,6 +66,15 @@ export async function turnOnPush(): Promise<void> {
   await call('POST', '/api/push/subscribe', { endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth } });
 }
 
+// Sends in a row that did not reach this user's devices (the worst device). Shown on the settings screen.
+export async function pushFailures(): Promise<number> {
+  const cfg = (await readSyncState()).config;
+  if (!cfg) return 0;
+  const res = await fetch(`${cfg.baseUrl}/api/push/status`, { headers: { Authorization: `Bearer ${cfg.token}` } });
+  if (!res.ok) throw new Error(`Notifications: the server answered ${res.status} when asked for the status.`);
+  return ((await res.json()) as { failures: number }).failures;
+}
+
 // Turns notifications off: the server forgets this device, then the browser drops its subscription.
 export async function turnOffPush(): Promise<void> {
   const reg = await registration();

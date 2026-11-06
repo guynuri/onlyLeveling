@@ -29,6 +29,14 @@ export const pushSlot: SlotHandler = async (req: Request, env: Env, principal: P
     return send({ ok: true }, 200);
   }
 
+  // Sends in a row that did not reach the push service, for this user's devices (the worst one). The app shows it.
+  if (url.pathname === '/api/push/status' && req.method === 'GET') {
+    const row = await env.DB.prepare('SELECT COALESCE(MAX(failures), 0) AS failures FROM push_subscriptions WHERE user_id = ?')
+      .bind(uid)
+      .first<{ failures: number }>();
+    return send({ failures: row?.failures ?? 0 }, 200);
+  }
+
   if (req.method !== 'POST') return send({ error: 'method not allowed' }, 405);
   // Without the keys nothing would ever be sent. Say so now, rather than store a subscription that does nothing.
   if (!(await vapidUsable(env))) return send({ error: 'push is not set up on the server yet' }, 503);
