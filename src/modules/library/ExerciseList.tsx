@@ -1,6 +1,8 @@
-// Library (UX design §3, §6): search, equipment and muscle filters, pictures first. U3 defaults the equipment chips
-// to what the user owns; until then they default to dumbbells + no equipment.
-import { useMemo, useState } from 'react';
+// Library (UX design §3, §6): search, equipment and muscle filters, pictures first. Equipment chips start at what the
+// user owns (no equipment + dumbbells until settings load).
+import { useEffect, useMemo, useState } from 'react';
+import { getRepo } from '../training/data';
+import { equipmentOf } from '../../domain/profile';
 import { listExercises } from '../../data/exercises';
 import { BODY_SLUGS, SLUG_LABEL, type BodySlug } from '../../domain/muscle-map';
 import { Button, Chip, ChipGroup, EmptyState } from '../../ui/primitives';
@@ -25,6 +27,17 @@ export default function ExerciseList() {
   const [kit, setKit] = useState<KitChoice[]>(['none', 'dumbbell']);
   const [muscle, setMuscle] = useState<BodySlug | null>(null);
   const [shown, setShown] = useState(PAGE);
+  // Default the equipment chips to what the user owns (UX design §3.3), once, when settings load.
+  useEffect(() => {
+    let alive = true;
+    getRepo()
+      .then((r) => r.getSettings())
+      .then((s) => alive && s && setKit(['none', ...equipmentOf(s)]))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
   const rows = useMemo(() => filterLibrary(listExercises(), { text, kit, muscle }), [text, kit, muscle]);
 
   return (

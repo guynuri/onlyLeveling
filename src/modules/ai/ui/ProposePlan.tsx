@@ -1,6 +1,6 @@
 // The first-plan proposal (SPEC §5, §8.2): show the plan with its corrections, then let the user choose. Nothing is
 // saved until a choice is made. A rules plan is labelled "Built by rules; AI unavailable." whenever the AI did not answer.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getExercise } from '../../../data/exercises';
 import type { Correction, ValidPlan } from '../../../../shared/ai-plan';
 import type { Settings } from '../../../domain/types';
@@ -8,7 +8,7 @@ import { TEMPLATE } from '../../../config/thresholds';
 import { buildPlanRequest } from '../domain/request';
 import { planFromProposal } from '../domain/apply';
 import { listExercises } from '../../../data/exercises';
-import { requestProposal, rulesPlan, saveChosenPlan, type Proposal } from '../actions';
+import { latestBodyweightKg, requestProposal, rulesPlan, saveChosenPlan, type Proposal } from '../actions';
 import { CopyPasteFallback } from './CopyPasteFallback';
 import { Button, Card } from '../../../ui/primitives';
 import { ExerciseName } from '../../library/ExerciseSheet';
@@ -27,7 +27,16 @@ export function ProposePlan(props: { settings: Settings; onSaved: () => void }) 
   const [preview, setPreview] = useState<Preview | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const request = buildPlanRequest(props.settings, listExercises(), TEMPLATE.exercisesPerDay);
+  const [bodyweight, setBodyweight] = useState<number | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void latestBodyweightKg().then((kg) => alive && setBodyweight(kg));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  // The copy-paste prompt carries the same summary the Worker gets, body stats included.
+  const request = buildPlanRequest(props.settings, listExercises(), TEMPLATE.exercisesPerDay, bodyweight);
 
   const toPreview = (p: Proposal): Preview =>
     p.status === 'ai' ? { kind: 'ai', plan: p.plan, corrections: p.corrections } : { kind: 'rules', reason: p.reason };

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseRoute, tabFor } from './route';
+import { parseRoute, tabFor, allowedWhileOnboarding } from './route';
 
 describe('parseRoute', () => {
   it('defaults to home for an empty or unknown hash', () => {
@@ -39,6 +39,15 @@ describe('parseRoute', () => {
 
   it('decodes an encoded exercise id', () => {
     expect(parseRoute('#/library/fx_a%20b')).toEqual({ screen: 'exercise', id: 'fx_a b' });
+  });
+});
+
+describe('allowedWhileOnboarding', () => {
+  it('only onboarding itself and Settings (to sign in on a new phone) are reachable before onboarding is finished', () => {
+    expect(allowedWhileOnboarding({ screen: 'onboarding' })).toBe(true);
+    expect(allowedWhileOnboarding({ screen: 'settings' })).toBe(true);
+    for (const r of [{ screen: 'home' }, { screen: 'plan' }, { screen: 'workout' }, { screen: 'library' }, { screen: 'exercise', id: 'x' }] as const)
+      expect(allowedWhileOnboarding(r)).toBe(false);
   });
 });
 

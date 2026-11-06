@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildTemplate, candidates, type TemplateInput } from './template';
 import type { Exercise } from './exercise';
+import { blockedIds } from './profile';
 
 const ex = (over: Partial<Exercise> & { id: string }): Exercise => ({
   name: over.id,
@@ -107,6 +108,17 @@ describe('candidates suit a starter dumbbell plan', () => {
       ],
     });
     expect(pool.map((e) => e.id)).toEqual(['OK_Press']);
+  });
+});
+
+describe('limits reach the plan builder', () => {
+  it('with a knee limit, no quad exercise is a candidate', () => {
+    const catalogue = [
+      ex({ id: 'Squat', muscles: { primary: ['quadriceps'], secondary: [] } }),
+      ex({ id: 'Press', muscles: { primary: ['chest'], secondary: [] } }),
+    ];
+    const avoid = [...blockedIds({ daysPerWeek: 3, restSec: 90, owned: [4], limits: { parts: ['knee'], note: '' } }, catalogue)];
+    expect(candidates({ daysPerWeek: 1, exercisesPerDay: 2, avoid, catalogue }).map((e) => e.id)).toEqual(['Press']);
   });
 });
 

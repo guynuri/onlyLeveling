@@ -9,21 +9,32 @@ import { TEMPLATE } from '../../config/thresholds';
 import type { Correction, ValidPlan } from '../../../shared/ai-plan';
 import { buildPlanRequest } from './domain/request';
 import { getRepo, defaultSettings } from '../training/data';
+import { blockedIds } from '../../domain/profile';
 
 export type Proposal =
   | { status: 'ai'; provider: string; plan: ValidPlan; corrections: Correction[] }
   | { status: 'fallback'; reason: string };
 
+// The newest bodyweight entry, for the AI summary. A read failure just leaves it out.
+export async function latestBodyweightKg(): Promise<number | null> {
+  try {
+    return (await (await getRepo()).listBodyweight())[0]?.kg ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // The Worker's answer, or a fallback reason. Offline, signed out, and over the daily cap all fall back to the rules.
 export async function requestProposal(s: Settings, fetchImpl: typeof fetch = fetch): Promise<Proposal> {
   const cfg = (await readSyncState()).config;
   if (!cfg) return { status: 'fallback', reason: 'signed-out' };
+  const latest = await latestBodyweightKg();
   let res: Response;
   try {
     res = await fetchImpl(`${cfg.baseUrl}/api/ai/plan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.token}` },
-      body: JSON.stringify(buildPlanRequest(s, listExercises(), TEMPLATE.exercisesPerDay)),
+      body: JSON.stringify(buildPlanRequest(s, listExercises(), TEMPLATE.exercisesPerDay, latest)),
     });
   } catch {
     return { status: 'fallback', reason: 'unreachable' };
@@ -41,7 +52,7 @@ export function rulesPlan(s: Settings, now: number): Plan {
   const t = buildTemplate({
     daysPerWeek: s.daysPerWeek,
     exercisesPerDay: TEMPLATE.exercisesPerDay,
-    avoid: s.avoid ?? [],
+    avoid: [...blockedIds(s, listExercises())],
     catalogue: listExercises(),
   });
   return planFromTemplate(t.days, s.daysPerWeek, now);

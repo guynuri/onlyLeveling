@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { ClipboardList, House, Menu, Play, TrendingUp } from 'lucide-react';
-import { parseRoute, tabFor, type Route, type Tab } from './app/route';
+import { allowedWhileOnboarding, parseRoute, tabFor, type Route, type Tab } from './app/route';
+import { onboardingDone } from './domain/profile';
 import MoreScreen from './app/MoreScreen';
 import { ToastHost } from './ui/controls';
 import ExerciseSheet from './modules/library/ExerciseSheet';
@@ -15,7 +16,8 @@ import HistoryScreen from './modules/training/HistoryScreen';
 import SettingsScreen from './modules/training/SettingsScreen';
 import ProgressScreen from './modules/progress/ProgressScreen';
 import Onboarding from './modules/onboarding/Onboarding';
-import { getRepo } from './modules/training/data';
+import { getRepo, defaultSettings } from './modules/training/data';
+import { needsOnboarding } from './modules/onboarding/gate';
 
 // Shell: top bar, screen, tab bar (UX design §6.1). Hash routing only (CLAUDE.md): no server rewrites on GitHub Pages.
 const TABS: ReadonlyArray<{ tab: Tab; label: string; icon: ReactNode }> = [
@@ -56,29 +58,44 @@ function Screen({ route }: { route: Route }) {
 export default function App() {
   const [route, setRoute] = useState<Route>(() => parseRoute(window.location.hash));
   const [sync, setSync] = useState<SyncState | null>(null);
+  // Onboarding is required: while it is unfinished the tab bar is hidden and other screens lead back to it.
+  const [mustOnboard, setMustOnboard] = useState(false);
 
   useEffect(() => {
-    const onHash = () => setRoute(parseRoute(window.location.hash));
+    const readSettings = () => getRepo().then((r) => r.getSettings());
+    const enforce = (pending: boolean) => {
+      setMustOnboard(pending);
+      if (pending && !allowedWhileOnboarding(parseRoute(window.location.hash))) window.location.hash = '#/onboarding';
+    };
+    // Re-checked on every navigation and pull: finishing onboarding, or signing in on a new phone, releases it.
+    const recheck = () =>
+      readSettings()
+        .then((s) => enforce(!onboardingDone(s ?? defaultSettings())))
+        .catch(() => undefined);
+    const onHash = () => {
+      setRoute(parseRoute(window.location.hash));
+      void recheck();
+    };
     const refresh = () => readSyncState().then(setSync).catch(() => undefined);
+    const onSync = () => {
+      void refresh();
+      void recheck();
+    };
     const onOnline = () => {
       void runSync().catch(() => undefined);
     };
     window.addEventListener('hashchange', onHash);
-    window.addEventListener(SYNC_EVENT, refresh);
+    window.addEventListener(SYNC_EVENT, onSync);
     window.addEventListener('online', onOnline);
-    refresh();
-    // First run: no finished onboarding means the interview comes first (SPEC §2).
-    getRepo()
-      .then((r) => r.getSettings())
-      .then((s) => {
-        if (!s?.onboardedAt && !window.location.hash.startsWith('#/onboarding')) window.location.hash = '#/onboarding';
-      })
+    void refresh();
+    // Pull on open: the app shows local data at once, and the server's changes arrive a moment later. The onboarding
+    // decision waits for that pull (onboarding/gate.ts explains why).
+    needsOnboarding(runSync, readSettings)
+      .then(enforce)
       .catch(() => undefined);
-    // Pull on open: the app shows local data at once, and the server's changes arrive a moment later.
-    void runSync().catch(() => undefined);
     return () => {
       window.removeEventListener('hashchange', onHash);
-      window.removeEventListener(SYNC_EVENT, refresh);
+      window.removeEventListener(SYNC_EVENT, onSync);
       window.removeEventListener('online', onOnline);
     };
   }, []);
@@ -92,9 +109,10 @@ export default function App() {
         <span className="synced">{sync ? syncLabel(sync) : ''}</span>
       </header>
       <main className="content">
+        {mustOnboard && route.screen === 'settings' && <a href="#/onboarding">← Back to setup</a>}
         <Screen route={route} />
       </main>
-      <nav className="ui-tabbar" aria-label="Main">
+      <nav className="ui-tabbar" aria-label="Main" hidden={mustOnboard}>
         {TABS.map((t) => (
           <a
             key={t.tab}

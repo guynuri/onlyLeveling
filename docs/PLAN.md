@@ -638,8 +638,8 @@ in standalone mode before its status says done.
 - Nine-step onboarding on `ChoiceCard` / `ChipGroup` / weights chip grid (1–50 kg) with progress dots and a fixed
   Continue. Accounts missing the new fields see only the new steps, pre-filled.
 - Settings screen edits the same fields with the same controls.
-- **Done when:** a new account finishes onboarding in under two minutes with multi-picks, and an old account sees
-  only the new steps.
+- **Done when:** a new account finishes onboarding in under two minutes with multi-picks, and an old account re-runs
+  all nine steps, pre-filled.
 
 ## U4: Plan v2 (§5, §6.5 planning)
 - Plan model gains `block: { weeks: 4|6|8|12; startedAt; deloadLastWeek }`, `schedule: 'rotation' | 'weekdays'`,
@@ -647,8 +647,11 @@ in standalone mode before its status says done.
   block from ship date. Migration `0080_plan_v2.sql`.
 - Pure: `blockWeek(plan, now)`, `isDeloadWeek`, `nextSession(plan, history)` for rotation and weekdays,
   starter templates filtered by equipment, validation of AI plans against equipment, limits, blend table.
+  Dumbbells are optional: plans, AI candidates and swaps use the equipment the user picked, and with none picked
+  only bodyweight exercises are assigned (owner, 2026-11-06). Weight snapping applies only to dumbbell moves.
 - Plan screen: Generate/regenerate (existing AI chain + preview + accept), templates, Week X of N, edit in place
-  (add from library, remove, reorder, sets/reps, swap). End-of-block offer: review + next block, or extend.
+  (add any library exercise yourself, remove, reorder, sets/reps, swap), so anyone can change a template or an AI
+  plan however they want (owner, 2026-11-06). Goals go to the AI; `GOAL_BLEND` is the rules plan's fail-safe. End-of-block offer: review + next block, or extend.
 - Limits added later → coach cards proposing swaps (existing accept flow).
 - **Done when:** the user can build, edit and regenerate a plan without leaving the Plan screen, and Home/Plan show
   the block week.
@@ -704,7 +707,7 @@ in standalone mode before its status says done.
 | 9 Push | 2 | implemented: rest-end push scheduled at rest start (cron every minute), one workout reminder per day on training days until the week's sessions are done, Web Push (RFC 8291 and 8292) on WebCrypto, custom service worker (`src/sw.ts`), Settings section with the install and denied fallbacks, `0050_push.sql`. Needs the Worker secret `VAPID_PRIVATE_JWK` before anything is sent. Not yet checked on an iPhone |
 | U1 Design foundation, navigation | 3 | implemented (PR #22): tokens, `src/ui/` components, tab bar, exercise sheet, kept screens moved over; Settings save no longer drops onboarding answers. Browser-checked at 375 px; iPhone standalone check not done |
 | U2 Library and media | 3 | implemented: 1,984 exercises (876 free-exercise-db, 399 RepDB, 709 openGym text), 442 with RepDB pictures fetched at build (never committed), MuscleMap body map, exercise sheet v2, library filters, pictures cached on first view. Browser-checked at 375 px incl. offline; iPhone standalone check not done |
-| U3 Onboarding v2 | 3 | not started |
+| U3 Onboarding v2 | 3 | implemented: settings v2 (goals, about, equipment, kettlebell weights, limits); nine-step onboarding with multi-picks and the weight chip grid; pre-v2 accounts re-run all nine steps, pre-filled; Settings edits the same answers; limits filter plans, swaps, the AI list and replace lists; library defaults to owned equipment. Browser-checked; iPhone standalone check not done |
 | U4 Plan v2 | 3 | not started |
 | U5 Workout v2, cardio | 3 | not started |
 | U6 Home hub, Progress v2 | 3 | not started |

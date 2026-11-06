@@ -11,6 +11,7 @@ import type { Settings, Workout } from '../../domain/types';
 import { planFromTemplate, planIsCurrent, type Plan } from '../../domain/plan';
 import { buildTemplate } from '../../domain/template';
 import { listExercises } from '../../data/exercises';
+import { blockedIds } from '../../domain/profile';
 
 // Caches one open handle. A failed open is not cached, so the next call retries. reset() drops the handle,
 // for when another tab upgrades the database and this connection is closed.
@@ -61,7 +62,7 @@ export async function currentPlan(repo: Repo, local: Repo, s: Settings, now = Da
   const t = buildTemplate({
     daysPerWeek: s.daysPerWeek,
     exercisesPerDay: TEMPLATE.exercisesPerDay,
-    avoid: [],
+    avoid: [...blockedIds(s, listExercises())],
     catalogue: listExercises(),
   });
   const plan = planFromTemplate(t.days, s.daysPerWeek, now);

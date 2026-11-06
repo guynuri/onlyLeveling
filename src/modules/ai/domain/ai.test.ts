@@ -55,13 +55,42 @@ const settings: Settings = {
 describe('what leaves the device (SPEC §5.3)', () => {
   it('the summary holds only the listed fields', () => {
     expect(Object.keys(summaryOf(settings)).sort()).toEqual(
-      ['avoid', 'daysPerWeek', 'experience', 'goal', 'owned', 'sessionMinutes', 'trends'].sort(),
+      [
+        'avoid',
+        'body',
+        'daysPerWeek',
+        'equipment',
+        'experience',
+        'goals',
+        'limits',
+        'limitsNote',
+        'owned',
+        'sessionMinutes',
+        'trends',
+      ].sort(),
     );
   });
 
-  it('owned weights are sent sorted, and the summary carries no bodyweight or date of birth', () => {
+  it('goals, equipment, limits and body stats are sent; the limits note is capped (owner decision 2026-11-06)', () => {
+    const s: Settings = {
+      ...settings,
+      goals: ['lose-fat', 'strength'],
+      equipment: ['dumbbell', 'bench'],
+      about: { sex: 'female', age: 41, heightCm: 170 },
+      limits: { parts: ['knee'], note: 'x'.repeat(300) },
+    };
+    const sum = summaryOf(s, 68.5);
+    expect(sum.goals).toEqual(['lose-fat', 'strength']);
+    expect(sum.equipment).toEqual(['dumbbell', 'bench']);
+    expect(sum.limits).toEqual(['knee']);
+    expect(sum.limitsNote).toHaveLength(200);
+    expect(sum.body).toEqual({ sex: 'female', age: 41, heightCm: 170, weightKg: 68.5 });
+  });
+
+  it('body stats are empty when nothing was given; owned weights are sent sorted; no account identity', () => {
+    expect(summaryOf(settings).body).toEqual({});
     expect(summaryOf(settings).owned).toEqual([4, 8, 10]);
-    expect(JSON.stringify(summaryOf(settings))).not.toMatch(/kg|birth|bodyweight/i);
+    expect(JSON.stringify(summaryOf(settings))).not.toMatch(/birth|username|email|token/i);
   });
 
   it('only dumbbell exercises with a known pattern, and not avoided ones, reach the AI', () => {

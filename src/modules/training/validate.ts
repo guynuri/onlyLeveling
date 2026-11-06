@@ -1,55 +1,26 @@
 // Input checks for the training screens. Pure, so the rules are tested. Each returns a message, never throws.
 import type { Settings } from '../../domain/types';
+import { TRAINING } from '../../config/thresholds';
 import type { Template, TemplateDay } from '../../domain/template';
 
 export type Parsed<T> = { ok: true; value: T } | { ok: false; error: string };
 
 const INT = /^\d+$/;
 
-export function parseSettingsForm(f: { days: string; rest: string; owned: string }): Parsed<Settings> {
-  const days = f.days.trim();
-  if (!INT.test(days) || Number(days) < 1 || Number(days) > 7) {
-    return { ok: false, error: 'Days per week must be a whole number from 1 to 7.' };
-  }
-  const rest = f.rest.trim();
-  if (!INT.test(rest)) {
-    return { ok: false, error: 'Rest must be a whole number of seconds (0 turns it off).' };
-  }
-  const tokens = f.owned.split(/[,\s]+/).filter((t) => t.length > 0);
-  if (tokens.length === 0) {
-    return { ok: false, error: 'Enter at least one dumbbell weight.' };
-  }
-  const owned: number[] = [];
-  for (const t of tokens) {
-    const n = Number(t);
-    if (!Number.isFinite(n) || n <= 0) {
-      return { ok: false, error: `"${t}" is not a dumbbell weight in kg.` };
-    }
-    owned.push(n);
-  }
-  return {
-    ok: true,
-    value: { daysPerWeek: Number(days), restSec: Number(rest), owned: [...new Set(owned)].sort((a, b) => a - b) },
-  };
-}
-
-// The Settings form changes three fields; everything else (onboarding answers, reminder) is kept. Saving the bare
-// parse result used to drop onboardedAt and send the user back through onboarding.
-export function applySettingsForm(current: Settings, f: { days: string; rest: string; owned: string }): Parsed<Settings> {
-  const parsed = parseSettingsForm(f);
-  return parsed.ok ? { ok: true, value: { ...current, ...parsed.value } } : parsed;
-}
-
-// Saves the Settings form on top of what is stored now. The screen's own copy is only a fallback: a reminder saved on
-// the same screen, or a sync pull after it opened, must not be overwritten by a stale copy.
-export async function saveSettingsForm(
+// Onboarding steps and Settings cards save a few profile fields at a time, on top of what is stored now (a fresh
+// read). With nothing stored yet, the training defaults fill the required fields.
+export async function saveProfilePatch(
   repo: { getSettings(): Promise<Settings | null | undefined>; saveSettings(s: Settings): Promise<void> },
-  fallback: Settings,
-  f: { days: string; rest: string; owned: string },
-): Promise<Parsed<Settings>> {
-  const parsed = applySettingsForm((await repo.getSettings()) ?? fallback, f);
-  if (parsed.ok) await repo.saveSettings(parsed.value);
-  return parsed;
+  patch: Partial<Settings>,
+): Promise<Settings> {
+  const current: Settings = (await repo.getSettings()) ?? {
+    daysPerWeek: TRAINING.defaultDaysPerWeek,
+    restSec: TRAINING.restSec,
+    owned: [...TRAINING.defaultOwnedKg],
+  };
+  const next = { ...current, ...patch };
+  await repo.saveSettings(next);
+  return next;
 }
 
 // One logged set. A blank, non-numeric, zero or fractional entry is refused, never logged as done.

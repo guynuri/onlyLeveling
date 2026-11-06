@@ -23,7 +23,7 @@ function useTrainingContext() {
   useEffect(() => {
     let alive = true;
     getRepo()
-      .then((repo) => readSheetContext(repo, Date.now()))
+      .then((repo) => readSheetContext(repo, Date.now(), listExercises()))
       .then((c) => alive && setCtx(c))
       .catch(() => alive && setCtx(null));
     return () => {
@@ -81,7 +81,7 @@ export default function ExerciseInfo({ id }: { id: string }) {
   return (
     <div className="ui-stack">
       <ExerciseMedia media={ex.media} name={ex.name} />
-      <BodyMap primary={ex.muscles.primary} secondary={ex.muscles.secondary} />
+      <BodyMap primary={ex.muscles.primary} secondary={ex.muscles.secondary} sex={ctx?.sex} />
 
       <div className="ui-chips" aria-label="About this exercise">
         <span className="ui-tag">{kitLabel(ex)}</span>
@@ -129,7 +129,7 @@ export default function ExerciseInfo({ id }: { id: string }) {
       )}
 
       <div className="ui-row">
-        {ctx?.plan && <SwapButton ex={ex} plan={ctx.plan} workouts={ctx.workouts} avoid={ctx.avoid} now={ctx.now} onSwapped={(plan) => setCtx({ ...ctx, plan })} />}
+        {ctx?.plan && <SwapButton ex={ex} plan={ctx.plan} workouts={ctx.workouts} avoid={ctx.blocked} now={ctx.now} onSwapped={(plan) => setCtx({ ...ctx, plan })} />}
         <a className="ui-btn ui-btn--ghost ui-btn--md" href={youtubeSearchUrl(ex.name)} target="_blank" rel="noopener noreferrer">
           Watch a demo
         </a>

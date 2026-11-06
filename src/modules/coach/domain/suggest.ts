@@ -26,6 +26,7 @@ export interface CoachInput {
   catalogue: readonly Exercise[];
   workouts: readonly Workout[];
   stored: readonly Suggestion[];
+  blocked?: ReadonlySet<string>; // avoid list + limits (domain/profile.ts blockedIds): never a swap target
   repMaxFor: (exerciseId: string) => number;
 }
 
@@ -52,7 +53,7 @@ export function candidates(input: CoachInput): Candidate[] {
     const name = ex.name;
     const base = { exerciseId, lastLogged: last.date };
     const swapTo = () =>
-      pickSwap({ exercise: ex, catalogue: input.catalogue, inPlan, avoid: new Set(), lastUsed, now });
+      pickSwap({ exercise: ex, catalogue: input.catalogue, inPlan, avoid: input.blocked ?? new Set(), lastUsed, now });
     const deload: SuggestionAction = { kind: 'deload', w: deloadWeight(lastW, owned, factor) };
 
     const stall = detectStall(hist, now);
