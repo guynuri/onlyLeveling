@@ -27,14 +27,15 @@ First sign-up runs a short **onboarding interview**. Answers are stored as setti
 
 | Setting | Default / value | Notes |
 |---|---|---|
-| Goal | Build muscle (secondary: strength) | Changeable any time. Feeds rep ranges and plan proposals. |
+| Goals | One or more of build muscle, strength, lose fat, endurance, mobility, health (equal weight) | UX design §4 (U3). Blend table `GOAL_BLEND` in config. An old single `goal` reads as a one-item list. |
+| About you | Optional sex, age, height (U3) | Never leaves the device. Sex picks the body figure; a weight given here starts the bodyweight log. |
 | Days per week | 3 | Plan builder respects it. Changeable any time. |
 | Session length | ~45 min | Limits exercises per session. |
-| Dumbbells owned | Uneven adjustable set, stored as an exact list | Owned weights in kg, per unit. Editable any time. See §3.4. |
+| Dumbbells owned | Picked on a chip grid of common weights 1–50 kg (U3) | Owned weights in kg, per unit, stored as an exact list. Kettlebell weights too when a kettlebell is owned. See §3.4. |
 | Load meaning | `as entered` per exercise | `as entered` / `each bell` / `total`, per `REFERENCE_NOTES.md` §8. |
-| Bench / barbell | None | Dumbbells only, so exercises must work standing or on the floor. |
+| Equipment | Multi-select: dumbbells, kettlebell, bench, pull-up bar, bands (U3) | Library defaults to it. Plans and swaps stay dumbbell / equipment-free until U4 reads it. No barbell. |
 | Experience | Returning after a break | Drives the starting load and progression pace. Editable. |
-| Injuries / avoid list | None | Editable. Excluded exercises never appear in plans or swaps. |
+| Limits / avoid list | Tappable body parts + optional note (U3) | `LIMIT_RULES` in config. Limited and avoided exercises never appear in plans, swaps or the AI list. The note (≤200 chars) is the one free-text field sent to the AI. |
 | Theme | Follow phone | Light and dark. |
 | Units | kg | |
 | Rest between sets | 90 s (`restSec`) | Ported default, `REFERENCE_NOTES.md` §5. 0 = off. |
