@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getRepo, getLocalRepo, defaultSettings } from './data';
-import { saveSettingsForm } from './validate';
+import { saveProfilePatch } from './validate';
+import { ProfileSettings } from '../onboarding/ProfileSettings';
 import type { Settings } from '../../domain/types';
 import { Button, Card } from '../../ui/primitives';
 import { SegmentedControl, Stepper, toast } from '../../ui/controls';
@@ -44,7 +45,6 @@ export default function SettingsScreen() {
   const [current, setCurrent] = useState<Settings | null>(null);
   const [days, setDays] = useState(3);
   const [rest, setRest] = useState(90);
-  const [owned, setOwned] = useState('');
   const [theme, setTheme] = useState<ThemeChoice>(readTheme);
   const [loaded, setLoaded] = useState(false);
   const [status, setStatus] = useState('');
@@ -64,7 +64,6 @@ export default function SettingsScreen() {
         setCurrent(cur);
         setDays(cur.daysPerWeek);
         setRest(cur.restSec);
-        setOwned(cur.owned.join(', '));
         setSync(st);
         if (st.config) setServer(st.config.baseUrl);
         setLoaded(true);
@@ -74,17 +73,11 @@ export default function SettingsScreen() {
 
   if (!loaded || !current) return <p className="muted">{status || 'Loading…'}</p>;
 
+  // Days and rest only; the steppers keep both in range. Weights live in the Equipment card.
   async function save() {
-    if (!current) return;
     try {
       const repo = await getRepo(); // queued for the server as well
-      const parsed = await saveSettingsForm(repo, current, { days: String(days), rest: String(rest), owned });
-      if (!parsed.ok) {
-        setStatus(parsed.error);
-        return;
-      }
-      setCurrent(parsed.value);
-      setOwned(parsed.value.owned.join(', '));
+      setCurrent(await saveProfilePatch(repo, { daysPerWeek: days, restSec: rest }));
       setStatus('');
       toast('Saved on this device.');
     } catch {
@@ -174,12 +167,10 @@ export default function SettingsScreen() {
           <Stepper label="rest seconds" value={rest} onChange={setRest} unit="s" step={15} min={0} />
         </div>
         <p className="muted small">Rest 0 turns the timer off.</p>
-        <label className="field">
-          Dumbbells owned, kg (e.g. 4, 6, 8, 10)
-          <textarea rows={2} value={owned} onChange={(e) => setOwned(e.target.value)} />
-        </label>
         <Button onClick={save}>Save</Button>
       </Card>
+
+      <ProfileSettings settings={current} />
 
       <Card title="Appearance">
         <SegmentedControl

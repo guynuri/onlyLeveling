@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseSettingsForm, applySettingsForm, saveSettingsForm, saveProfilePatch, parseSetInput, isIsoDate, todayFromTemplate } from './validate';
+import { saveProfilePatch, parseSetInput, isIsoDate, todayFromTemplate } from './validate';
 import type { Settings } from '../../domain/types';
 
 describe('saveProfilePatch', () => {
@@ -38,81 +38,6 @@ describe('saveProfilePatch', () => {
   });
 });
 
-describe('saveSettingsForm', () => {
-  it('merges into the stored settings at save time, not a copy taken when the screen opened', async () => {
-    const opened: Settings = { daysPerWeek: 3, restSec: 90, owned: [4], onboardedAt: 1 };
-    // Saved after the screen opened (reminder saved on the same screen, or a sync pull).
-    let stored: Settings = { ...opened, reminder: { enabled: true, time: '07:00' } };
-    const repo = {
-      getSettings: async () => stored,
-      saveSettings: async (s: Settings) => {
-        stored = s;
-      },
-    };
-    const r = await saveSettingsForm(repo, opened, { days: '4', rest: '60', owned: '4, 6' });
-    expect(r.ok).toBe(true);
-    expect(stored).toEqual({ ...opened, reminder: { enabled: true, time: '07:00' }, daysPerWeek: 4, restSec: 60, owned: [4, 6] });
-  });
-
-  it('saves nothing when the form is invalid', async () => {
-    let saves = 0;
-    const repo = { getSettings: async () => null, saveSettings: async () => void saves++ };
-    const r = await saveSettingsForm(repo, { daysPerWeek: 3, restSec: 90, owned: [4] }, { days: '0', rest: '60', owned: '4' });
-    expect(r.ok).toBe(false);
-    expect(saves).toBe(0);
-  });
-});
-
-describe('applySettingsForm', () => {
-  it('keeps the onboarding answers and reminder when the form is saved', () => {
-    const current = {
-      daysPerWeek: 3,
-      restSec: 90,
-      owned: [4, 6],
-      goal: 'strength' as const,
-      onboardedAt: 123,
-      avoid: ['fx_x'],
-      reminder: { enabled: true, time: '18:00' },
-    };
-    const r = applySettingsForm(current, { days: '4', rest: '60', owned: '4, 6, 8' });
-    expect(r).toEqual({
-      ok: true,
-      value: { ...current, daysPerWeek: 4, restSec: 60, owned: [4, 6, 8] },
-    });
-  });
-
-  it('passes a form error through unchanged', () => {
-    const r = applySettingsForm({ daysPerWeek: 3, restSec: 90, owned: [4] }, { days: '9', rest: '60', owned: '4' });
-    expect(r.ok).toBe(false);
-  });
-});
-
-describe('parseSettingsForm', () => {
-  const ok = { days: '3', rest: '90', owned: '4, 6, 8' };
-
-  it('accepts a complete, valid form and sorts the owned weights', () => {
-    const r = parseSettingsForm({ ...ok, owned: '8, 4, 6' });
-    expect(r).toEqual({ ok: true, value: { daysPerWeek: 3, restSec: 90, owned: [4, 6, 8] } });
-  });
-
-  it('rejects blank or out-of-range days (an empty field used to store 0)', () => {
-    expect(parseSettingsForm({ ...ok, days: '' }).ok).toBe(false);
-    expect(parseSettingsForm({ ...ok, days: '0' }).ok).toBe(false);
-    expect(parseSettingsForm({ ...ok, days: '8' }).ok).toBe(false);
-    expect(parseSettingsForm({ ...ok, days: '2.5' }).ok).toBe(false);
-  });
-
-  it('rejects a negative or blank rest; 0 is allowed (rest off)', () => {
-    expect(parseSettingsForm({ ...ok, rest: '-1' }).ok).toBe(false);
-    expect(parseSettingsForm({ ...ok, rest: '' }).ok).toBe(false);
-    expect(parseSettingsForm({ ...ok, rest: '0' }).ok).toBe(true);
-  });
-
-  it('rejects owned lists with no valid weight', () => {
-    expect(parseSettingsForm({ ...ok, owned: 'abc' }).ok).toBe(false);
-    expect(parseSettingsForm({ ...ok, owned: '' }).ok).toBe(false);
-  });
-});
 
 describe('parseSetInput', () => {
   it('accepts a positive weight and at least one rep', () => {
