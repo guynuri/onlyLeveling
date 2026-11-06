@@ -129,6 +129,23 @@ export const XP = {
   badgeSessionMilestones: [1, 10, 100], // "first session", then 10 and 100 sessions
   badgeRankFrom: 'C', // achievement badges per muscle start at this rank
 } as const;
+// XP for work with no weight on the bar (UX design §3.3, U5b). A bodyweight exercise counts as a share of the latest
+// bodyweight (first row whose name matches wins, else the default); a band set counts a fixed load. These are proposals,
+// tuned with real logs like the rest of the XP table. Timed exercises earn no muscle XP.
+export const UNWEIGHTED_XP = {
+  defaultBodyweightKg: 70, // used when no bodyweight is logged; the finish summary asks for one
+  bandLoadKg: 10,
+  defaultFraction: 0.5,
+  fractions: [
+    { match: 'pull-?up|chin-?up', fraction: 1.0 },
+    { match: 'dip', fraction: 0.9 },
+    { match: 'push-?up', fraction: 0.65 },
+    { match: 'lunge|split squat', fraction: 0.5 },
+    { match: 'squat', fraction: 0.6 },
+    { match: 'sit-?up|crunch|leg raise', fraction: 0.3 },
+  ],
+} as const;
+
 // Profile and onboarding v2 (UX design §4). Weight grids are what the chip grids offer.
 export const PROFILE = {
   dumbbellGrid: [

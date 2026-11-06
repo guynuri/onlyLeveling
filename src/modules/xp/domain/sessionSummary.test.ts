@@ -19,7 +19,8 @@ const bench = {
   muscles: { primary: ['chest'], secondary: ['triceps'] },
 } as unknown as Exercise;
 const plank = { id: 'plank', name: 'Plank', primaryMuscles: ['abdominals'], secondaryMuscles: [], equipment: 'bodyweight', requires: [], mode: 'time', muscles: { primary: ['abs'], secondary: [] } } as unknown as Exercise;
-const byId = (id: string) => [bench, plank].find((e) => e.id === id);
+const pushup = { id: 'pu', name: 'Push-Up', primaryMuscles: ['chest'], secondaryMuscles: [], equipment: 'bodyweight', requires: [], mode: 'reps', muscles: { primary: ['chest'], secondary: [] } } as unknown as Exercise;
+const byId = (id: string) => [bench, plank, pushup].find((e) => e.id === id);
 
 const set = (w: number, r: number): SetRow => ({ w, r, done: true, phase: 'work', at: 0 });
 const workout = (id: string, start: number, entries: Workout['entries']): Workout => ({ id, start, end: start + 45 * MIN, entries });
@@ -82,5 +83,13 @@ describe('summarize', () => {
     const s = summarize({ ...base, workouts: [], workout: w2 });
     expect([...s.primary].sort()).toEqual(['abs', 'chest']);
     expect(s.secondary).toEqual(['triceps']);
+  });
+
+  it('says when bodyweight sets were scored with the default bodyweight', () => {
+    const pu = workout('wp', 1_000_000_000, [entry('pu', [set(0, 10)])]);
+    expect(summarize({ ...base, workouts: [], workout: pu }).usedDefaultBodyweight).toBe(true);
+    const bw = [{ date: new Date(1_000_000_000).toISOString().slice(0, 10), kg: 80 }];
+    expect(summarize({ ...base, bodyweight: bw, workouts: [], workout: pu }).usedDefaultBodyweight).toBe(false);
+    expect(summarize({ ...base, workouts: [], workout: workout('wb', 1_000_000_000, [entry('bench', [set(8, 10)])]) }).usedDefaultBodyweight).toBe(false);
   });
 });

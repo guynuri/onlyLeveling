@@ -7,7 +7,8 @@ import { bestWeight } from '../../../domain/prs';
 import type { HistorySession } from '../../../domain/progression';
 import type { Workout } from '../../../domain/types';
 import { GROUPS, type Group } from './muscles';
-import { computeProgress, type ProgressInput } from './progress';
+import { xpLoad } from './effectiveLoad';
+import { bodyweightAt, computeProgress, type ProgressInput } from './progress';
 import { RANKS, type Rank } from './rank';
 
 // A set above everything lifted before. The first lift of an exercise is not a record, a timed set never is, and
@@ -28,6 +29,7 @@ export interface SessionSummary {
   primary: BodySlug[];
   secondary: BodySlug[];
   rankUps: { group: Group; from: Rank; to: Rank }[];
+  usedDefaultBodyweight: boolean; // bodyweight sets were scored with the default bodyweight: the summary asks for one
 }
 
 export function summarize(input: ProgressInput & { workout: Workout }): SessionSummary {
@@ -47,6 +49,8 @@ export function summarize(input: ProgressInput & { workout: Workout }): SessionS
   const prExerciseIds: string[] = [];
   const primary = new Set<BodySlug>();
   const secondary = new Set<BodySlug>();
+  const bodyweightKg = bodyweightAt(workout.start, input.bodyweight);
+  let usedDefaultBodyweight = false;
   for (const e of workout.entries) {
     const done = e.sets.filter((s) => s.done && s.phase === 'work');
     if (done.length === 0) continue;
@@ -54,6 +58,8 @@ export function summarize(input: ProgressInput & { workout: Workout }): SessionS
     const timed = exercise?.mode === 'time';
     if (!timed) volumeKg += done.reduce((sum, s) => sum + s.w * s.r, 0);
     if (exercise) {
+      const load = xpLoad(exercise, bodyweightKg);
+      if (load.kind === 'fixed' && load.usedDefault) usedDefaultBodyweight = true;
       exercise.muscles.primary.forEach((m) => primary.add(m));
       exercise.muscles.secondary.forEach((m) => secondary.add(m));
     }
@@ -76,5 +82,6 @@ export function summarize(input: ProgressInput & { workout: Workout }): SessionS
     primary: [...primary],
     secondary: [...secondary].filter((s) => !primary.has(s)),
     rankUps,
+    usedDefaultBodyweight,
   };
 }

@@ -34,6 +34,7 @@ export interface ProgressState {
   streak: number;
   badges: string[];
   flaggedSets: number;
+  usedDefaultBodyweight: boolean; // some bodyweight set was scored with the default bodyweight
 }
 
 // Local calendar day as a number, so day differences ignore DST.
@@ -47,6 +48,10 @@ function isoDay(s: string): number {
 }
 
 // The latest bodyweight on or before the session day, within the window. Null when there is none.
+export function bodyweightAt(ms: number, entries: readonly BodyweightEntry[]): number | null {
+  return bodyweightFor(localDay(ms), entries);
+}
+
 function bodyweightFor(day: number, entries: readonly BodyweightEntry[]): number | null {
   let best: BodyweightEntry | null = null;
   for (const e of entries) {
@@ -78,6 +83,7 @@ export function computeProgress(input: ProgressInput): ProgressState {
   const bestWeight = new Map<string, number>(); // exercise → best working weight so far
   const seen: { start: number; entries: SessionEntry[] }[] = [];
   let flaggedSets = 0;
+  let usedDefaultBodyweight = false;
   let firstPr = false;
   let rankUp = false;
 
@@ -103,8 +109,9 @@ export function computeProgress(input: ProgressInput): ProgressState {
       return best;
     };
 
-    const res = sessionXp(entries, recentBest, input.repMaxFor);
+    const res = sessionXp(entries, recentBest, input.repMaxFor, bodyweightFor(day, input.bodyweight));
     flaggedSets += res.flaggedSets;
+    if (res.usedDefaultBodyweight) usedDefaultBodyweight = true;
     for (const g of GROUPS) xp[g] += res.byGroup[g];
 
     // First personal record: a working weight above the best before it (the very first lift of an exercise is not one).
@@ -156,5 +163,6 @@ export function computeProgress(input: ProgressInput): ProgressState {
     ),
     badges: earnedBadges({ sessions, firstPr, rankUp, maxRank }),
     flaggedSets,
+    usedDefaultBodyweight,
   };
 }

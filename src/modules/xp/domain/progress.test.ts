@@ -159,3 +159,29 @@ describe('rules inside the computation', () => {
     expect(p.badges).not.toContain('session:10');
   });
 });
+
+describe('bodyweight work through computeProgress', () => {
+  const pushup: Exercise = { ...bench, id: 'fx_Pushups', name: 'Push-Up', equipment: 'bodyweight', requires: [], secondaryMuscles: [] };
+  const pu = new Map([[pushup.id, pushup]]);
+  const w: Workout = {
+    id: 'pu1',
+    start: START,
+    end: START + 3_600_000,
+    entries: [{ exerciseId: pushup.id, planned: { w: 0, reps: 10, sets: 3 }, sets: sets(0, 10) }],
+  };
+  const run = (bodyweight: BodyweightEntry[]) =>
+    computeProgress({ workouts: [w], exerciseById: (id) => pu.get(id), bodyweight, daysPerWeek: 3, repMaxFor: () => 10, now: NOW });
+
+  it('push-ups earn chest XP from the logged bodyweight', () => {
+    const p = run([{ date: '2026-11-02', kg: 80 }]);
+    expect(p.muscles.chest.xp).toBeCloseTo(52 * 10 * 3 + 150);
+    expect(p.usedDefaultBodyweight).toBe(false);
+  });
+
+  it('with no bodyweight logged they still earn XP and the default is flagged', () => {
+    const p = run([]);
+    expect(p.muscles.chest.xp).toBeGreaterThan(0);
+    expect(p.usedDefaultBodyweight).toBe(true);
+  });
+});
+

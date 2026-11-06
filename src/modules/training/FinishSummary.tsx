@@ -42,6 +42,9 @@ export function FinishSummary(props: {
           </li>
         </ul>
       </Card>
+      {s.usedDefaultBodyweight && (
+        <p className="muted small">Log your weight in Progress so bodyweight sets earn exact XP.</p>
+      )}
       {s.prExerciseIds.length > 0 && (
         <Card title="New records">
           <ul className="ui-list">
