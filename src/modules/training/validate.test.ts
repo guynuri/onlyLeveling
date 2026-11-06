@@ -1,5 +1,29 @@
 import { describe, it, expect } from 'vitest';
-import { parseSettingsForm, parseSetInput, isIsoDate, todayFromTemplate } from './validate';
+import { parseSettingsForm, applySettingsForm, parseSetInput, isIsoDate, todayFromTemplate } from './validate';
+
+describe('applySettingsForm', () => {
+  it('keeps the onboarding answers and reminder when the form is saved', () => {
+    const current = {
+      daysPerWeek: 3,
+      restSec: 90,
+      owned: [4, 6],
+      goal: 'strength' as const,
+      onboardedAt: 123,
+      avoid: ['fx_x'],
+      reminder: { enabled: true, time: '18:00' },
+    };
+    const r = applySettingsForm(current, { days: '4', rest: '60', owned: '4, 6, 8' });
+    expect(r).toEqual({
+      ok: true,
+      value: { ...current, daysPerWeek: 4, restSec: 60, owned: [4, 6, 8] },
+    });
+  });
+
+  it('passes a form error through unchanged', () => {
+    const r = applySettingsForm({ daysPerWeek: 3, restSec: 90, owned: [4] }, { days: '9', rest: '60', owned: '4' });
+    expect(r.ok).toBe(false);
+  });
+});
 
 describe('parseSettingsForm', () => {
   const ok = { days: '3', rest: '90', owned: '4, 6, 8' };
