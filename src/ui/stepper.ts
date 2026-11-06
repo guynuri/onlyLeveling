@@ -10,3 +10,8 @@ export function stepValue(
   const next = opts.values && opts.values.length > 0 ? stepOwned(opts.values, current, dir) : current + dir * (opts.step ?? 1);
   return Math.min(opts.max ?? Infinity, Math.max(opts.min ?? 0, next));
 }
+
+// Whether a tap would change the value: false at a limit, so that button is disabled.
+export function canStep(current: number, dir: 1 | -1, opts: Parameters<typeof stepValue>[2]): boolean {
+  return stepValue(current, dir, opts) !== current;
+}

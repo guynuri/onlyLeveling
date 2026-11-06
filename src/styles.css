@@ -1,4 +1,4 @@
-/* Design tokens (UX design §7). Dark first, "leveling" feel: deep background, one glowing accent, rank colours.
+/* Design tokens (UX design §7). Dark first, "leveling" feel: deep background, one softly glowing purple accent, rank colours.
    Screens use these tokens and the components in src/ui/ only, so the later restyle (U8) changes this file and
    src/ui/ui.css, not the screens. */
 :root {
@@ -8,9 +8,9 @@
   --border: #252d42;
   --fg: #eef1f8;
   --muted: #8b93a8;
-  --accent: #5b8cff;
-  --accent-glow: rgb(91 140 255 / 45%);
-  --on-accent: #050810;
+  --accent: #8b5cf6;
+  --accent-glow: rgb(139 92 246 / 22%);
+  --on-accent: #ffffff;
   --danger: #ff5c6c;
   --success: #3ddc97;
   --warn: #ffb547;
@@ -47,7 +47,7 @@
   --fs-xxl: 2.5rem;
   --fw-bold: 700;
 
-  --glow: 0 0 18px var(--accent-glow);
+  --glow: 0 0 10px var(--accent-glow);
   --shadow: 0 6px 24px rgb(0 0 0 / 35%);
   --tap: 44px;
   --tabbar-h: 64px;
@@ -63,8 +63,8 @@
     --border: #d5dbea;
     --fg: #0d1220;
     --muted: #5a6378;
-    --accent: #3a6df0;
-    --accent-glow: rgb(58 109 240 / 30%);
+    --accent: #7c3aed;
+    --accent-glow: rgb(124 58 237 / 18%);
     --on-accent: #ffffff;
     --shadow: 0 4px 16px rgb(13 18 32 / 10%);
     color-scheme: light;
@@ -78,8 +78,8 @@
   --border: #d5dbea;
   --fg: #0d1220;
   --muted: #5a6378;
-  --accent: #3a6df0;
-  --accent-glow: rgb(58 109 240 / 30%);
+  --accent: #7c3aed;
+  --accent-glow: rgb(124 58 237 / 18%);
   --on-accent: #ffffff;
   --shadow: 0 4px 16px rgb(13 18 32 / 10%);
   color-scheme: light;

@@ -133,7 +133,8 @@
   font: inherit; font-size: var(--fs-lg); font-weight: var(--fw-bold);
   cursor: pointer;
 }
-.ui-stepper-btn:active { background: var(--surface); }
+.ui-stepper-btn:active:not(:disabled) { background: var(--surface); }
+.ui-stepper-btn:disabled { color: var(--muted); opacity: 0.35; cursor: default; }
 .ui-stepper-value { min-width: 64px; text-align: center; font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; }
 .ui-stepper-unit { color: var(--muted); font-weight: 400; font-size: var(--fs-sm); }
 

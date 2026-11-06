@@ -1,6 +1,6 @@
 // Interactive shared controls (UX design §7): Stepper, SegmentedControl, Sheet, toasts. Styled in ui.css.
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { stepValue } from './stepper';
+import { canStep, stepValue } from './stepper';
 
 export function Stepper(props: {
   value: number;
@@ -16,14 +16,14 @@ export function Stepper(props: {
   const tap = (dir: 1 | -1) => onChange(stepValue(value, dir, opts));
   return (
     <div className="ui-stepper" role="group" aria-label={label}>
-      <button type="button" className="ui-stepper-btn" aria-label={`Less ${label}`} onClick={() => tap(-1)}>
+      <button type="button" className="ui-stepper-btn" aria-label={`Less ${label}`} disabled={!canStep(value, -1, opts)} onClick={() => tap(-1)}>
         −
       </button>
       <output className="ui-stepper-value" aria-live="polite">
         {value}
         {unit && <span className="ui-stepper-unit"> {unit}</span>}
       </output>
-      <button type="button" className="ui-stepper-btn" aria-label={`More ${label}`} onClick={() => tap(1)}>
+      <button type="button" className="ui-stepper-btn" aria-label={`More ${label}`} disabled={!canStep(value, 1, opts)} onClick={() => tap(1)}>
         +
       </button>
     </div>
