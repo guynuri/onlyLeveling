@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getRepo, getLocalRepo, defaultSettings } from './data';
-import { applySettingsForm } from './validate';
+import { saveSettingsForm } from './validate';
 import type { Settings } from '../../domain/types';
 import { Button, Card } from '../../ui/primitives';
 import { SegmentedControl, Stepper, toast } from '../../ui/controls';
@@ -76,14 +76,13 @@ export default function SettingsScreen() {
 
   async function save() {
     if (!current) return;
-    const parsed = applySettingsForm(current, { days: String(days), rest: String(rest), owned });
-    if (!parsed.ok) {
-      setStatus(parsed.error);
-      return;
-    }
     try {
       const repo = await getRepo(); // queued for the server as well
-      await repo.saveSettings(parsed.value);
+      const parsed = await saveSettingsForm(repo, current, { days: String(days), rest: String(rest), owned });
+      if (!parsed.ok) {
+        setStatus(parsed.error);
+        return;
+      }
       setCurrent(parsed.value);
       setOwned(parsed.value.owned.join(', '));
       setStatus('');
