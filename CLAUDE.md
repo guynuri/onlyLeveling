@@ -97,6 +97,9 @@ The product spec lives in `docs/SPEC.md`; the phased plan in `docs/PLAN.md`. Rea
 | Data | Source | Licence | Obligations |
 |---|---|---|---|
 | Exercise structure (names, muscles, equipment, level, force, mechanic) | yuhonas/free-exercise-db | Unlicense (public domain), **data only** | Its images are treated as unlicensed: never use or commit them. |
+| Exercises + images (primary, U2) | RepDB free tier (github.com/RepDB/exercise-dataset) | RepDB Free Tier License v1.0 | Visible credit "Exercise data by RepDB (repdb.co)". **Never commit its JSON or images**: fetched at build time into the build output only. No zip, index or listing endpoint. Never send its images, descriptions or tips to an LLM. |
+| Body-map geometry | MuscleMap (Melih Colpan), via openGym `frontend/src/lib/body-paths.js` | MIT | Keep the MIT notice in `docs/CREDITS.md`. |
+| Extra exercise text | openGym `catalogue/exercises` | MIT (ExerciseDB text) / AGPL-3.0 (openGym's own) | Row in `docs/CREDITS.md`. Text only, never `catalogue/media`. |
 | Exercises + images | wger.de API | CC-BY-SA 3 / 4 (per exercise and per image) | Store author + licence per image; show them on screen; share-alike on modified images. |
 | Exercises + images | everkinetic/data | CC-BY-SA 4.0 | Credit Everkinetic. Copy images into our storage; never hotlink `img.everkinetic.com`. |
 | Exercises with no licensed image | (any) | — | Show text only. Don't fill the gap with free-exercise-db photos. |
