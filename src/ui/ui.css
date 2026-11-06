@@ -200,3 +200,38 @@
   box-shadow: var(--shadow);
   font-size: var(--fs-sm);
 }
+
+/* Vertical list of tiles/cards */
+.ui-stack { display: flex; flex-direction: column; gap: var(--s-3); }
+
+/* Tab bar */
+.ui-tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+  display: flex; justify-content: space-around; align-items: flex-end;
+  height: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+  padding: 0 var(--s-2) env(safe-area-inset-bottom);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border);
+}
+.ui-tab {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  height: var(--tabbar-h);
+  color: var(--muted);
+  text-decoration: none;
+  font-size: var(--fs-xs); font-weight: 600;
+}
+.ui-tab-icon { display: inline-flex; }
+.ui-tab-icon svg { width: 24px; height: 24px; }
+.ui-tab[aria-current='page'] { color: var(--accent); }
+.ui-tab[aria-current='page'] .ui-tab-icon { filter: drop-shadow(0 0 6px var(--accent-glow)); }
+.ui-tab--train .ui-tab-icon {
+  width: 52px; height: 52px; margin-top: -22px;
+  align-items: center; justify-content: center;
+  border-radius: var(--r-pill);
+  background: var(--accent); color: var(--on-accent);
+  box-shadow: var(--glow);
+}
+.ui-tab--train .ui-tab-icon svg { width: 26px; height: 26px; fill: currentColor; }

@@ -1,16 +1,32 @@
 // Hash routing only (CLAUDE.md): GitHub Pages has no server rewrites. Pure, so it is tested.
 export type Route =
-  | { screen: 'today' }
+  | { screen: 'home' }
   | { screen: 'plan' }
+  | { screen: 'workout' }
+  | { screen: 'progress' }
+  | { screen: 'more' }
   | { screen: 'library' }
   | { screen: 'exercise'; id: string }
   | { screen: 'history' }
   | { screen: 'settings' }
   | { screen: 'credits' }
-  | { screen: 'progress' } // reached from a link on Today, not a bottom tab (PLAN Phase 6)
   | { screen: 'onboarding' }; // first run; reached by the gate in App, not a tab (PLAN Phase 7)
 
-const TABS = ['today', 'plan', 'library', 'history', 'settings'] as const satisfies readonly Route['screen'][];
+export type Tab = 'home' | 'plan' | 'workout' | 'progress' | 'more';
+
+// Screens reached by their own name. 'exercise' needs an id and is handled separately.
+const SIMPLE = [
+  'home',
+  'plan',
+  'workout',
+  'progress',
+  'more',
+  'library',
+  'history',
+  'settings',
+  'credits',
+  'onboarding',
+] as const satisfies readonly Exclude<Route['screen'], 'exercise'>[];
 
 function safeDecode(s: string): string | null {
   try {
@@ -28,10 +44,23 @@ export function parseRoute(hash: string): Route {
     // A malformed escape (e.g. "100%") must not throw during render: fall back to the list.
     return id === null ? { screen: 'library' } : { screen: 'exercise', id };
   }
-  if (head === 'library') return { screen: 'library' };
-  if (head === 'credits') return { screen: 'credits' };
-  if (head === 'progress') return { screen: 'progress' };
-  if (head === 'onboarding') return { screen: 'onboarding' };
-  const tab = TABS.find((t) => t === head);
-  return tab ? { screen: tab } : { screen: 'today' };
+  // Unknown hashes and old #/today links (push notifications, bookmarks) land on Home.
+  const screen = SIMPLE.find((s) => s === head);
+  return screen ? { screen } : { screen: 'home' };
+}
+
+// Which bottom tab is highlighted for a route: More owns its sub-screens, onboarding sits under Home.
+export function tabFor(route: Route): Tab {
+  switch (route.screen) {
+    case 'library':
+    case 'exercise':
+    case 'history':
+    case 'settings':
+    case 'credits':
+      return 'more';
+    case 'onboarding':
+      return 'home';
+    default:
+      return route.screen;
+  }
 }

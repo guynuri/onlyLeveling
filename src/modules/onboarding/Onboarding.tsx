@@ -173,7 +173,7 @@ export default function Onboarding() {
           settings={settings}
           onSaved={async () => {
             await (await getRepo()).saveSettings({ ...settings, onboardedAt: Date.now() });
-            window.location.hash = '#/today';
+            window.location.hash = '#/home';
           }}
         />
       )}

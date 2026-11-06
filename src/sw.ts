@@ -3,7 +3,7 @@
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
 
 const ICON = 'icons/icon-192.png';
-const APP_URL = 'https://guynuri.github.io/onlyLeveling/#/today';
+const APP_URL = 'https://guynuri.github.io/onlyLeveling/#/home';
 
 interface Message {
   title: string;
