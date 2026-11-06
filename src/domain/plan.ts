@@ -11,10 +11,21 @@ export interface Adjustment {
   at: number; // set when accepted; cleared once a session with this exercise is logged after it
 }
 
+// A training block (UX design §5): its length, when it started, and whether its last week is a planned deload.
+export interface Block {
+  weeks: 4 | 6 | 8 | 12;
+  startedAt: number; // epoch ms
+  deloadLastWeek: boolean;
+}
+
 export interface Plan {
   daysPerWeek: number;
   days: TemplateDay[];
   adjustments: Adjustment[];
+  // U4. All optional: a plan saved before U4 is read through domain/block.ts.
+  block?: Block;
+  schedule?: 'rotation' | 'weekdays';
+  weekdays?: number[]; // 0 = Sunday … 6; one per day, ascending (schedule 'weekdays')
   updatedAt: number; // the missed-session count restarts from here
 }
 

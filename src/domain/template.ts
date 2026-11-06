@@ -17,8 +17,19 @@ export interface RoutineItem {
   seconds: number;
 }
 
+// What one exercise asks for in a plan: sets and a rep range (U4). Absent: the library default for the exercise.
+export interface Target {
+  sets: number;
+  repMin: number;
+  repMax: number;
+}
+
 export interface TemplateDay {
   index: number;
+  label?: string; // e.g. "Upper", "Pull"
+  targets?: Record<string, Target>; // by exercise id
+  postCardioMinutes?: number; // a cardio block after the lifting (U5 logs it)
+  mobilityMinutes?: number;
   warmup: RoutineItem[];
   exerciseIds: string[]; // catalogue ids only
   cooldown: RoutineItem[];

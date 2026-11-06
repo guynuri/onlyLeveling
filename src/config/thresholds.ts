@@ -37,6 +37,14 @@ export const E1RM = {
   maxReps: 12,
 } as const;
 
+// Training blocks (UX design §5, U4): a plan runs for one of these lengths; an older plan counts as the default.
+export const BLOCK = {
+  defaultWeeks: 8,
+  lengths: [4, 6, 8, 12],
+  weekMs: 7 * 86_400_000,
+  maxWeeks: 12, // extending a block never goes past this
+} as const;
+
 // Template plans (PLAN Phase 3). Session length limits exercises per day.
 export const TEMPLATE = {
   exercisesPerDay: 4,
