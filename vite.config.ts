@@ -11,6 +11,10 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      // Our own service worker (src/sw.ts): precache plus push alerts (PLAN Phase 9). The plugin injects the precache list.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       // autoUpdate: a new build activates on its own. 'prompt' needs an update UI that does not exist yet,
       // and without it an installed iOS app keeps the old build until every copy is closed.
       registerType: 'autoUpdate',

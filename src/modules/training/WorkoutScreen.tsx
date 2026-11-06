@@ -7,6 +7,7 @@ import { nextPrescription, type Prescription } from '../../domain/progression';
 import type { SetRow } from '../../domain/session';
 import type { Settings, Workout, Entry } from '../../domain/types';
 import { startRest, remainingMs, type RestTimer } from './rest-timer';
+import { scheduleRestAlert, cancelRestAlert } from '../push/actions';
 import { getRepo, getLocalRepo, defaultSettings, historyFor, progressionConfigFor, currentPlan } from './data';
 import { parseSetInput, todayFromTemplate } from './validate';
 
@@ -80,8 +81,18 @@ export default function WorkoutScreen() {
     const at = Date.now();
     const row: SetRow = { w: parsed.value.w, r: parsed.value.r, done: true, phase: 'work', at };
     setExercises((prev) => prev.map((e, i) => (i === index ? { ...e, sets: [...e.sets, row] } : e)));
-    setRest(startRest(at, settings!.restSec));
+    const timer = startRest(at, settings!.restSec);
+    setRest(timer);
     setNow(at);
+    // The rest-end push (PLAN Phase 9). The on-screen timer runs either way; a failure is said, not hidden.
+    if (timer) {
+      scheduleRestAlert(timer.endsAt).catch((e: unknown) =>
+        setStatus(`Rest alert not scheduled: ${e instanceof Error ? e.message : 'unknown error'}`),
+      );
+    } else {
+      // Rest is off: an alert from an earlier set must not fire now.
+      cancelRestAlert().catch(() => undefined);
+    }
   }
 
   function update(index: number, field: 'weight' | 'reps', value: string) {
@@ -99,6 +110,8 @@ export default function WorkoutScreen() {
     const workout: Workout = { id: `w_${start}`, start, end: Date.now(), entries };
     const repo = await getRepo();
     await repo.saveWorkout(workout);
+    // A finished workout ends any pending rest alert. A failed cancel must not block saving, so it is ignored.
+    cancelRestAlert().catch(() => undefined);
     setWorkouts([workout, ...workouts]);
     setStatus('Saved on this device. Last synced: never.');
     setExercises([]);

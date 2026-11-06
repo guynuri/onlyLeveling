@@ -12,6 +12,7 @@ import {
   syncLabel,
 } from '../sync/actions';
 import { fetchExport, type SyncState } from '../../data/sync-engine';
+import { PushSettings } from '../push/ui/PushSettings';
 import { AuthClientError } from '../../data/auth-client';
 
 const DEFAULT_SERVER = 'https://onlyleveling-api.guynuri.workers.dev';
@@ -140,6 +141,7 @@ export default function SettingsScreen() {
   return (
     <section>
       <h1>Settings</h1>
+      <PushSettings />
       <label className="field">
         Days per week (1–7)
         <input inputMode="numeric" value={days} onChange={(e) => setDays(e.target.value)} />

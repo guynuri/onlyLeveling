@@ -12,6 +12,7 @@ export interface Settings {
   experience?: 'returning' | 'beginner' | 'intermediate';
   avoid?: string[]; // exercise ids that never appear in plans or swaps
   onboardedAt?: number; // set when the interview is finished
+  reminder?: { enabled: boolean; time: string }; // workout reminder, HH:MM local time (SPEC §6.4)
 }
 
 export interface Entry {
