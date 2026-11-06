@@ -48,8 +48,8 @@ export async function requestProposal(s: Settings, fetchImpl: typeof fetch = fet
 }
 
 // The rules-based plan (SPEC §5.6): always available, and the fallback label applies to it.
-export function rulesPlan(s: Settings, now: number): Plan | null {
-  const built = buildRulesPlan({ settings: s, catalogue: listExercises(), kind: 'auto', weeks: BLOCK.defaultWeeks, now });
+export function rulesPlan(s: Settings, now: number, weeks: number = BLOCK.defaultWeeks): Plan | null {
+  const built = buildRulesPlan({ settings: s, catalogue: listExercises(), kind: 'auto', weeks, now });
   return built.ok ? built.plan : null;
 }
 

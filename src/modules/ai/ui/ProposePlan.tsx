@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { getExercise } from '../../../data/exercises';
 import type { Correction, ValidPlan } from '../../../../shared/ai-plan';
 import type { Settings } from '../../../domain/types';
-import { TEMPLATE } from '../../../config/thresholds';
+import { BLOCK, TEMPLATE } from '../../../config/thresholds';
+import { repRangeFor } from '../../../domain/reps';
 import { buildPlanRequest } from '../domain/request';
 import { planFromProposal } from '../domain/apply';
 import { listExercises } from '../../../data/exercises';
@@ -23,7 +24,8 @@ const REASON: Record<string, string> = {
   none: 'No AI provider is set up.',
 };
 
-export function ProposePlan(props: { settings: Settings; onSaved: () => void }) {
+export function ProposePlan(props: { settings: Settings; weeks?: number; onSaved: () => void }) {
+  const weeks = props.weeks ?? BLOCK.defaultWeeks;
   const [preview, setPreview] = useState<Preview | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,9 +60,14 @@ export function ProposePlan(props: { settings: Settings; onSaved: () => void }) 
     setError(null);
     try {
       const now = Date.now();
-      if (plan?.kind === 'ai') await saveChosenPlan(planFromProposal(plan.plan, props.settings.daysPerWeek, now));
+      if (plan?.kind === 'ai') await saveChosenPlan(
+          planFromProposal(plan.plan, props.settings, weeks, (id) => {
+            const ex = getExercise(id);
+            return ex ? repRangeFor(ex) : { min: 8, max: 12 };
+          }, now),
+        );
       else {
-        const rules = rulesPlan(props.settings, now);
+        const rules = rulesPlan(props.settings, now, weeks);
         if (!rules) {
           setError('No exercises fit your equipment and limits. Change them in Settings.');
           return;
