@@ -9,6 +9,7 @@ import { TEMPLATE } from '../../config/thresholds';
 import type { Correction, ValidPlan } from '../../../shared/ai-plan';
 import { buildPlanRequest } from './domain/request';
 import { getRepo, defaultSettings } from '../training/data';
+import { blockedIds } from '../../domain/profile';
 
 export type Proposal =
   | { status: 'ai'; provider: string; plan: ValidPlan; corrections: Correction[] }
@@ -41,7 +42,7 @@ export function rulesPlan(s: Settings, now: number): Plan {
   const t = buildTemplate({
     daysPerWeek: s.daysPerWeek,
     exercisesPerDay: TEMPLATE.exercisesPerDay,
-    avoid: s.avoid ?? [],
+    avoid: [...blockedIds(s, listExercises())],
     catalogue: listExercises(),
   });
   return planFromTemplate(t.days, s.daysPerWeek, now);

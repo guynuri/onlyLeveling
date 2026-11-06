@@ -6,6 +6,7 @@ import { getRepo, getLocalRepo, defaultSettings, currentPlan } from './data';
 import { ExerciseName } from '../library/ExerciseSheet';
 import { Card } from '../../ui/primitives';
 import { PLAN_CHANGED_EVENT } from '../library/labels';
+import { blockedIds } from '../../domain/profile';
 
 // Saves a plan with one exercise replaced. The clock is read here, outside render.
 async function replaceAndSave(plan: Plan, fromId: string, toId: string): Promise<Plan> {
@@ -26,7 +27,7 @@ export default function PlanScreen() {
       (async () => {
         const repo = await getRepo();
         const s = (await repo.getSettings()) ?? defaultSettings();
-        setAvoid(s.avoid ?? []);
+        setAvoid([...blockedIds(s, listExercises())]);
         setPlan(await currentPlan(repo, await getLocalRepo(), s));
       })().catch(() => setError('Could not load your plan. Reload to try again.'));
     load();
