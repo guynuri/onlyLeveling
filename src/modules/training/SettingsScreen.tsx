@@ -3,6 +3,7 @@ import { getRepo, getLocalRepo, defaultSettings } from './data';
 import { saveProfilePatch } from './validate';
 import { ProfileSettings } from '../onboarding/ProfileSettings';
 import type { Settings } from '../../domain/types';
+import { workoutViewOf } from '../../domain/profile';
 import { Button, Card } from '../../ui/primitives';
 import { SegmentedControl, Stepper, toast } from '../../ui/controls';
 import { applyTheme, readTheme, type ThemeChoice } from '../../ui/theme';
@@ -45,6 +46,7 @@ export default function SettingsScreen() {
   const [current, setCurrent] = useState<Settings | null>(null);
   const [days, setDays] = useState(3);
   const [rest, setRest] = useState(90);
+  const [view, setView] = useState<'focus' | 'list'>('focus');
   const [theme, setTheme] = useState<ThemeChoice>(readTheme);
   const [loaded, setLoaded] = useState(false);
   const [status, setStatus] = useState('');
@@ -64,6 +66,7 @@ export default function SettingsScreen() {
         setCurrent(cur);
         setDays(cur.daysPerWeek);
         setRest(cur.restSec);
+        setView(workoutViewOf(cur));
         setSync(st);
         if (st.config) setServer(st.config.baseUrl);
         setLoaded(true);
@@ -77,7 +80,7 @@ export default function SettingsScreen() {
   async function save() {
     try {
       const repo = await getRepo(); // queued for the server as well
-      setCurrent(await saveProfilePatch(repo, { daysPerWeek: days, restSec: rest }));
+      setCurrent(await saveProfilePatch(repo, { daysPerWeek: days, restSec: rest, workoutView: view }));
       setStatus('');
       toast('Saved on this device.');
     } catch {
@@ -167,6 +170,19 @@ export default function SettingsScreen() {
           <Stepper label="rest seconds" value={rest} onChange={setRest} unit="s" step={15} min={0} />
         </div>
         <p className="muted small">Rest 0 turns the timer off.</p>
+        <div className="ui-setting">
+          <span>Workout view</span>
+          <SegmentedControl
+            label="Workout view"
+            options={[
+              { value: 'focus', label: 'Focus' },
+              { value: 'list', label: 'List' },
+            ]}
+            value={view}
+            onChange={setView}
+          />
+        </div>
+        <p className="muted small">Focus shows one exercise at a time. List shows the whole session.</p>
         <Button onClick={save}>Save</Button>
       </Card>
 
