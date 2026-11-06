@@ -160,7 +160,7 @@
   width: 100%; max-width: 640px;
   max-height: 90dvh;
   margin: auto auto 0;
-  padding: 0;
+  padding: 0; overflow: hidden; /* only .ui-sheet-body scrolls */
   border: 1px solid var(--border);
   border-bottom: 0;
   border-radius: var(--r-lg) var(--r-lg) 0 0;

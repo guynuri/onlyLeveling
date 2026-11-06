@@ -58,12 +58,14 @@ export function SegmentedControl<T extends string>(props: {
 // does not scroll while it is open.
 export function Sheet(props: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
   const { open, onClose } = props;
 
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
     if (open && !d.open) d.showModal();
+    if (open && bodyRef.current) bodyRef.current.scrollTop = 0; // a fresh sheet always starts at the top
     if (!open && d.open) d.close();
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -83,7 +85,7 @@ export function Sheet(props: { open: boolean; onClose: () => void; title: string
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="ui-sheet-body">
+      <div className="ui-sheet-body" ref={bodyRef}>
         <header className="ui-sheet-head">
           <h2 className="ui-sheet-title">{props.title}</h2>
           <button type="button" className="ui-sheet-close" aria-label="Close" onClick={onClose}>
