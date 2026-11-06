@@ -33,6 +33,25 @@ export function parseSettingsForm(f: { days: string; rest: string; owned: string
   };
 }
 
+// The Settings form changes three fields; everything else (onboarding answers, reminder) is kept. Saving the bare
+// parse result used to drop onboardedAt and send the user back through onboarding.
+export function applySettingsForm(current: Settings, f: { days: string; rest: string; owned: string }): Parsed<Settings> {
+  const parsed = parseSettingsForm(f);
+  return parsed.ok ? { ok: true, value: { ...current, ...parsed.value } } : parsed;
+}
+
+// Saves the Settings form on top of what is stored now. The screen's own copy is only a fallback: a reminder saved on
+// the same screen, or a sync pull after it opened, must not be overwritten by a stale copy.
+export async function saveSettingsForm(
+  repo: { getSettings(): Promise<Settings | null | undefined>; saveSettings(s: Settings): Promise<void> },
+  fallback: Settings,
+  f: { days: string; rest: string; owned: string },
+): Promise<Parsed<Settings>> {
+  const parsed = applySettingsForm((await repo.getSettings()) ?? fallback, f);
+  if (parsed.ok) await repo.saveSettings(parsed.value);
+  return parsed;
+}
+
 // One logged set. A blank, non-numeric, zero or fractional entry is refused, never logged as done.
 export function parseSetInput(weightText: string, repsText: string): Parsed<{ w: number; r: number }> {
   const wt = weightText.trim();

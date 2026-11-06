@@ -3,6 +3,8 @@ import { getExercise, listExercises } from '../../data/exercises';
 import { replaceExercise, planExerciseIds, type Plan } from '../../domain/plan';
 import { isDumbbellCompatible, movementPattern } from '../../domain/exercise';
 import { getRepo, getLocalRepo, defaultSettings, currentPlan } from './data';
+import { ExerciseName } from '../library/ExerciseSheet';
+import { Card } from '../../ui/primitives';
 
 // Saves a plan with one exercise replaced. The clock is read here, outside render.
 async function replaceAndSave(plan: Plan, fromId: string, toId: string): Promise<Plan> {
@@ -49,49 +51,52 @@ export default function PlanScreen() {
     <section>
       <h1>Plan</h1>
       {saveError && <p className="error">{saveError}</p>}
-      <p className="muted">
-        Your plan. It changes when you accept a coach suggestion, replace an exercise, or change days per week. Dumbbell
-        and bodyweight exercises only.
+      <p className="muted small">
+        Your plan. It changes when you accept a coach suggestion, replace an exercise, or change days per week. Tap an
+        exercise to see how it is done.
       </p>
       {plan.days.map((day) => (
-        <div key={day.index} className="plan-day">
-          <h2>Day {day.index + 1}</h2>
+        <Card key={day.index} title={`Day ${day.index + 1}`}>
           <h3>Warm-up</h3>
-          <ul>
+          <ul className="ui-list">
             {day.warmup.map((r) => (
               <li key={r.name}>
-                {r.name} · {Math.round(r.seconds / 60)} min
+                <span>{r.name}</span>
+                <span className="muted small">{Math.round(r.seconds / 60)} min</span>
               </li>
             ))}
           </ul>
           <h3>Exercises</h3>
-          <ol>
+          <ol className="ui-list ui-list--numbered">
             {day.exerciseIds.map((id) => (
-              <li key={id}>
-                {getExercise(id)?.name ?? id}{' '}
-                <label className="small">
-                  Replace with{' '}
-                  <select value="" onChange={(e) => e.target.value && replace(id, e.target.value)} aria-label={`Replace ${getExercise(id)?.name ?? id}`}>
-                    <option value="">Choose…</option>
-                    {choices.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+              <li key={id} className="ui-list-stack">
+                <ExerciseName id={id} name={getExercise(id)?.name ?? id} />
+                <select
+                  className="ui-select-sm"
+                  value=""
+                  onChange={(e) => e.target.value && replace(id, e.target.value)}
+                  aria-label={`Replace ${getExercise(id)?.name ?? id}`}
+                >
+                  <option value="">Replace with…</option>
+                  {choices.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
               </li>
             ))}
           </ol>
           <h3>Cool-down</h3>
-          <ul>
+          <ul className="ui-list">
             {day.cooldown.map((r) => (
               <li key={r.name}>
-                {r.name} · {Math.round(r.seconds / 60)} min
+                <span>{r.name}</span>
+                <span className="muted small">{Math.round(r.seconds / 60)} min</span>
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       ))}
     </section>
   );

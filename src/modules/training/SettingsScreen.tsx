@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { getRepo, getLocalRepo, defaultSettings } from './data';
-import { parseSettingsForm } from './validate';
+import { saveSettingsForm } from './validate';
+import type { Settings } from '../../domain/types';
+import { Button, Card } from '../../ui/primitives';
+import { SegmentedControl, Stepper, toast } from '../../ui/controls';
+import { applyTheme, readTheme, type ThemeChoice } from '../../ui/theme';
 import {
   readSyncState,
   runSync,
@@ -18,6 +22,18 @@ import { AuthClientError } from '../../data/auth-client';
 const DEFAULT_SERVER = 'https://onlyleveling-api.guynuri.workers.dev';
 type Mode = 'signin' | 'signup' | 'recover';
 
+const MODES = [
+  { value: 'signin', label: 'Sign in' },
+  { value: 'signup', label: 'New account' },
+  { value: 'recover', label: 'Forgot' },
+] as const;
+
+const THEMES = [
+  { value: 'system', label: 'Phone' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'light', label: 'Light' },
+] as const;
+
 function messageOf(e: unknown): string {
   if (e instanceof AuthClientError) return e.message;
   return e instanceof Error ? e.message : 'Something went wrong. Try again.';
@@ -25,9 +41,11 @@ function messageOf(e: unknown): string {
 
 // Core settings per D5 (days, rest, owned dumbbells), plus the account, sync and export (SPEC §6.3).
 export default function SettingsScreen() {
-  const [days, setDays] = useState('');
-  const [rest, setRest] = useState('');
+  const [current, setCurrent] = useState<Settings | null>(null);
+  const [days, setDays] = useState(3);
+  const [rest, setRest] = useState(90);
   const [owned, setOwned] = useState('');
+  const [theme, setTheme] = useState<ThemeChoice>(readTheme);
   const [loaded, setLoaded] = useState(false);
   const [status, setStatus] = useState('');
   const [sync, setSync] = useState<SyncState | null>(null);
@@ -43,8 +61,9 @@ export default function SettingsScreen() {
     Promise.all([getLocalRepo().then((r) => r.getSettings()), readSyncState()])
       .then(([saved, st]) => {
         const cur = saved ?? defaultSettings();
-        setDays(String(cur.daysPerWeek));
-        setRest(String(cur.restSec));
+        setCurrent(cur);
+        setDays(cur.daysPerWeek);
+        setRest(cur.restSec);
         setOwned(cur.owned.join(', '));
         setSync(st);
         if (st.config) setServer(st.config.baseUrl);
@@ -53,19 +72,21 @@ export default function SettingsScreen() {
       .catch(() => setStatus('Could not load settings. Reload the page to try again.'));
   }, []);
 
-  if (!loaded) return <p className="muted">{status || 'Loading…'}</p>;
+  if (!loaded || !current) return <p className="muted">{status || 'Loading…'}</p>;
 
   async function save() {
-    const parsed = parseSettingsForm({ days, rest, owned });
-    if (!parsed.ok) {
-      setStatus(parsed.error);
-      return;
-    }
+    if (!current) return;
     try {
       const repo = await getRepo(); // queued for the server as well
-      await repo.saveSettings(parsed.value);
+      const parsed = await saveSettingsForm(repo, current, { days: String(days), rest: String(rest), owned });
+      if (!parsed.ok) {
+        setStatus(parsed.error);
+        return;
+      }
+      setCurrent(parsed.value);
       setOwned(parsed.value.owned.join(', '));
-      setStatus('Saved on this device.');
+      setStatus('');
+      toast('Saved on this device.');
     } catch {
       setStatus('Could not save. Nothing changed; try again.');
     }
@@ -138,101 +159,102 @@ export default function SettingsScreen() {
 
   const signedIn = !!sync?.config;
 
+
   return (
     <section>
       <h1>Settings</h1>
+
+      <Card title="Training">
+        <div className="ui-setting">
+          <span>Days per week</span>
+          <Stepper label="days per week" value={days} onChange={setDays} min={1} max={7} />
+        </div>
+        <div className="ui-setting">
+          <span>Rest between sets</span>
+          <Stepper label="rest seconds" value={rest} onChange={setRest} unit="s" step={15} min={0} />
+        </div>
+        <p className="muted small">Rest 0 turns the timer off.</p>
+        <label className="field">
+          Dumbbells owned, kg (e.g. 4, 6, 8, 10)
+          <textarea rows={2} value={owned} onChange={(e) => setOwned(e.target.value)} />
+        </label>
+        <Button onClick={save}>Save</Button>
+      </Card>
+
+      <Card title="Appearance">
+        <SegmentedControl
+          label="Theme"
+          options={THEMES}
+          value={theme}
+          onChange={(t) => {
+            setTheme(t);
+            applyTheme(t);
+          }}
+        />
+      </Card>
+
       <PushSettings />
-      <label className="field">
-        Days per week (1–7)
-        <input inputMode="numeric" value={days} onChange={(e) => setDays(e.target.value)} />
-      </label>
-      <label className="field">
-        Rest between sets (seconds, 0 = off)
-        <input inputMode="numeric" value={rest} onChange={(e) => setRest(e.target.value)} />
-      </label>
-      <label className="field">
-        Dumbbells owned, kg (e.g. 4, 6, 8, 10)
-        <textarea rows={3} value={owned} onChange={(e) => setOwned(e.target.value)} />
-      </label>
-      <button type="button" onClick={save}>
-        Save
-      </button>
 
-      <h2>Account and sync</h2>
-      {sync && <p className="muted">{syncLabel(sync)}</p>}
+      <Card title="Account and sync">
+        {sync && <p className="muted small">{syncLabel(sync)}</p>}
 
-      {signedIn ? (
-        <>
-          <div className="row">
-            <button type="button" onClick={syncNowClick}>
-              Sync now
-            </button>
-            <button type="button" onClick={exportData}>
-              Export my data
-            </button>
-            <button type="button" onClick={makeInvite}>
-              Create invite code
-            </button>
-            <button type="button" onClick={disconnect}>
-              Sign out here
-            </button>
-          </div>
-          {newInvite && (
-            <p>
-              Invite code: <strong className="code">{newInvite}</strong>
-            </p>
-          )}
-        </>
-      ) : (
-        <>
-          <div className="row">
-            <button type="button" className={mode === 'signin' ? '' : 'ghost'} onClick={() => setMode('signin')}>
-              Sign in
-            </button>
-            <button type="button" className={mode === 'signup' ? '' : 'ghost'} onClick={() => setMode('signup')}>
-              Create account
-            </button>
-            <button type="button" className={mode === 'recover' ? '' : 'ghost'} onClick={() => setMode('recover')}>
-              Forgot password
-            </button>
-          </div>
-          <label className="field">
-            Server address
-            <input value={server} onChange={(e) => setServer(e.target.value)} autoCapitalize="none" />
-          </label>
-          <label className="field">
-            Username
-            <input
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              autoCapitalize="none"
-              autoComplete="username"
-            />
-          </label>
-          {mode !== 'signin' && (
+        {signedIn ? (
+          <>
+            <div className="ui-row">
+              <Button variant="secondary" onClick={syncNowClick}>
+                Sync now
+              </Button>
+              <Button variant="secondary" onClick={exportData}>
+                Export my data
+              </Button>
+              <Button variant="secondary" onClick={makeInvite}>
+                Create invite code
+              </Button>
+              <Button variant="danger" onClick={disconnect}>
+                Sign out here
+              </Button>
+            </div>
+            {newInvite && (
+              <p>
+                Invite code: <strong className="code">{newInvite}</strong>
+              </p>
+            )}
+          </>
+        ) : (
+          <div className="ui-stack">
+            <SegmentedControl label="Account action" options={MODES} value={mode} onChange={setMode} />
             <label className="field">
-              Invite code{mode === 'recover' ? ' (one you created)' : ''}
-              <input value={code} onChange={(e) => setCode(e.target.value)} autoCapitalize="characters" />
+              Server address
+              <input value={server} onChange={(e) => setServer(e.target.value)} autoCapitalize="none" />
             </label>
-          )}
-          <label className="field">
-            {mode === 'recover' ? 'New password (at least 10 characters)' : 'Password (at least 10 characters)'}
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-            />
-          </label>
-          <button type="button" onClick={account}>
-            {mode === 'signin' ? 'Sign in and sync' : mode === 'signup' ? 'Create account' : 'Reset password'}
-          </button>
-        </>
-      )}
+            <label className="field">
+              Username
+              <input value={username} onChange={(e) => setUsername(e.target.value)} autoCapitalize="none" autoComplete="username" />
+            </label>
+            {mode !== 'signin' && (
+              <label className="field">
+                Invite code{mode === 'recover' ? ' (one you created)' : ''}
+                <input value={code} onChange={(e) => setCode(e.target.value)} autoCapitalize="characters" />
+              </label>
+            )}
+            <label className="field">
+              {mode === 'recover' ? 'New password (at least 10 characters)' : 'Password (at least 10 characters)'}
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+              />
+            </label>
+            <Button onClick={account}>
+              {mode === 'signin' ? 'Sign in and sync' : mode === 'signup' ? 'Create account' : 'Reset password'}
+            </Button>
+          </div>
+        )}
+      </Card>
 
-      <p className="muted">{status}</p>
-      <p>
-        <a href="#/credits">Credits</a>
+      <p className="muted" role="status">
+        {status}
       </p>
     </section>
   );

@@ -13,4 +13,10 @@ export const CREDITS: readonly CreditEntry[] = [
     licence: 'Unlicense (public domain)',
     uses: 'Exercise names, muscles, equipment, instructions. Images are not used: their licence is not stated.',
   },
+  {
+    name: 'Lucide icons',
+    url: 'https://lucide.dev',
+    licence: 'ISC',
+    uses: 'Icons in the tab bar and screens.',
+  },
 ];

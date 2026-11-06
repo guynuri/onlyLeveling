@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { getRepo, defaultSettings } from '../../training/data';
 import { PUSH_COPY, type PushState } from '../domain/support';
 import { currentPushState, turnOnPush, turnOffPush, saveReminder, pushFailures } from '../actions';
+import { Button, Card } from '../../../ui/primitives';
 
 export function PushSettings() {
   const [state, setState] = useState<PushState | null>(null);
@@ -45,8 +46,7 @@ export function PushSettings() {
   if (!state) return error ? <p className="error">{error}</p> : <p className="muted">Checking notifications…</p>;
 
   return (
-    <section aria-label="Notifications">
-      <h2>Notifications</h2>
+    <Card title="Notifications">
       <p className="muted small">{PUSH_COPY[state]}</p>
       {failures > 0 && (
         <p className="error small">
@@ -55,20 +55,20 @@ export function PushSettings() {
       )}
 
       {state === 'off' && (
-        <button type="button" disabled={busy} onClick={() => run(turnOnPush, 'Notifications are on.')}>
+        <Button disabled={busy} onClick={() => run(turnOnPush, 'Notifications are on.')}>
           Turn on notifications
-        </button>
+        </Button>
       )}
 
       {state === 'on' && (
-        <button type="button" disabled={busy} onClick={() => run(turnOffPush, 'Notifications are off.')}>
+        <Button variant="secondary" disabled={busy} onClick={() => run(turnOffPush, 'Notifications are off.')}>
           Turn off notifications
-        </button>
+        </Button>
       )}
 
       {state === 'on' && (
-        <div className="reminder">
-          <label className="field">
+        <div className="ui-stack ui-gap-top">
+          <label className="ui-check">
             <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} /> Workout reminder
           </label>
           <label className="field">
@@ -79,14 +79,14 @@ export function PushSettings() {
             Sent on training days until this week’s sessions are done. Timing depends on iPhone background scheduling, so it
             may be a few minutes late.
           </p>
-          <button type="button" disabled={busy} onClick={() => run(() => saveReminder(enabled, time), 'Reminder saved.')}>
+          <Button disabled={busy} onClick={() => run(() => saveReminder(enabled, time), 'Reminder saved.')}>
             Save reminder
-          </button>
+          </Button>
         </div>
       )}
 
       {message && <p className="small">{message}</p>}
       {error && <p className="error">{error}</p>}
-    </section>
+    </Card>
   );
 }

@@ -1,0 +1,309 @@
+/* Component styles (UX design §7). Tokens only — no raw colours or sizes outside src/styles.css. */
+
+/* Button */
+.ui-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2);
+  min-height: var(--tap);
+  padding: var(--s-2) var(--s-4);
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+  font: inherit; font-weight: 600; font-size: var(--fs-md);
+  text-decoration: none;
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.1s, background 0.15s;
+}
+.ui-btn:active:not(:disabled) { transform: scale(0.97); }
+.ui-btn:disabled { opacity: 0.5; cursor: default; }
+.ui-btn--sm { padding: var(--s-1) var(--s-3); font-size: var(--fs-sm); }
+.ui-btn--block { display: flex; width: 100%; }
+.ui-btn--primary { background: var(--accent); color: var(--on-accent); }
+.ui-btn--primary:hover:not(:disabled), .ui-btn--primary:active:not(:disabled) { box-shadow: var(--glow); }
+.ui-btn--secondary { background: var(--surface-2); color: var(--fg); border-color: var(--border); }
+.ui-btn--ghost { background: transparent; color: var(--accent); }
+.ui-btn--danger { background: transparent; color: var(--danger); border-color: var(--danger); }
+.ui-btn-icon { display: inline-flex; }
+.ui-btn-icon svg { width: 18px; height: 18px; }
+
+/* Card */
+.ui-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--s-4);
+  margin-bottom: var(--s-3);
+  box-shadow: var(--shadow);
+}
+.ui-card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); margin-bottom: var(--s-3); }
+.ui-card-title { font-size: var(--fs-md); margin: 0; color: var(--fg); text-transform: none; letter-spacing: 0; }
+
+/* Tile */
+.ui-tile {
+  position: relative;
+  display: flex; align-items: center; gap: var(--s-3);
+  min-height: 64px;
+  padding: var(--s-3) var(--s-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  color: var(--fg);
+  text-decoration: none;
+}
+.ui-tile:active { background: var(--surface-2); }
+.ui-tile-icon { display: inline-flex; color: var(--accent); }
+.ui-tile-icon svg { width: 22px; height: 22px; }
+.ui-tile-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.ui-tile-label { font-weight: 600; }
+.ui-tile-value { color: var(--muted); font-size: var(--fs-sm); }
+.ui-badge {
+  min-width: 22px; height: 22px; padding: 0 var(--s-1);
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--r-pill);
+  background: var(--accent); color: var(--on-accent);
+  font-size: var(--fs-xs); font-weight: var(--fw-bold);
+  box-shadow: var(--glow);
+}
+
+/* Chip */
+.ui-chips { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.ui-chip {
+  min-height: var(--tap);
+  padding: var(--s-1) var(--s-3);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--fg);
+  font: inherit; font-size: var(--fs-sm); font-weight: 500;
+  cursor: pointer;
+}
+.ui-chip[aria-pressed='true'] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); box-shadow: var(--glow); }
+
+/* Choice card */
+.ui-choice {
+  display: flex; align-items: center; gap: var(--s-3);
+  width: 100%;
+  min-height: 64px;
+  padding: var(--s-3) var(--s-4);
+  text-align: left;
+  background: var(--surface);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  font: inherit;
+  cursor: pointer;
+}
+.ui-choice[aria-pressed='true'] { border-color: var(--accent); box-shadow: var(--glow); }
+.ui-choice-icon { display: inline-flex; color: var(--accent); }
+.ui-choice-text { display: flex; flex-direction: column; }
+.ui-choice-title { font-weight: 600; }
+.ui-choice-sub { color: var(--muted); font-size: var(--fs-sm); }
+
+/* Progress bar */
+.ui-progress { height: 8px; background: var(--surface-2); border-radius: var(--r-pill); overflow: hidden; }
+.ui-progress-fill { height: 100%; background: var(--accent); box-shadow: var(--glow); border-radius: inherit; transition: width 0.3s; }
+
+/* Rank badge */
+.ui-rank {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 32px; height: 32px; padding: 0 var(--s-1);
+  border-radius: var(--r-sm);
+  border: 2px solid var(--rank);
+  color: var(--rank);
+  font-weight: 800; font-size: var(--fs-sm);
+  font-family: var(--font-mono);
+}
+.ui-rank--glow { box-shadow: 0 0 14px var(--rank); }
+
+/* Empty state */
+.ui-empty { display: flex; flex-direction: column; align-items: center; gap: var(--s-2); text-align: center; padding: var(--s-6) var(--s-4); }
+.ui-empty-icon { color: var(--muted); }
+.ui-empty-icon svg { width: 40px; height: 40px; }
+.ui-empty-title { font-weight: 600; margin: 0; }
+.ui-empty-body { color: var(--muted); margin: 0; }
+
+/* Stepper */
+.ui-stepper {
+  display: inline-flex; align-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+.ui-stepper-btn {
+  width: var(--tap); height: var(--tap);
+  border: 0; background: transparent; color: var(--accent);
+  font: inherit; font-size: var(--fs-lg); font-weight: var(--fw-bold);
+  cursor: pointer;
+}
+.ui-stepper-btn:active:not(:disabled) { background: var(--surface); }
+.ui-stepper-btn:disabled { color: var(--muted); opacity: 0.35; cursor: default; }
+.ui-stepper-value { min-width: 64px; text-align: center; font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; }
+.ui-stepper-unit { color: var(--muted); font-weight: 400; font-size: var(--fs-sm); }
+
+/* Segmented control */
+.ui-segmented {
+  display: flex; gap: var(--s-1);
+  padding: var(--s-1);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+.ui-segment {
+  flex: 1; min-height: 36px;
+  border: 0; border-radius: var(--r-sm);
+  background: transparent; color: var(--muted);
+  font: inherit; font-size: var(--fs-sm); font-weight: 600;
+  cursor: pointer;
+}
+.ui-segment[aria-checked='true'] { background: var(--accent); color: var(--on-accent); box-shadow: var(--glow); }
+
+/* Sheet */
+.ui-sheet {
+  width: 100%; max-width: 640px;
+  max-height: 90dvh;
+  margin: auto auto 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  background: var(--surface);
+  color: var(--fg);
+  box-shadow: var(--shadow);
+}
+/* Beats the browser's dialog:modal max-width/height, which would leave gaps at the sides on a phone. */
+dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
+.ui-sheet::backdrop { background: rgb(0 0 0 / 55%); }
+.ui-sheet[open] { animation: ui-sheet-up 0.25s ease-out; }
+@keyframes ui-sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+.ui-sheet-body {
+  max-height: 90dvh; overflow-y: auto; overscroll-behavior: contain;
+  padding: var(--s-4);
+  padding-bottom: calc(var(--s-4) + env(safe-area-inset-bottom));
+}
+.ui-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); margin-bottom: var(--s-3); }
+.ui-sheet-title { margin: 0; font-size: var(--fs-lg); color: var(--fg); text-transform: none; letter-spacing: 0; }
+.ui-sheet-close {
+  width: var(--tap); height: var(--tap); flex: none;
+  border: 0; border-radius: var(--r-pill);
+  background: var(--surface-2); color: var(--fg);
+  font: inherit; cursor: pointer;
+}
+
+/* Toast */
+.ui-toast-host {
+  position: fixed; left: 0; right: 0;
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + var(--s-3));
+  display: flex; justify-content: center;
+  pointer-events: none;
+  z-index: 20;
+}
+.ui-toast {
+  max-width: calc(100% - 2 * var(--s-4));
+  padding: var(--s-2) var(--s-4);
+  border-radius: var(--r-pill);
+  background: var(--surface-2); color: var(--fg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  font-size: var(--fs-sm);
+}
+
+/* Vertical list of tiles/cards */
+.ui-stack { display: flex; flex-direction: column; gap: var(--s-3); }
+
+/* Tab bar */
+.ui-tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+  display: flex; justify-content: space-around; align-items: flex-end;
+  height: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+  padding: 0 var(--s-2) env(safe-area-inset-bottom);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border);
+}
+.ui-tab {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  height: var(--tabbar-h);
+  color: var(--muted);
+  text-decoration: none;
+  font-size: var(--fs-xs); font-weight: 600;
+}
+.ui-tab-icon { display: inline-flex; }
+.ui-tab-icon svg { width: 24px; height: 24px; }
+.ui-tab[aria-current='page'] { color: var(--accent); }
+.ui-tab[aria-current='page'] .ui-tab-icon { filter: drop-shadow(0 0 6px var(--accent-glow)); }
+.ui-tab--train .ui-tab-icon {
+  width: 52px; height: 52px; margin-top: -22px;
+  align-items: center; justify-content: center;
+  border-radius: var(--r-pill);
+  background: var(--accent); color: var(--on-accent);
+  box-shadow: var(--glow);
+}
+.ui-tab--train .ui-tab-icon svg { width: 26px; height: 26px; fill: currentColor; }
+
+/* Exercise name that opens its sheet */
+.ui-exname {
+  display: inline; min-height: 0; padding: 0;
+  border: 0; background: none;
+  color: inherit; font: inherit;
+  text-align: left;
+  text-decoration: underline; text-decoration-color: var(--accent-glow); text-underline-offset: 3px;
+  cursor: pointer;
+  position: relative;
+}
+/* Invisible hit area: about 44px tall without moving the text or the layout around it. */
+.ui-exname::after { content: ''; position: absolute; inset: -10px -4px; }
+
+/* Small display-only tag */
+.ui-tag {
+  display: inline-flex; align-items: center;
+  padding: var(--s-1) var(--s-3);
+  border-radius: var(--r-pill);
+  background: var(--surface-2); color: var(--muted);
+  border: 1px solid var(--border);
+  font-size: var(--fs-xs); font-weight: 600;
+}
+
+/* Numbered steps */
+.ui-steps { margin: 0; padding-left: var(--s-5); display: flex; flex-direction: column; gap: var(--s-2); }
+
+/* A label with its control on the right (Settings rows) */
+.ui-setting { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); margin-bottom: var(--s-3); }
+/* Buttons side by side, wrapping on narrow screens */
+.ui-row { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.ui-gap-top { margin-top: var(--s-3); }
+/* Checkbox with its label */
+.ui-check { display: flex; align-items: center; gap: var(--s-2); min-height: var(--tap); }
+.ui-check input { width: 22px; height: 22px; min-height: 0; accent-color: var(--accent); }
+
+/* Lists inside cards */
+.ui-list { list-style: none; margin: 0 0 var(--s-3); padding: 0; }
+.ui-list > li {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+  min-height: var(--tap);
+  padding: var(--s-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+.ui-list > li:last-child { border-bottom: 0; }
+.ui-list--numbered { counter-reset: item; }
+.ui-list--numbered > li { counter-increment: item; justify-content: flex-start; }
+.ui-list--numbered > li::before { content: counter(item); color: var(--accent); font-weight: var(--fw-bold); min-width: 1.5em; align-self: flex-start; }
+.ui-list > li.ui-list-stack { flex-wrap: wrap; }
+.ui-list-stack > *:not(:first-child) { flex-basis: calc(100% - 1.5em); max-width: calc(100% - 1.5em); margin-left: 1.5em; }
+.ui-list--rows > li { padding: 0; }
+.ui-list-link {
+  display: flex; flex-direction: column; justify-content: center;
+  width: 100%; min-height: 56px; padding: var(--s-2) 0;
+  color: var(--fg); text-decoration: none;
+}
+.ui-select-sm { min-height: 36px; padding: var(--s-1) var(--s-2); font-size: var(--fs-sm); width: auto; max-width: 100%; color: var(--muted); }
+
+/* Sticky search/filter bar */
+.ui-sticky {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; flex-direction: column; gap: var(--s-2);
+  padding: var(--s-2) 0 var(--s-3);
+  background: var(--bg);
+}
+
+/* Expandable card */
+.ui-details > summary { cursor: pointer; font-weight: 600; min-height: var(--tap); display: flex; align-items: center; }

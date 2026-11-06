@@ -6,6 +6,12 @@ Add one row per ported file.
 | our file | ported from | notes |
 |---|---|---|
 
+## Libraries
+
+| library | licence | what we use | link |
+|---|---|---|---|
+| Lucide (`lucide-react`) | ISC | icons in the tab bar and screens | https://lucide.dev |
+
 ## Data sources
 
 | source | licence | what we use | link |

@@ -1,11 +1,21 @@
 import { describe, it, expect } from 'vitest';
-import { parseRoute } from './route';
+import { parseRoute, tabFor } from './route';
 
 describe('parseRoute', () => {
-  it('defaults to today for an empty or unknown hash', () => {
-    expect(parseRoute('')).toEqual({ screen: 'today' });
-    expect(parseRoute('#')).toEqual({ screen: 'today' });
-    expect(parseRoute('#/nope')).toEqual({ screen: 'today' });
+  it('defaults to home for an empty or unknown hash', () => {
+    expect(parseRoute('')).toEqual({ screen: 'home' });
+    expect(parseRoute('#')).toEqual({ screen: 'home' });
+    expect(parseRoute('#/nope')).toEqual({ screen: 'home' });
+  });
+
+  it('old #/today links land on home', () => {
+    expect(parseRoute('#/today')).toEqual({ screen: 'home' });
+  });
+
+  it('maps the new tab screens', () => {
+    expect(parseRoute('#/workout')).toEqual({ screen: 'workout' });
+    expect(parseRoute('#/progress')).toEqual({ screen: 'progress' });
+    expect(parseRoute('#/more')).toEqual({ screen: 'more' });
   });
 
   it('maps tab hashes, with or without the leading slash', () => {
@@ -29,5 +39,16 @@ describe('parseRoute', () => {
 
   it('decodes an encoded exercise id', () => {
     expect(parseRoute('#/library/fx_a%20b')).toEqual({ screen: 'exercise', id: 'fx_a b' });
+  });
+});
+
+describe('tabFor', () => {
+  it('highlights More for its sub-screens', () => {
+    for (const r of [{ screen: 'library' }, { screen: 'history' }, { screen: 'settings' }, { screen: 'credits' }, { screen: 'exercise', id: 'x' }] as const)
+      expect(tabFor(r)).toBe('more');
+  });
+  it('highlights Home during onboarding and the tab itself otherwise', () => {
+    expect(tabFor({ screen: 'onboarding' })).toBe('home');
+    expect(tabFor({ screen: 'workout' })).toBe('workout');
   });
 });

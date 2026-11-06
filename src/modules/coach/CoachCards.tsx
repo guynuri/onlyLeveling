@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { getExercise } from '../../data/exercises';
 import type { Suggestion, SuggestionAction } from '../../domain/suggestion';
 import { loadCoachCards, acceptCoachCard, snoozeCoachCard, neverCoachCard } from './actions';
+import { ExerciseName } from '../library/ExerciseSheet';
+import { Button, Card } from '../../ui/primitives';
 
 export const COACH_FOOTER = 'Suggestion. Training guidance, not medical advice.';
 
@@ -51,25 +53,33 @@ export function CoachCards() {
         <p className="muted">No suggestions. They appear after a few weeks of sessions.</p>
       )}
       {cards.map((c) => (
-        <article key={c.id} className="coach-card">
-          <h2>{name(c.exerciseId)}</h2>
+        <Card key={c.id}>
+          <h2 className="ui-card-title">
+            <ExerciseName id={c.exerciseId} name={name(c.exerciseId)} />
+          </h2>
           <p>{c.reason}</p>
           <p>
-            <strong>{actionLabel(c.action, name)}</strong>
+            <strong>
+              {c.action.kind === 'swap' ? (
+                <>
+                  Swap for <ExerciseName id={c.action.toId} name={name(c.action.toId)} />
+                </>
+              ) : (
+                actionLabel(c.action, name)
+              )}
+            </strong>
           </p>
-          <div className="coach-actions">
-            <button type="button" onClick={() => act(() => acceptCoachCard(c))}>
-              Accept
-            </button>
-            <button type="button" onClick={() => act(() => snoozeCoachCard(c))}>
+          <div className="ui-row">
+            <Button onClick={() => act(() => acceptCoachCard(c))}>Accept</Button>
+            <Button variant="secondary" onClick={() => act(() => snoozeCoachCard(c))}>
               Not now
-            </button>
-            <button type="button" onClick={() => act(() => neverCoachCard(c))}>
+            </Button>
+            <Button variant="ghost" onClick={() => act(() => neverCoachCard(c))}>
               Never
-            </button>
+            </Button>
           </div>
           <p className="muted small">{COACH_FOOTER}</p>
-        </article>
+        </Card>
       ))}
     </section>
   );

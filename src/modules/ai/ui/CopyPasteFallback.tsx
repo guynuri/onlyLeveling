@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { validateAiPlan, type Correction, type ValidPlan } from '../../../../shared/ai-plan';
 import { buildPrompt, type PlanRequest } from '../../../../shared/ai-prompt';
+import { Button } from '../../../ui/primitives';
 
 export function CopyPasteFallback(props: {
   request: PlanRequest;
@@ -31,23 +32,25 @@ export function CopyPasteFallback(props: {
   };
 
   return (
-    <details className="copy-paste">
+    <details className="ui-card ui-details">
       <summary>Use another AI (copy and paste)</summary>
-      <p className="muted small">Copy the prompt into any AI chat, then paste its answer here. Answers are checked the same way.</p>
-      <button type="button" onClick={copy}>
-        Copy prompt
-      </button>
-      <textarea readOnly value={prompt} rows={6} aria-label="Prompt" />
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        rows={8}
-        placeholder="Paste the answer here"
-        aria-label="Pasted answer"
-      />
-      <button type="button" onClick={check} disabled={text.trim().length === 0}>
-        Check answer
-      </button>
+      <div className="ui-stack ui-gap-top">
+        <p className="muted small">Copy the prompt into any AI chat, then paste its answer here. Answers are checked the same way.</p>
+        <Button variant="secondary" onClick={copy}>
+          Copy prompt
+        </Button>
+        <textarea readOnly value={prompt} rows={6} aria-label="Prompt" />
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={8}
+          placeholder="Paste the answer here"
+          aria-label="Pasted answer"
+        />
+        <Button onClick={check} disabled={text.trim().length === 0}>
+          Check answer
+        </Button>
+      </div>
       {errors.length > 0 && (
         <ul className="error">
           {errors.map((e) => (
