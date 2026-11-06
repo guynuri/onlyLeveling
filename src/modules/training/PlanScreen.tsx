@@ -3,6 +3,7 @@ import { getExercise, listExercises } from '../../data/exercises';
 import { replaceExercise, planExerciseIds, type Plan } from '../../domain/plan';
 import { isDumbbellCompatible, movementPattern } from '../../domain/exercise';
 import { getRepo, getLocalRepo, defaultSettings, currentPlan } from './data';
+import { ExerciseName } from '../library/ExerciseSheet';
 
 // Saves a plan with one exercise replaced. The clock is read here, outside render.
 async function replaceAndSave(plan: Plan, fromId: string, toId: string): Promise<Plan> {
@@ -68,7 +69,7 @@ export default function PlanScreen() {
           <ol>
             {day.exerciseIds.map((id) => (
               <li key={id}>
-                {getExercise(id)?.name ?? id}{' '}
+                <ExerciseName id={id} name={getExercise(id)?.name ?? id} />{' '}
                 <label className="small">
                   Replace with{' '}
                   <select value="" onChange={(e) => e.target.value && replace(id, e.target.value)} aria-label={`Replace ${getExercise(id)?.name ?? id}`}>

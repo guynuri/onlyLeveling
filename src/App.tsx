@@ -3,6 +3,7 @@ import { ClipboardList, House, Menu, Play, TrendingUp } from 'lucide-react';
 import { parseRoute, tabFor, type Route, type Tab } from './app/route';
 import MoreScreen from './app/MoreScreen';
 import { ToastHost } from './ui/controls';
+import ExerciseSheet from './modules/library/ExerciseSheet';
 import { readSyncState, runSync, syncLabel, SYNC_EVENT } from './modules/sync/actions';
 import type { SyncState } from './data/sync-engine';
 import ExerciseDetail from './modules/library/ExerciseDetail';
@@ -106,6 +107,7 @@ export default function App() {
           </a>
         ))}
       </nav>
+      <ExerciseSheet />
       <ToastHost />
     </div>
   );

@@ -235,3 +235,26 @@
   box-shadow: var(--glow);
 }
 .ui-tab--train .ui-tab-icon svg { width: 26px; height: 26px; fill: currentColor; }
+
+/* Exercise name that opens its sheet */
+.ui-exname {
+  display: inline; min-height: 0; padding: 0;
+  border: 0; background: none;
+  color: inherit; font: inherit;
+  text-align: left;
+  text-decoration: underline; text-decoration-color: var(--accent-glow); text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* Small display-only tag */
+.ui-tag {
+  display: inline-flex; align-items: center;
+  padding: var(--s-1) var(--s-3);
+  border-radius: var(--r-pill);
+  background: var(--surface-2); color: var(--muted);
+  border: 1px solid var(--border);
+  font-size: var(--fs-xs); font-weight: 600;
+}
+
+/* Numbered steps */
+.ui-steps { margin: 0; padding-left: var(--s-5); display: flex; flex-direction: column; gap: var(--s-2); }

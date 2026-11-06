@@ -11,6 +11,7 @@ import { scheduleRestAlert, cancelRestAlert } from '../push/actions';
 import { WeeklyReview } from '../review/ui/WeeklyReview';
 import { getRepo, getLocalRepo, defaultSettings, historyFor, progressionConfigFor, currentPlan } from './data';
 import { parseSetInput, todayFromTemplate } from './validate';
+import { ExerciseName } from '../library/ExerciseSheet';
 
 interface ExercisePlan {
   exerciseId: string;
@@ -148,7 +149,9 @@ export default function WorkoutScreen() {
         const name = getExercise(ex.exerciseId)?.name ?? ex.exerciseId;
         return (
           <article key={ex.exerciseId} className="exercise-card">
-            <h2>{name}</h2>
+            <h2>
+              <ExerciseName id={ex.exerciseId} name={name} />
+            </h2>
             <p className="muted">
               Target {ex.prescription.sets} × {ex.prescription.reps} at {ex.prescription.w} kg
             </p>

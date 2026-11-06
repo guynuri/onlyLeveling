@@ -3,6 +3,7 @@ import { getExercise } from '../../data/exercises';
 import type { BodyweightEntry, Workout } from '../../domain/types';
 import { getRepo } from './data';
 import { isIsoDate } from './validate';
+import { ExerciseName } from '../library/ExerciseSheet';
 
 // Past sessions, plus the bodyweight log (SPEC §2: bodyweight is logged over time).
 export default function HistoryScreen() {
@@ -49,8 +50,12 @@ export default function HistoryScreen() {
           <li key={w.id}>
             <strong>{new Date(w.start).toLocaleDateString()}</strong>
             <span className="muted">
-              {' '}
-              {w.entries.map((e) => `${getExercise(e.exerciseId)?.name ?? e.exerciseId} (${e.sets.length} sets)`).join(' · ')}
+              {w.entries.map((e, i) => (
+                <span key={e.exerciseId}>
+                  {i > 0 ? ' · ' : ' '}
+                  <ExerciseName id={e.exerciseId} name={getExercise(e.exerciseId)?.name ?? e.exerciseId} /> ({e.sets.length} sets)
+                </span>
+              ))}
             </span>
           </li>
         ))}

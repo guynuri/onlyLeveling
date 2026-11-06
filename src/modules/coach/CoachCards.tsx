@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { getExercise } from '../../data/exercises';
 import type { Suggestion, SuggestionAction } from '../../domain/suggestion';
 import { loadCoachCards, acceptCoachCard, snoozeCoachCard, neverCoachCard } from './actions';
+import { ExerciseName } from '../library/ExerciseSheet';
 
 export const COACH_FOOTER = 'Suggestion. Training guidance, not medical advice.';
 
@@ -52,10 +53,20 @@ export function CoachCards() {
       )}
       {cards.map((c) => (
         <article key={c.id} className="coach-card">
-          <h2>{name(c.exerciseId)}</h2>
+          <h2>
+            <ExerciseName id={c.exerciseId} name={name(c.exerciseId)} />
+          </h2>
           <p>{c.reason}</p>
           <p>
-            <strong>{actionLabel(c.action, name)}</strong>
+            <strong>
+              {c.action.kind === 'swap' ? (
+                <>
+                  Swap for <ExerciseName id={c.action.toId} name={name(c.action.toId)} />
+                </>
+              ) : (
+                actionLabel(c.action, name)
+              )}
+            </strong>
           </p>
           <div className="coach-actions">
             <button type="button" onClick={() => act(() => acceptCoachCard(c))}>
