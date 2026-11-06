@@ -353,3 +353,25 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
 .ui-ex-thumb img { width: 100%; height: 100%; object-fit: contain; }
 .ui-ex-thumb .ui-body--sm { height: 52px; gap: 2px; }
 .ui-ex-text { display: flex; flex-direction: column; min-width: 0; }
+
+/* Onboarding steps */
+.ob-step { display: flex; flex-direction: column; gap: var(--s-2); }
+.ob-eyebrow { margin: 0; color: var(--accent); font-size: var(--fs-xs); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: 0.08em; }
+.ob-title { margin: 0; font-size: var(--fs-xl); }
+.ob-why { margin: 0 0 var(--s-3); color: var(--muted); }
+.ob-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-2); }
+.ob-number-row .ui-chip { min-width: var(--tap); justify-content: center; font-size: var(--fs-md); font-weight: var(--fw-bold); }
+.ob-dots { display: flex; gap: var(--s-1); justify-content: center; margin-bottom: var(--s-4); }
+.ob-dot { width: 8px; height: 8px; border-radius: var(--r-pill); background: var(--surface-2); }
+.ob-dot[data-on='true'] { background: var(--accent); box-shadow: var(--glow); }
+.ob-foot {
+  position: fixed; left: 0; right: 0;
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+  z-index: 9;
+  display: flex; gap: var(--s-2); justify-content: space-between;
+  padding: var(--s-3) var(--s-4);
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+.ob-foot .ui-btn--primary { flex: 1; }
+.ob-pad { padding-bottom: calc(var(--tap) + var(--s-6)); }
