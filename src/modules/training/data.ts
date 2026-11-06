@@ -13,6 +13,7 @@ import { buildRulesPlan } from '../../domain/plan-builder';
 import { listExercises } from '../../data/exercises';
 
 import { loadKind } from '../../domain/exercise';
+import type { Target } from '../../domain/template';
 
 // Caches one open handle. A failed open is not cached, so the next call retries. reset() drops the handle,
 // for when another tab upgrades the database and this connection is closed.
@@ -79,14 +80,14 @@ import { repRangeFor } from '../../domain/reps';
 export { repRangeFor };
 
 // Dumbbell moves snap to owned dumbbells, kettlebell moves to owned kettlebells; bands and bodyweight go by reps only.
-export function progressionConfigFor(ex: Exercise, s: Settings): ProgressionConfig {
-  const range = repRangeFor(ex);
+export function progressionConfigFor(ex: Exercise, s: Settings, target?: Target): ProgressionConfig {
+  const range = target ? { min: target.repMin, max: target.repMax } : repRangeFor(ex);
   const kind = loadKind(ex);
   const owned = kind === 'dumbbell' ? s.owned : kind === 'kettlebell' ? (s.ownedKettlebells ?? []) : [];
   return {
     repMin: range.min,
     repMax: range.max,
-    sets: TRAINING.defaultSets,
+    sets: target?.sets ?? TRAINING.defaultSets,
     owned,
     gridStep: TRAINING.gridStepKg,
     startWeight: TRAINING.startWeightKg,

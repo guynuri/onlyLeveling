@@ -1,5 +1,5 @@
 // A coach suggestion as stored and synced (SPEC §7). Rules live in modules/coach/domain; this is the shape only.
-export type SuggestionRule = 'stall' | 'tooEasy' | 'stale' | 'missed';
+export type SuggestionRule = 'stall' | 'tooEasy' | 'stale' | 'missed' | 'limit';
 export type SuggestionStatus = 'pending' | 'accepted' | 'snoozed' | 'never';
 
 // What Accept does to the plan. Weights are already snapped to owned bells when the rule creates the action.

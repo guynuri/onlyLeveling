@@ -1,7 +1,7 @@
 // Input checks for the training screens. Pure, so the rules are tested. Each returns a message, never throws.
 import type { Settings } from '../../domain/types';
 import { TRAINING } from '../../config/thresholds';
-import type { Template, TemplateDay } from '../../domain/template';
+
 
 export type Parsed<T> = { ok: true; value: T } | { ok: false; error: string };
 
@@ -41,10 +41,4 @@ export function parseSetInput(weightText: string, repsText: string): Parsed<{ w:
 export function isIsoDate(s: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
   return !Number.isNaN(Date.parse(`${s}T00:00:00Z`));
-}
-
-// Today's plan day: the finished-session count, cycling through the plan. Null when the plan has no days.
-export function todayFromTemplate(template: Template, finishedSessions: number): TemplateDay | null {
-  if (template.days.length === 0) return null;
-  return template.days[finishedSessions % template.days.length];
 }

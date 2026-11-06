@@ -48,6 +48,20 @@ export function candidates(input: CoachInput): Candidate[] {
     const ex = byId.get(exerciseId);
     if (!ex) continue;
     const hist = historyOf(workouts, exerciseId);
+    // A limit (or the avoid list) added after the plan was made: the plan is never edited by itself, so the exercise
+    // stays and a card offers a swap. It needs no history, so it comes before the history checks.
+    if (input.blocked?.has(exerciseId)) {
+      const to = pickSwap({ exercise: ex, catalogue: input.catalogue, inPlan, avoid: input.blocked, equipment: input.equipment, lastUsed, now });
+      if (to) {
+        out.push({
+          rule: 'limit',
+          exerciseId,
+          reason: `${ex.name}: you listed a limit or avoid this exercise, and it is still in your plan. A swap with the same muscle is suggested. Training guidance, not medical advice.`,
+          action: { kind: 'swap', toId: to.id },
+          lastLogged: hist.length > 0 ? hist[hist.length - 1].date : 0,
+        });
+      }
+    }
     if (hist.length === 0) continue;
     const last = hist[hist.length - 1];
     const lastW = last.target.w;
