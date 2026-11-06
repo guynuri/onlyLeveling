@@ -657,6 +657,8 @@ in standalone mode before its status says done.
   the block week.
 
 ## U5: Workout v2 and cardio logging (§6.4, §6.5)
+- Moved from U4 (owner, 2026-11-07): edit the plan in place from a session's detail and the pre-workout preview
+  (reuse U4's `DayEditor`), and standalone cardio days in the plan (U4 only stores post-lift cardio and mobility minutes).
 - Focus view (default) and list view (setting), current exercise and set highlighted, `Stepper` on `stepOwned`,
   one-tap ✓ on pre-filled sets (3-tap rule kept), timed sets for `mode: 'time'`.
 - RIR picker 0–4+ with colours and one plain line per level. Rest timer as pinned bar/overlay (existing timer).
