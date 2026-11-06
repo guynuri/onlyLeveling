@@ -129,6 +129,26 @@ export const XP = {
   badgeSessionMilestones: [1, 10, 100], // "first session", then 10 and 100 sessions
   badgeRankFrom: 'C', // achievement badges per muscle start at this rank
 } as const;
+// Cardio (UX design §6.5, U5b). XP = minutes × effort × xpPerEffortMinute ÷ 10; it never counts toward muscle ranks.
+export const CARDIO = {
+  types: [
+    { value: 'run', label: 'Run' },
+    { value: 'walk', label: 'Walk' },
+    { value: 'bike', label: 'Bike' },
+    { value: 'rower', label: 'Rower' },
+    { value: 'jump-rope', label: 'Jump rope' },
+    { value: 'hiit', label: 'HIIT' },
+    { value: 'other', label: 'Other' },
+  ],
+  minutesMax: 600,
+  distanceMax: 500, // km
+  defaultMinutes: 20,
+  minutesStep: 5,
+  distanceStep: 0.5,
+  defaultEffort: 5, // 1 to 10; used for XP when none was given
+  xpPerEffortMinute: 3,
+} as const;
+
 // XP for work with no weight on the bar (UX design §3.3, U5b). A bodyweight exercise counts as a share of the latest
 // bodyweight (first row whose name matches wins, else the default); a band set counts a fixed load. These are proposals,
 // tuned with real logs like the rest of the XP table. Timed exercises earn no muscle XP.
