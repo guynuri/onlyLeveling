@@ -588,6 +588,104 @@ background scheduling, which is not exact.
 
 ---
 
+# Wave 3: UX overhaul (U1–U8)
+
+Source: `docs/superpowers/specs/2026-11-06-ux-overhaul-design.md` (approved 2026-11-06, PR #20). Section numbers
+below (§n) refer to that design. One phase = one branch = one PR, in order: each phase uses what the previous one
+ships. A phase's **detailed task plan** is written at its start into `docs/superpowers/plans/` (U1's is already
+there), because it depends on the real code the earlier phases left behind.
+
+Every phase: tests + lint + typecheck + build green; new domain rules are pure and tested; thresholds only in
+`src/config/thresholds.ts`; new records save locally first and sync through the outbox; checked on a real iPhone
+in standalone mode before its status says done.
+
+## U1: Design foundation, navigation, exercise sheet shell (§6.1, §6.3, §7)
+- Game-like tokens (dark first, glowing accent, light theme kept) and base styles, mobile first (375 px, 16 px
+  gutters, 44 px targets, safe areas).
+- Icon set (Lucide, ISC) and the shared components in `src/ui/`.
+- Tabs Home · Plan · ▶ · Progress · More; More holds Library, History, Settings, Credits. Home temporarily shows
+  today's existing screen until U6.
+- Exercise sheet opened from every exercise name in Plan, Workout, History and coach cards (text content for now).
+- Screens not rewritten later (Settings, History, Library list, Credits, coach and review cards, push settings,
+  plan proposal) move onto the components. Onboarding, Workout, Home and Progress are left as they are; their
+  phases rewrite them.
+- **Done when:** no raw colours or ad-hoc sizes outside `src/styles.css` and `src/ui/`; every tab works one-handed
+  on an iPhone; tapping an exercise name in Plan, Workout, History or a coach card opens its sheet (Library rows
+  open the detail page).
+- Detailed plan: `docs/superpowers/plans/2026-11-06-u1-design-foundation.md`.
+
+## U2: Library and media (§3)
+- `scripts/fetch-repdb.ts`: downloads the RepDB free tier at a pinned URL + SHA-256 into a gitignored folder;
+  the deploy workflow runs it before `vite build`. No zip, index or listing in the build output.
+- Import merge (pure, tested): RepDB core; free-exercise-db and openGym catalogue text-only extras; de-duplicate by
+  normalised name + alias table; `fx_*` ids kept, new `rp_*` / `og_*` ids. Muscle-name table to body-map slugs
+  and XP groups. Exercise model gains `media?: { stills?: string[]; clip?: string }`, `tips?`, `unilateral?`,
+  `mode: 'reps' | 'time'`, and the full equipment list (§3.3).
+- Port MuscleMap body geometry (male/female × front/back) with its MIT notice; `BodyMap` component (primary strong,
+  secondary light). `ExerciseMedia` component: start/peak crossfade, reduced-motion still, clip slot.
+- Exercise sheet gets media, body map, tips, last sessions/best set, Watch a demo (YouTube search link), Swap.
+- Library screen: search, filter by owned equipment and muscle, pictures first.
+- Credits: RepDB line, MuscleMap MIT notice, openGym catalogue text. CLAUDE.md licence table already corrected.
+- **Done when:** every RepDB exercise shows its loop and muscles offline after first load; no RepDB file is in git;
+  the AI prompt carries no RepDB text.
+
+## U3: Onboarding v2 and settings model (§4, §8 existing data)
+- Settings: `goals: Goal[]` (old `goal` read as a one-item list), `about?: { sex, age, heightCm }`,
+  `equipment: EquipmentKind[]`, `owned` (dumbbells) + `ownedKettlebells`, `limits: { parts: BodyPart[]; note }`.
+  D1 migration `0070_settings_v2.sql` if settings columns need it.
+- Goal-blend table and joint→exercise limits table in config, pure functions `blendGoals(goals)` and
+  `excludedByLimits(exercise, limits)`, tested. Equipment filter `usableWith(exercise, equipment)`.
+- Nine-step onboarding on `ChoiceCard` / `ChipGroup` / weights chip grid (1–50 kg) with progress dots and a fixed
+  Continue. Accounts missing the new fields see only the new steps, pre-filled.
+- Settings screen edits the same fields with the same controls.
+- **Done when:** a new account finishes onboarding in under two minutes with multi-picks, and an old account sees
+  only the new steps.
+
+## U4: Plan v2 (§5, §6.5 planning)
+- Plan model gains `block: { weeks: 4|6|8|12; startedAt; deloadLastWeek }`, `schedule: 'rotation' | 'weekdays'`,
+  per-exercise sets and rep range, cardio days and post-lift cardio / mobility blocks. Existing plan → 8-week
+  block from ship date. Migration `0080_plan_v2.sql`.
+- Pure: `blockWeek(plan, now)`, `isDeloadWeek`, `nextSession(plan, history)` for rotation and weekdays,
+  starter templates filtered by equipment, validation of AI plans against equipment, limits, blend table.
+- Plan screen: Generate/regenerate (existing AI chain + preview + accept), templates, Week X of N, edit in place
+  (add from library, remove, reorder, sets/reps, swap). End-of-block offer: review + next block, or extend.
+- Limits added later → coach cards proposing swaps (existing accept flow).
+- **Done when:** the user can build, edit and regenerate a plan without leaving the Plan screen, and Home/Plan show
+  the block week.
+
+## U5: Workout v2 and cardio logging (§6.4, §6.5)
+- Focus view (default) and list view (setting), current exercise and set highlighted, `Stepper` on `stepOwned`,
+  one-tap ✓ on pre-filled sets (3-tap rule kept), timed sets for `mode: 'time'`.
+- RIR picker 0–4+ with colours and one plain line per level. Rest timer as pinned bar/overlay (existing timer).
+- Live PR badge (`prs.ts`). Finish summary: duration, volume, PRs, XP, muscles hit on the body map, rank-ups.
+- Cardio session log (type, duration, distance?, effort?) and post-lift cardio blocks; record type and migration
+  `0090_cardio.sql`; synced.
+- XP: bodyweight-fraction and band-load table (§3.3) feeding existing volume/strength maths; cardio XP =
+  duration × effort rule; streak counts planned cardio days as sessions.
+- **Done when:** a full session logs one-handed with no typing in the common case, and a planned cardio day counts
+  for the streak.
+
+## U6: Home hub and Progress v2 (§6.2, §6.6)
+- Home tiles: next workout (name, Week X of N, thumbnails, mini body map, Start), Level & XP, Streak, Coach count;
+  each opens its screen.
+- Progress: body map with Ranks and Recovery/neglect modes (thresholds in config), tap a muscle for rank, XP to
+  next, benchmark lift, exercises; bodyweight chart with 7-day average and weigh-in; badges and streak.
+- **Done when:** Home fits one iPhone screen without scrolling and every tile leads somewhere.
+
+## U7: Game layer (§6.7)
+- Rank-up / level-up celebration (CSS only) after the finish summary.
+- Streak freezes: earn 1 per 4 completed weeks, hold max 2, auto-spent on a missed week (config).
+- Weekly quests: 2–3 per week from rules over plan + history, bonus XP, deterministic.
+- Monthly recap card on the first open of a month, with block position.
+- Stored records (freezes, quests, recaps) with migration `0100_game.sql`.
+- **Done when:** each rule has tests including week and month boundaries, and celebrations respect reduced motion.
+
+## U8: Restyle from inspirations (§7)
+- The user brings inspirations; a design drill-down session decides the look; this phase changes tokens and
+  `src/ui/` CSS only. Any screen change needed is a defect in an earlier phase and is listed in the PR.
+
+---
+
 # 4. Status
 
 | Phase | Wave | Status |
@@ -604,6 +702,14 @@ background scheduling, which is not exact.
 | 8 Nutrition | Later (D1) | blueprint only |
 | Weekly AI review (SPEC Phase 2) | after 9 | implemented: one stored review per closed week (`0060_weekly_review.sql`), shown on the first open of each week, generated through the same chain and daily cap as the first plan, rules text stored when the AI does not answer. Coach suggestions stay on the coach cards. Not yet checked on an iPhone |
 | 9 Push | 2 | implemented: rest-end push scheduled at rest start (cron every minute), one workout reminder per day on training days until the week's sessions are done, Web Push (RFC 8291 and 8292) on WebCrypto, custom service worker (`src/sw.ts`), Settings section with the install and denied fallbacks, `0050_push.sql`. Needs the Worker secret `VAPID_PRIVATE_JWK` before anything is sent. Not yet checked on an iPhone |
+| U1 Design foundation, navigation | 3 | not started (detailed plan written) |
+| U2 Library and media | 3 | not started |
+| U3 Onboarding v2 | 3 | not started |
+| U4 Plan v2 | 3 | not started |
+| U5 Workout v2, cardio | 3 | not started |
+| U6 Home hub, Progress v2 | 3 | not started |
+| U7 Game layer | 3 | not started |
+| U8 Restyle | 3 | not started, waits for the user's inspirations |
 
 Phase numbers 5 to 8 keep your original list. Phase 9 is the push phase added in D4. The Contracts freeze is
 called PR C so it does not clash with Phase 5.
