@@ -1,6 +1,7 @@
 // Maps one free-exercise-db record to our Exercise. Pure: the one-off script does the file I/O.
 // Unrecognised upstream values throw, so a new value forces a mapping decision instead of a silent guess.
-import { movementPattern, type Equipment, type Exercise, type Force, type Level, type Mechanic } from './exercise';
+import { movementPattern, type Equipment, type Exercise, type Force, type Kit, type Level, type Mechanic } from './exercise';
+import { slugsOf } from './muscle-map';
 
 // Shape of dist/exercises.json entries that we read. `images` is read only to be dropped.
 export interface FreeExerciseRaw {
@@ -56,9 +57,26 @@ function mapLevel(v: string): Level {
   throw new Error(`Unmapped level: ${v}`);
 }
 
+// Kit implied by free-exercise-db's single equipment value. Bench needs are not recorded upstream.
+export function kitOf(equipment: Equipment): Kit[] {
+  if (equipment === 'dumbbell' || equipment === 'kettlebell' || equipment === 'band') return [equipment];
+  return [];
+}
+
+// The fields added in exercise model v2, derived from the v1 ones. Used by the importer and when the committed
+// v1 JSON is loaded.
+export function upgradeFx(ex: Omit<Exercise, 'requires' | 'mode' | 'muscles'>): Exercise {
+  return {
+    ...ex,
+    requires: kitOf(ex.equipment),
+    mode: ex.category === 'stretching' ? 'time' : 'reps',
+    muscles: { primary: slugsOf(ex.primaryMuscles), secondary: slugsOf(ex.secondaryMuscles) },
+  };
+}
+
 export function mapFreeExercise(raw: FreeExerciseRaw): Exercise {
   const force = mapForce(raw.force);
-  return {
+  return upgradeFx({
     id: `fx_${raw.id}`,
     name: raw.name,
     aliases: [],
@@ -76,5 +94,5 @@ export function mapFreeExercise(raw: FreeExerciseRaw): Exercise {
     license: 'Unlicense',
     author: null,
     sourceUrl: 'https://github.com/yuhonas/free-exercise-db',
-  };
+  });
 }

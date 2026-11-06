@@ -24,6 +24,8 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      # RepDB exercise data and pictures: fetched at build time, never committed (CLAUDE.md data table).
+      - run: npm run media
       - run: npm run lint
       - run: npm test
       - run: npm run build

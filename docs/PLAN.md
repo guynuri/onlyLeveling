@@ -703,7 +703,7 @@ in standalone mode before its status says done.
 | Weekly AI review (SPEC Phase 2) | after 9 | implemented: one stored review per closed week (`0060_weekly_review.sql`), shown on the first open of each week, generated through the same chain and daily cap as the first plan, rules text stored when the AI does not answer. Coach suggestions stay on the coach cards. Not yet checked on an iPhone |
 | 9 Push | 2 | implemented: rest-end push scheduled at rest start (cron every minute), one workout reminder per day on training days until the week's sessions are done, Web Push (RFC 8291 and 8292) on WebCrypto, custom service worker (`src/sw.ts`), Settings section with the install and denied fallbacks, `0050_push.sql`. Needs the Worker secret `VAPID_PRIVATE_JWK` before anything is sent. Not yet checked on an iPhone |
 | U1 Design foundation, navigation | 3 | implemented (PR #22): tokens, `src/ui/` components, tab bar, exercise sheet, kept screens moved over; Settings save no longer drops onboarding answers. Browser-checked at 375 px; iPhone standalone check not done |
-| U2 Library and media | 3 | not started |
+| U2 Library and media | 3 | implemented: 1,984 exercises (876 free-exercise-db, 399 RepDB, 709 openGym text), 442 with RepDB pictures fetched at build (never committed), MuscleMap body map, exercise sheet v2, library filters, pictures cached on first view. Browser-checked at 375 px incl. offline; iPhone standalone check not done |
 | U3 Onboarding v2 | 3 | not started |
 | U4 Plan v2 | 3 | not started |
 | U5 Workout v2, cardio | 3 | not started |

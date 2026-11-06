@@ -26,17 +26,22 @@ export interface Template {
   days: TemplateDay[];
 }
 
-// Candidates: dumbbell-compatible, a known movement pattern, not avoided. Compound lifts first, then by id.
+// Candidates: dumbbell-compatible, a known movement pattern, not avoided. Compound lifts first, then ones with
+// pictures (UX design §3.2), then by id.
 export function candidates(input: TemplateInput): Exercise[] {
   const avoid = new Set(input.avoid);
   return input.catalogue
     .filter((ex) => isDumbbellCompatible(ex))
     .filter((ex) => movementPattern(ex) !== 'unknown')
+    // A starter plan: rep-based strength work, nothing expert (U4 replaces this builder).
+    .filter((ex) => ex.category === 'strength' && ex.mode === 'reps' && ex.level !== 'expert')
     .filter((ex) => !avoid.has(ex.id) && !avoid.has(ex.name))
     .sort((a, b) => {
       const ca = a.mechanic === 'compound' ? 0 : 1;
       const cb = b.mechanic === 'compound' ? 0 : 1;
-      return ca - cb || a.id.localeCompare(b.id);
+      const ma = a.media ? 0 : 1;
+      const mb = b.media ? 0 : 1;
+      return ca - cb || ma - mb || a.id.localeCompare(b.id);
     });
 }
 

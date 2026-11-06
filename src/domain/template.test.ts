@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildTemplate, type TemplateInput } from './template';
+import { buildTemplate, candidates, type TemplateInput } from './template';
 import type { Exercise } from './exercise';
 
 const ex = (over: Partial<Exercise> & { id: string }): Exercise => ({
@@ -14,6 +14,9 @@ const ex = (over: Partial<Exercise> & { id: string }): Exercise => ({
   secondaryMuscles: [],
   movementPattern: 'push',
   instructions: [],
+  requires: [],
+  mode: 'reps',
+  muscles: { primary: [], secondary: [] },
   source: 'free-exercise-db',
   textSource: 'free-exercise-db',
   license: 'Unlicense',
@@ -87,5 +90,34 @@ describe('buildTemplate', () => {
 
   it('is deterministic for the same input', () => {
     expect(buildTemplate(INPUT())).toEqual(buildTemplate(INPUT()));
+  });
+});
+
+describe('candidates suit a starter dumbbell plan', () => {
+  it('leaves out expert, timed and non-strength exercises', () => {
+    const pool = candidates({
+      daysPerWeek: 1,
+      exercisesPerDay: 4,
+      avoid: [],
+      catalogue: [
+        ex({ id: 'OK_Press' }),
+        ex({ id: 'Expert_Handstand', level: 'expert' }),
+        ex({ id: 'Timed_Plank', mode: 'time' }),
+        ex({ id: 'Plyo_Pushup', category: 'plyometrics' }),
+      ],
+    });
+    expect(pool.map((e) => e.id)).toEqual(['OK_Press']);
+  });
+});
+
+describe('candidates prefer exercises with pictures', () => {
+  it('between two otherwise equal candidates, the one with media comes first', () => {
+    const pool = candidates({
+      daysPerWeek: 1,
+      exercisesPerDay: 2,
+      avoid: [],
+      catalogue: [ex({ id: 'A_Plain' }), ex({ id: 'B_Pictured', media: { stills: ['media/repdb/b.webp'] } })],
+    });
+    expect(pool.map((e) => e.id)).toEqual(['B_Pictured', 'A_Plain']);
   });
 });

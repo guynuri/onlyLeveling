@@ -1,4 +1,9 @@
-// Exercise model (SPEC §7, DATA_SOURCES §6) and pure rules over it. Phase 2 subset: no images, no custom exercises.
+// Exercise model (SPEC §7, DATA_SOURCES §6; UX design §3) and pure rules over it. No custom exercises yet.
+import type { BodySlug } from './muscle-map';
+
+// Equipment an exercise needs beyond the floor (UX design §3.3). Empty = no equipment.
+export type Kit = 'dumbbell' | 'kettlebell' | 'bench' | 'pullup_bar' | 'band';
+export type ExerciseSource = 'free-exercise-db' | 'repdb' | 'opengym';
 
 export type Equipment =
   | 'barbell'
@@ -29,16 +34,33 @@ export interface Exercise {
   secondaryMuscles: string[];
   movementPattern: MovementPattern;
   instructions: string[];
-  source: 'free-exercise-db';
-  textSource: 'free-exercise-db';
-  license: 'Unlicense';
+  requires: Kit[];
+  mode: 'reps' | 'time'; // time: holds, stretches, mobility (UX design §3.3)
+  muscles: { primary: BodySlug[]; secondary: BodySlug[] }; // body-map slugs; XP still reads primaryMuscles
+  media?: { stills: string[]; clip?: string }; // paths relative to the app base
+  description?: string;
+  tips?: string[];
+  unilateral?: boolean;
+  variationGroup?: string;
+  tags?: string[];
+  extrasFrom?: 'repdb'; // a free-exercise-db record that took RepDB's description, tips or pictures (credit line)
+  source: ExerciseSource;
+  textSource: ExerciseSource;
+  license: string;
   author: string | null;
   sourceUrl: string | null;
 }
 
-// Dumbbell-only app (SPEC §1, D9). A movement the user can do with a pair of dumbbells or with no equipment.
-export function isDumbbellCompatible(ex: Pick<Exercise, 'equipment'>): boolean {
-  return ex.equipment === 'dumbbell' || ex.equipment === 'bodyweight';
+// Needs nothing at all. `requires` is empty for barbell, cable and machine records too (no Kit for them), so the
+// equipment field decides.
+export function isEquipmentFree(ex: Pick<Exercise, 'equipment' | 'requires'>): boolean {
+  return ex.equipment === 'bodyweight' && ex.requires.length === 0;
+}
+
+// Plans and swaps stay on exercises done with dumbbells or nothing at all until U4 reads the owned equipment.
+// A dumbbell exercise that also needs a bench, or a bodyweight one that needs a bar, does not count.
+export function isDumbbellCompatible(ex: Pick<Exercise, 'equipment' | 'requires'>): boolean {
+  return (ex.equipment === 'dumbbell' || ex.equipment === 'bodyweight') && ex.requires.every((k) => k === 'dumbbell');
 }
 
 // Derived from force only. Force null means unknown, shown visibly, never guessed.

@@ -307,3 +307,49 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
 
 /* Expandable card */
 .ui-details > summary { cursor: pointer; font-weight: 600; min-height: var(--tap); display: flex; align-items: center; }
+
+/* Body map (MuscleMap geometry) */
+.ui-body { display: flex; justify-content: center; gap: var(--s-2); }
+.ui-body--md { height: 220px; }
+.ui-body--sm { height: 120px; }
+.ui-body-view { height: 100%; width: auto; }
+.ui-body-sil { fill: var(--border); }
+.ui-body-m { fill: var(--surface-2); stroke: var(--bg); stroke-width: 2; }
+.ui-body-m--secondary { fill: var(--accent); fill-opacity: 0.4; }
+.ui-body-m--primary { fill: var(--accent); }
+
+/* Exercise media: start/peak crossfade loop, or one still, or a clip */
+.ui-media {
+  position: relative;
+  width: 100%; max-width: 320px; margin: 0 auto;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.ui-media-item { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.ui-media--loop .ui-media-peak { animation: ui-media-swap 2.4s ease-in-out infinite; }
+@keyframes ui-media-swap {
+  0%, 35% { opacity: 0; }
+  50%, 85% { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* Reduced motion: no loop, rest on the peak position (the global rule stops the animation; this pins the frame). */
+@media (prefers-reduced-motion: reduce) {
+  .ui-media--loop .ui-media-peak { animation: none; opacity: 1; }
+}
+
+/* Library rows */
+.ui-scroll-x { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.ui-scroll-x::-webkit-scrollbar { display: none; }
+.ui-scroll-x > * { flex: none; }
+.ui-ex-row { flex-direction: row; align-items: center; justify-content: flex-start; gap: var(--s-3); }
+.ui-ex-thumb {
+  flex: none; width: 56px; height: 56px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--r-md); overflow: hidden;
+  background: var(--surface-2);
+}
+.ui-ex-thumb img { width: 100%; height: 100%; object-fit: contain; }
+.ui-ex-thumb .ui-body--sm { height: 52px; gap: 2px; }
+.ui-ex-text { display: flex; flex-direction: column; min-width: 0; }

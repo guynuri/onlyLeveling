@@ -5,6 +5,7 @@ import { isDumbbellCompatible, movementPattern } from '../../domain/exercise';
 import { getRepo, getLocalRepo, defaultSettings, currentPlan } from './data';
 import { ExerciseName } from '../library/ExerciseSheet';
 import { Card } from '../../ui/primitives';
+import { PLAN_CHANGED_EVENT } from '../library/labels';
 
 // Saves a plan with one exercise replaced. The clock is read here, outside render.
 async function replaceAndSave(plan: Plan, fromId: string, toId: string): Promise<Plan> {
@@ -21,12 +22,17 @@ export default function PlanScreen() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    (async () => {
-      const repo = await getRepo();
-      const s = (await repo.getSettings()) ?? defaultSettings();
-      setAvoid(s.avoid ?? []);
-      setPlan(await currentPlan(repo, await getLocalRepo(), s));
-    })().catch(() => setError('Could not load your plan. Reload to try again.'));
+    const load = () =>
+      (async () => {
+        const repo = await getRepo();
+        const s = (await repo.getSettings()) ?? defaultSettings();
+        setAvoid(s.avoid ?? []);
+        setPlan(await currentPlan(repo, await getLocalRepo(), s));
+      })().catch(() => setError('Could not load your plan. Reload to try again.'));
+    load();
+    // A swap from the exercise sheet saves the plan behind this screen.
+    window.addEventListener(PLAN_CHANGED_EVENT, load);
+    return () => window.removeEventListener(PLAN_CHANGED_EVENT, load);
   }, []);
 
   if (error) return <p className="muted">{error}</p>;

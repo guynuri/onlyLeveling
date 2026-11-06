@@ -7,6 +7,30 @@ Licences and field names follow CLAUDE.md.
 are treated as unlicensed and never committed. Images come from wger (per-image author and licence)
 and Everkinetic (CC-BY-SA, credit required). An exercise with no licensed image shows text only.
 
+**Update 2026-11-06 (UX overhaul, U2):** pictures now come from the **RepDB free tier** (§0 below);
+openGym's catalogue adds text-only dumbbell exercises. wger and Everkinetic are not used yet.
+
+## 0. RepDB free tier (pictures and text, fetched at build time)
+
+Repo: `github.com/RepDB/exercise-dataset`, pinned at commit `66c4298af8d99b9dc397dad6699e508fb871d249`;
+`exercises.json` is checked against a SHA-256 in `scripts/fetch-repdb.ts`. Licence: RepDB Free Tier
+License v1.0 — free in-app use with the visible credit "Exercise data by RepDB (repdb.co)"; no
+redistribution as a dataset; no generative-AI use of the images.
+
+- 701 exercises; 442 use equipment the app supports (none, dumbbell, kettlebell, pull-up bar, bench,
+  bands). Each has start and peak pictures (512 px WebP) or one picture. ~730 pictures, ~12 MB.
+- **Never committed.** `npm run media` (and the deploy workflow) writes `src/data/generated/repdb.json`
+  and `public/media/repdb/*.webp`, both gitignored. Fresh clones and CI tests run without them; the
+  library is then text-only.
+- Served as individual app files from GitHub Pages; no zip, index or listing endpoint. The service
+  worker caches each picture the first time it is shown (not precached).
+- Merge (`src/domain/catalogue-merge.ts`): a RepDB exercise with the same normalised name as a
+  free-exercise-db one adds its pictures and tips to that record (the `fx_` id is kept); otherwise it is
+  added as `rp_<id>`. `src/data/aliases.ts` links differently named pairs.
+- Useful fields kept for later phases: `tags` (`knee_safe`, `shoulder_safe`, `lower_back_safe`,
+  `requires_bench`), `variation_group` (swaps), `is_unilateral`.
+- The AI prompt carries exercise ids and names only (guard test in `src/modules/ai/domain/ai.test.ts`).
+
 ## 1. free-exercise-db: structured data only
 
 Repo: `github.com/yuhonas/free-exercise-db`. Data licence: **Unlicense**. Image licence: **none

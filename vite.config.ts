@@ -15,6 +15,10 @@ export default defineConfig({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.ts',
+      // The merged exercise catalogue (U2) makes the app chunk ~2.6 MB; it must still be precached or the app is not
+      // offline. Exercise pictures are not precached at all (src/sw.ts caches them on first view).
+      // ponytail: one big chunk; split the catalogue into its own lazy chunk if start-up time on the phone suffers.
+      injectManifest: { maximumFileSizeToCacheInBytes: 5 * 1024 * 1024 },
       // autoUpdate: a new build activates on its own. 'prompt' needs an update UI that does not exist yet,
       // and without it an installed iOS app keeps the old build until every copy is closed.
       registerType: 'autoUpdate',
