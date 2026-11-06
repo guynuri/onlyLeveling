@@ -5,7 +5,7 @@ import ExerciseInfo from './ExerciseInfo';
 export default function ExerciseDetail({ id }: { id: string }) {
   const ex = getExercise(id);
   return (
-    <article>
+    <article className="subcomponent">
       <a href="#/library">← Library</a>
       <h1>{ex?.name ?? 'Exercise'}</h1>
       <ExerciseInfo id={id} />

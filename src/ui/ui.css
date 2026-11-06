@@ -307,6 +307,7 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
 
 /* Expandable card */
 .ui-details > summary { cursor: pointer; font-weight: 600; min-height: var(--tap); display: flex; align-items: center; }
+.subcomponent { overscroll-behavior: contain; }
 
 /* Body map (MuscleMap geometry) */
 .ui-body { display: flex; justify-content: center; gap: var(--s-2); }
