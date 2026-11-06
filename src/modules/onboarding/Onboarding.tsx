@@ -3,7 +3,8 @@
 // on top of the stored settings, so leaving halfway loses nothing.
 import { useEffect, useState } from 'react';
 import { PROFILE } from '../../config/thresholds';
-import { equipmentOf, goalsOf, onboardingSteps, parseAbout, validateWeights, type Step } from '../../domain/profile';
+import { equipmentOf, goalsOf, onboardingSteps, parseAbout, validateWeights, V2_STEPS, type Step } from '../../domain/profile';
+import { SYNC_EVENT } from '../sync/actions';
 import type { BodyPart, EquipmentChoice, Goal, Settings } from '../../domain/types';
 import { Button } from '../../ui/primitives';
 import { getRepo, defaultSettings } from '../training/data';
@@ -74,10 +75,34 @@ export default function Onboarding() {
         const list = onboardingSteps(s);
         setSettings(s);
         setDraft(draftFrom(s));
-        setSteps(list.length > 0 ? list : ['goals', 'about', 'equipment', 'weights', 'limits']);
+        // Opened with nothing left to answer (from Settings or a link): offer the v2 questions again.
+        setSteps(list.length > 0 ? list : [...V2_STEPS]);
       })
       .catch(() => setError('Could not load your settings. Reload to try again.'));
   }, []);
+
+  // Settings pulled from the server while this screen is open (another phone answered, or a new phone's first sync)
+  // replace the draft, so a Continue never saves stale or blank answers over them. Our own saves come back equal and
+  // are ignored. When the pull leaves nothing to answer, onboarding is over.
+  useEffect(() => {
+    if (!settings) return;
+    const onSync = () => {
+      getRepo()
+        .then((r) => r.getSettings())
+        .then((fresh) => {
+          if (!fresh || JSON.stringify(fresh) === JSON.stringify(settings)) return;
+          if (onboardingSteps(fresh).length === 0 && onboardingSteps(settings).length > 0) {
+            window.location.hash = '#/home';
+            return;
+          }
+          setSettings(fresh);
+          setDraft(draftFrom(fresh));
+        })
+        .catch(() => undefined);
+    };
+    window.addEventListener(SYNC_EVENT, onSync);
+    return () => window.removeEventListener(SYNC_EVENT, onSync);
+  }, [settings]);
 
   if (!steps || !draft || !settings) return <p className="muted">{error ?? 'Loading…'}</p>;
   const step = steps[i];
