@@ -17,13 +17,13 @@
 - Equipment: multi-select of `none` (always implied), `dumbbell`, `kettlebell`, `bench`, `pullup_bar`, `band`. Plans and swaps stay dumbbell/equipment-free until U4 (U1/U2 rule); U3 uses equipment for the library default only.
 - Weights: chip grid only (user decision), dumbbells 1–50 kg; kettlebells shown only when owned.
 - Limits: tappable body parts + optional note. A limit removes exercises from plans, the AI candidate list, swaps and Plan's replace list. A limit never edits a saved plan (coach cards for that are U4). Wording: training guidance, not medical advice.
-- Existing accounts (onboarded before v2) see only the new steps, pre-filled; nothing resets.
+- Existing accounts (onboarded before v2) re-run all nine steps on next open, pre-filled with what they have (owner decision, 2026-11-06); the plan and `onboardedAt` are never reset.
 - The approved design says the limits note goes to the AI. It is capped at 200 characters and sent as `limitsNote`; nothing else free-text leaves the device.
 - Tests + lint + typecheck + build green; iPhone standalone check before done.
 
 ## Review Focus
 
-1. **An account saved before U3** (only `goal`, `owned`, `onboardedAt`): app opens to the five new steps, pre-filled with goal and dumbbells → test in Task 1 (`onboardingSteps`).
+1. **An account saved before U3** (only `goal`, `owned`, `onboardedAt`): app opens to all nine steps, pre-filled with goal and dumbbells → covered by `onboardingDone` in `profile.test.ts`.
 2. **Skipping About you** leaves no partial record and never blocks Continue → test in Task 1 (`parseAbout` with all blanks).
 3. **A limit plus an exercise already in the saved plan:** the plan keeps it (no silent edit), but it is gone from swaps, replace lists and new plans → test in Task 2 (`blockedIds` used by `candidates`).
 4. **Deselecting every dumbbell weight** cannot be saved while Dumbbells is selected (empty owned list breaks progression) → test in Task 1 (`validateWeights`).
@@ -53,11 +53,11 @@
   - `blendGoals(goals): { cardioSessions; cardioMinutes; mobilityMinutes; repBias }` — max of each number across goals; `repBias` is `'heavier'` if strength is in and endurance is not, `'lighter'` if endurance is in and strength is not, else `'none'`.
   - `excludedByLimits(ex, parts): boolean` — true when any part's rule lists a slug in `ex.muscles.primary` and the exercise does not carry that rule's `safeTag`.
   - `blockedIds(s, catalogue): Set<string>` — `s.avoid` ∪ ids excluded by `s.limits.parts`.
-  - `onboardingSteps(s): Step[]` — `type Step = 'goals' | 'about' | 'experience' | 'days' | 'session' | 'equipment' | 'weights' | 'limits' | 'plan'`; no `onboardedAt` → all nine; `onboardedAt` but no `onboardedV2At` → `['goals','about','equipment','weights','limits']`; both → `[]`.
+  - `ALL_STEPS` (`type Step = 'goals' | 'about' | 'experience' | 'days' | 'session' | 'equipment' | 'weights' | 'limits' | 'plan'`) and `onboardingDone(s)` (`!!s.onboardedV2At`); everyone without `onboardedV2At` runs all nine.
   - `parseAbout(f: { sex: string; age: string; heightCm: string; weightKg: string }): Parsed<{ about: NonNullable<Settings['about']>; weightKg: number | null }>` — blanks allowed (all blank → `about: {}`, `weightKg: null`); out-of-range numbers → error naming the field and range.
   - `validateWeights(equipment, owned, ownedKettlebells): string | null` — error when Dumbbells is selected with no dumbbell weight, or Kettlebell with no kettlebell weight.
 
-- [ ] **Step 1: Failing tests** in `profile.test.ts`: `goalsOf` (legacy `goal`, empty `goals`, default); `equipmentOf` (legacy owned → dumbbell); `blendGoals` (`['build-muscle','lose-fat']` → 2 sessions × 20 min, bias none; `['strength','endurance']` → bias none; `['strength']` → heavier); `excludedByLimits` (knee + squat with quadriceps primary → true; same with `tags: ['knee_safe']` → false; knee + curl → false); `blockedIds` unions avoid and limits; `onboardingSteps` for the three account states (Review Focus 1); `parseAbout` all blank → ok `{about:{}, weightKg:null}`, age `"7"` → error, `"180"` cm ok (Review Focus 2); `validateWeights` (Review Focus 4).
+- [ ] **Step 1: Failing tests** in `profile.test.ts`: `goalsOf` (legacy `goal`, empty `goals`, default); `equipmentOf` (legacy owned → dumbbell); `blendGoals` (`['build-muscle','lose-fat']` → 2 sessions × 20 min, bias none; `['strength','endurance']` → bias none; `['strength']` → heavier); `excludedByLimits` (knee + squat with quadriceps primary → true; same with `tags: ['knee_safe']` → false; knee + curl → false); `blockedIds` unions avoid and limits; `onboardingDone` (Review Focus 1); `parseAbout` all blank → ok `{about:{}, weightKg:null}`, age `"7"` → error, `"180"` cm ok (Review Focus 2); `validateWeights` (Review Focus 4).
 - [ ] **Step 2: Run** `npx vitest run src/domain/profile.test.ts` → FAIL. **Step 3: Implement. Step 4: Run** → PASS; `npm run typecheck` clean.
 - [ ] **Step 5: Commit** `feat(profile): settings v2 model, goal blend, limits and onboarding rules`.
 
@@ -98,15 +98,15 @@
 ### Task 4: Onboarding v2 flow and gate
 
 **Files:**
-- Modify: `src/modules/onboarding/Onboarding.tsx` (rewrite), `src/App.tsx` (gate uses `onboardingSteps`)
+- Modify: `src/modules/onboarding/Onboarding.tsx` (rewrite), `src/App.tsx` (gate uses `onboardingDone`)
 
 **Interfaces:**
-- Steps come from `onboardingSteps(settings)`; progress dots; fixed bottom bar with Back (ghost) and Continue (primary, disabled until the step is answerable: goals ≥ 1, equipment any, weights pass `validateWeights`). About and Limits are skippable.
+- Steps are `ALL_STEPS`; progress dots; fixed bottom bar with Back (ghost) and Continue (primary, disabled until the step is answerable: goals ≥ 1, equipment any, weights pass `validateWeights`). About and Limits are skippable.
 - Each Continue saves the step's fields merged into the stored settings (fresh read, like `saveSettingsForm`). The about weight adds a bodyweight entry for today. The last v2 step sets `onboardedV2At`; a full run also sets `onboardedAt` after the plan step (existing `ProposePlan`).
 - Pre-fill: goals from `goalsOf`, equipment from `equipmentOf`, weights from `owned`.
-- App gate: redirect to `#/onboarding` when `onboardingSteps(s).length > 0`.
+- App gate: redirect to `#/onboarding` when `!onboardingDone(s)`.
 
-- [ ] **Step 1: Implement. Step 2: Verify** typecheck/lint/build; browser: a fresh profile runs nine steps; a profile with only `goal`, `owned`, `onboardedAt` (set via devtools) runs five, pre-filled.
+- [ ] **Step 1: Implement. Step 2: Verify** typecheck/lint/build; browser: a fresh profile runs nine steps; a profile with only `goal`, `owned`, `onboardedAt` (set via devtools) runs all nine, pre-filled.
 - [ ] **Step 3: Commit** `feat(onboarding): v2 flow with multi-pick goals, equipment, weights grid and limits`.
 
 ### Task 5: Settings edits the same answers
