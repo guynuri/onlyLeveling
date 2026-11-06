@@ -11,6 +11,12 @@ export function blockOf(plan: Plan): Block {
   return plan.block ?? { weeks: BLOCK.defaultWeeks, startedAt: plan.updatedAt, deloadLastWeek: true };
 }
 
+// Pins an older plan's block start. Without this, every later edit (which moves updatedAt) would move the default
+// start too and restart the week count. Returns the same plan when it already has a block.
+export function materializeBlock(plan: Plan): Plan {
+  return plan.block ? plan : { ...plan, block: blockOf(plan) };
+}
+
 // Week 1 of N. Past the end it stays on the last week and says `over`, so the screen never shows "Week 11 of 8".
 export function blockWeek(plan: Plan, now: number): { week: number; of: number; over: boolean } {
   const b = blockOf(plan);

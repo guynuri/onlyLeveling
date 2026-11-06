@@ -45,6 +45,16 @@ describe('currentPlan', () => {
     expect(synced.writes).toHaveLength(0);
   });
 
+  it('a saved plan from before U4 comes back with its block start pinned, and nothing is written', async () => {
+    const saved = planFromTemplate([{ index: 0, warmup: [], exerciseIds: ['x'], cooldown: [] }], 3, 77);
+    const synced = fake(saved);
+    const local = fake(undefined);
+    const plan = await currentPlan(synced.repo, local.repo, settings, 1000);
+    expect(plan.block).toEqual({ weeks: 8, startedAt: 77, deloadLastWeek: true });
+    expect(local.writes).toHaveLength(0);
+    expect(synced.writes).toHaveLength(0);
+  });
+
   it('keeps a saved plan even when days per week changed: only the user replaces a plan they may have edited', async () => {
     const saved = planFromTemplate([{ index: 0, warmup: [], exerciseIds: ['x'], cooldown: [] }], 2, 1);
     const synced = fake(saved);

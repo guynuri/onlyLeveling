@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { blockOf, blockWeek, deloaded, isDeloadWeek, nextSession, targetOf } from './block';
+import { blockOf, blockWeek, deloaded, isDeloadWeek, materializeBlock, nextSession, targetOf } from './block';
 import type { Plan } from './plan';
 import type { Exercise } from './exercise';
 import type { TemplateDay } from './template';
@@ -104,5 +104,18 @@ describe('deloaded', () => {
   it('an unweighted one drops a set, never below 1', () => {
     expect(deloaded({ w: 0, reps: 10, sets: 3 }, false, [])).toEqual({ w: 0, reps: 10, sets: 2 });
     expect(deloaded({ w: 0, reps: 10, sets: 1 }, false, []).sets).toBe(1);
+  });
+});
+
+describe('materializeBlock', () => {
+  it('pins an old plan block start so later edits (which move updatedAt) do not restart the week count', () => {
+    const old = plan();
+    const pinned = materializeBlock(old);
+    expect(pinned.block).toEqual({ weeks: 8, startedAt: T0, deloadLastWeek: true });
+    expect(blockOf({ ...pinned, updatedAt: T0 + 5 * WEEK }).startedAt).toBe(T0);
+  });
+  it('returns the same plan when it already has a block', () => {
+    const p = plan({ block: { weeks: 4, startedAt: 7, deloadLastWeek: true } });
+    expect(materializeBlock(p)).toBe(p);
   });
 });

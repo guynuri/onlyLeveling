@@ -34,7 +34,7 @@ First sign-up runs a short **onboarding interview**. Answers are stored as setti
 | Session length | ~45 min | Limits exercises per session. |
 | Dumbbells owned | Picked on a chip grid of common weights 1–50 kg, plus any weight typed in (U3) | Owned weights in kg, per unit, stored as an exact list. Kettlebell weights too when a kettlebell is owned. See §3.4. |
 | Load meaning | `as entered` per exercise | `as entered` / `each bell` / `total`, per `REFERENCE_NOTES.md` §8. |
-| Equipment | Multi-select: dumbbells, kettlebell, bench, pull-up bar, bands (U3) | Library defaults to it. Plans and swaps stay dumbbell / equipment-free until U4 reads it. No barbell. |
+| Equipment | Multi-select: dumbbells, kettlebell, bench, pull-up bar, bands (U3) | Library defaults to it. Plans, swaps, AI candidates and progression use only exercises whose equipment is all owned; with nothing picked, only bodyweight exercises (U4). No barbell. |
 | Experience | Returning after a break | Drives the starting load and progression pace. Editable. |
 | Limits / avoid list | Tappable body parts + optional note (U3) | `LIMIT_RULES` in config. Limited and avoided exercises never appear in plans, swaps or the AI list. The note (≤200 chars) is the one free-text field sent to the AI. |
 | Theme | Follow phone | Light and dark. |

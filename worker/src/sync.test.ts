@@ -171,6 +171,23 @@ describe('plan and suggestions (Phase 5): last write wins, scoped by user', () =
     expect((await exportAll(db, A)).plan).toMatchObject({ daysPerWeek: 4 });
   });
 
+  it('a v2 plan (block, targets, weekdays, cardio minutes) round-trips unchanged: no schema change is needed', async () => {
+    const data = {
+      daysPerWeek: 2,
+      days: [
+        { index: 0, label: 'Upper A', warmup: [], exerciseIds: ['fx_a'], targets: { fx_a: { sets: 4, repMin: 5, repMax: 8 } }, postCardioMinutes: 20, mobilityMinutes: 5, cooldown: [] },
+        { index: 1, label: 'Lower A', warmup: [], exerciseIds: ['fx_b'], cooldown: [] },
+      ],
+      adjustments: [],
+      block: { weeks: 10, startedAt: 5, deloadLastWeek: false },
+      schedule: 'weekdays',
+      weekdays: [1, 4],
+      updatedAt: 400,
+    };
+    await applyPush(db, A, [{ opId: 'v2', kind: 'plan', data, updatedAt: 400 }], 1000);
+    expect((await exportAll(db, A)).plan).toEqual(data);
+  });
+
   it('stores suggestions per id and pulls them since the cursor', async () => {
     await applyPush(db, A, [sug('stall:x', 'pending', 10), sug('stale:y', 'pending', 10)], 1000);
     expect((await exportAll(db, A)).suggestions).toHaveLength(2);

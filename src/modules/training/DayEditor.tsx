@@ -62,7 +62,7 @@ export function DayEditor(props: {
   day: TemplateDay;
   equipment: readonly EquipmentChoice[];
   blocked: readonly string[];
-  onEdit: (edit: (now: number) => Plan) => void;
+  onEdit: (edit: (plan: Plan, now: number) => Plan) => void;
 }) {
   const { plan, day } = props;
   const [picker, setPicker] = useState<Picker>(null);
@@ -70,7 +70,7 @@ export function DayEditor(props: {
   const blocked = new Set(props.blocked);
   const inDay = new Set(day.exerciseIds);
 
-  const retarget = (id: string, t: Target) => props.onEdit((now) => setTarget(plan, di, id, t, now));
+  const retarget = (id: string, t: Target) => props.onEdit((p, now) => setTarget(p, di, id, t, now));
 
   // Any library exercise can be added by hand; the note says when it needs kit the user has not picked.
   const addable = listExercises().filter((e) => !inDay.has(e.id));
@@ -113,10 +113,10 @@ export function DayEditor(props: {
                 </div>
               </div>
               <div className="ui-row">
-                <Button size="sm" variant="ghost" disabled={i === 0} aria-label={`Move ${ex?.name ?? id} up`} onClick={() => props.onEdit((now) => moveExercise(plan, di, id, -1, now))}>
+                <Button size="sm" variant="ghost" disabled={i === 0} aria-label={`Move ${ex?.name ?? id} up`} onClick={() => props.onEdit((p, now) => moveExercise(p, di, id, -1, now))}>
                   Up
                 </Button>
-                <Button size="sm" variant="ghost" disabled={i === day.exerciseIds.length - 1} aria-label={`Move ${ex?.name ?? id} down`} onClick={() => props.onEdit((now) => moveExercise(plan, di, id, 1, now))}>
+                <Button size="sm" variant="ghost" disabled={i === day.exerciseIds.length - 1} aria-label={`Move ${ex?.name ?? id} down`} onClick={() => props.onEdit((p, now) => moveExercise(p, di, id, 1, now))}>
                   Down
                 </Button>
                 <Button size="sm" variant="secondary" onClick={() => setPicker({ mode: 'swap', fromId: id })}>
@@ -127,7 +127,7 @@ export function DayEditor(props: {
                   variant="danger"
                   disabled={day.exerciseIds.length <= 1}
                   aria-label={`Remove ${ex?.name ?? id}`}
-                  onClick={() => props.onEdit((now) => removeExercise(plan, di, id, now))}
+                  onClick={() => props.onEdit((p, now) => removeExercise(p, di, id, now))}
                 >
                   Remove
                 </Button>
@@ -149,7 +149,7 @@ export function DayEditor(props: {
         onClose={() => setPicker(null)}
         onPick={(ex) => {
           const r = repRangeFor(ex);
-          props.onEdit((now) => addExercise(plan, di, ex.id, { sets: 3, repMin: r.min, repMax: r.max }, now));
+          props.onEdit((p, now) => addExercise(p, di, ex.id, { sets: 3, repMin: r.min, repMax: r.max }, now));
           setPicker(null);
         }}
       />
@@ -160,7 +160,7 @@ export function DayEditor(props: {
         note={() => null}
         onClose={() => setPicker(null)}
         onPick={(ex) => {
-          if (picker?.mode === 'swap') props.onEdit((now) => replaceInDay(plan, di, picker.fromId, ex.id, now));
+          if (picker?.mode === 'swap') props.onEdit((p, now) => replaceInDay(p, di, picker.fromId, ex.id, now));
           setPicker(null);
         }}
       />

@@ -5,6 +5,7 @@ import type { Plan } from '../../domain/plan';
 import type { Exercise } from '../../domain/exercise';
 import type { Settings, Workout } from '../../domain/types';
 import { blockedIds, equipmentOf } from '../../domain/profile';
+import { materializeBlock } from '../../domain/block';
 import type { EquipmentChoice } from '../../domain/types';
 
 export interface SheetContext {
@@ -27,7 +28,7 @@ export async function readSheetContext(
 ): Promise<SheetContext> {
   const [s, plan, workouts] = await Promise.all([repo.getSettings(), repo.getPlan(), repo.listWorkouts()]);
   return {
-    plan: plan ?? null,
+    plan: plan ? materializeBlock(plan) : null,
     workouts,
     blocked: s ? [...blockedIds(s, catalogue)] : [],
     equipment: s ? equipmentOf(s) : [],

@@ -22,7 +22,7 @@ const WEEKDAYS = [
 export function PlanHeader(props: {
   plan: Plan;
   now: number;
-  onEdit: (edit: (now: number) => Plan) => void;
+  onEdit: (edit: (plan: Plan, now: number) => Plan) => void;
   onRegenerate: () => void;
 }) {
   const { plan } = props;
@@ -36,7 +36,7 @@ export function PlanHeader(props: {
     const next = picked.includes(d) ? picked.filter((x) => x !== d) : [...picked, d];
     setPicked(next);
     // Saved only once there is one weekday per training day; until then the old schedule stays.
-    if (next.length === n) props.onEdit((now) => setSchedule(plan, 'weekdays', [...next].sort((a, b) => a - b), now));
+    if (next.length === n) props.onEdit((p, now) => setSchedule(p, 'weekdays', [...next].sort((a, b) => a - b), now));
   };
 
   return (
@@ -46,7 +46,7 @@ export function PlanHeader(props: {
           <p className="muted">You finished all {week.of} weeks. Build the next block, or keep going with this one.</p>
           <div className="ui-row">
             <Button onClick={props.onRegenerate}>Build next block</Button>
-            <Button variant="secondary" onClick={() => props.onEdit((now) => extendBlock(plan, EXTEND_WEEKS, now))}>
+            <Button variant="secondary" onClick={() => props.onEdit((p, now) => extendBlock(p, EXTEND_WEEKS, now))}>
               Extend by {EXTEND_WEEKS} weeks
             </Button>
           </div>
@@ -55,7 +55,7 @@ export function PlanHeader(props: {
         <Card title={`Week ${week.week} of ${week.of}`}>
           <ProgressBar value={week.week} max={week.of} label={`Week ${week.week} of ${week.of}`} />
           {isDeloadWeek(plan, props.now) && <p className="muted small">Deload week: lighter work so you come back fresh.</p>}
-          <Chip selected={block.deloadLastWeek} onToggle={() => props.onEdit((now) => setDeload(plan, !block.deloadLastWeek, now))}>
+          <Chip selected={block.deloadLastWeek} onToggle={() => props.onEdit((p, now) => setDeload(p, !block.deloadLastWeek, now))}>
             Deload in the last week
           </Chip>
         </Card>
@@ -71,7 +71,7 @@ export function PlanHeader(props: {
           value={mode}
           onChange={(v) => {
             setMode(v);
-            if (v === 'rotation') props.onEdit((now) => setSchedule(plan, 'rotation', undefined, now));
+            if (v === 'rotation') props.onEdit((p, now) => setSchedule(p, 'rotation', undefined, now));
           }}
         />
         {mode === 'rotation' ? (
