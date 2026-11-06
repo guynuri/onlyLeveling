@@ -638,8 +638,8 @@ in standalone mode before its status says done.
 - Nine-step onboarding on `ChoiceCard` / `ChipGroup` / weights chip grid (1–50 kg) with progress dots and a fixed
   Continue. Accounts missing the new fields see only the new steps, pre-filled.
 - Settings screen edits the same fields with the same controls.
-- **Done when:** a new account finishes onboarding in under two minutes with multi-picks, and an old account sees
-  only the new steps.
+- **Done when:** a new account finishes onboarding in under two minutes with multi-picks, and an old account re-runs
+  all nine steps, pre-filled.
 
 ## U4: Plan v2 (§5, §6.5 planning)
 - Plan model gains `block: { weeks: 4|6|8|12; startedAt; deloadLastWeek }`, `schedule: 'rotation' | 'weekdays'`,
@@ -647,6 +647,8 @@ in standalone mode before its status says done.
   block from ship date. Migration `0080_plan_v2.sql`.
 - Pure: `blockWeek(plan, now)`, `isDeloadWeek`, `nextSession(plan, history)` for rotation and weekdays,
   starter templates filtered by equipment, validation of AI plans against equipment, limits, blend table.
+  Dumbbells are optional: plans, AI candidates and swaps use the equipment the user picked, and with none picked
+  only bodyweight exercises are assigned (owner, 2026-11-06). Weight snapping applies only to dumbbell moves.
 - Plan screen: Generate/regenerate (existing AI chain + preview + accept), templates, Week X of N, edit in place
   (add any library exercise yourself, remove, reorder, sets/reps, swap), so anyone can change a template or an AI
   plan however they want (owner, 2026-11-06). Goals go to the AI; `GOAL_BLEND` is the rules plan's fail-safe. End-of-block offer: review + next block, or extend.
