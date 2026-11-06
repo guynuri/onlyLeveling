@@ -1,5 +1,6 @@
 // Rules-based plan (SPEC §5.6 fallback; PLAN Phase 3). Deterministic: same input, same plan.
-import { isDumbbellCompatible, movementPattern, type Exercise } from './exercise';
+import { movementPattern, usableWith, type Exercise } from './exercise';
+import type { EquipmentChoice } from './types';
 import { ROUTINE } from '../config/thresholds';
 
 export interface TemplateInput {
@@ -7,6 +8,7 @@ export interface TemplateInput {
   exercisesPerDay: number;
   avoid: readonly string[]; // exercise ids or names
   catalogue: readonly Exercise[];
+  equipment: readonly EquipmentChoice[]; // what the user owns; nothing → bodyweight only
 }
 
 // A timed routine item (warm-up or cool-down). Never an exercise, never a set.
@@ -26,12 +28,12 @@ export interface Template {
   days: TemplateDay[];
 }
 
-// Candidates: dumbbell-compatible, a known movement pattern, not avoided. Compound lifts first, then ones with
+// Candidates: usable with the owned equipment, a known movement pattern, not avoided. Compound lifts first, then ones with
 // pictures (UX design §3.2), then by id.
 export function candidates(input: TemplateInput): Exercise[] {
   const avoid = new Set(input.avoid);
   return input.catalogue
-    .filter((ex) => isDumbbellCompatible(ex))
+    .filter((ex) => usableWith(ex, input.equipment))
     .filter((ex) => movementPattern(ex) !== 'unknown')
     // A starter plan: rep-based strength work, nothing expert (U4 replaces this builder).
     .filter((ex) => ex.category === 'strength' && ex.mode === 'reps' && ex.level !== 'expert')

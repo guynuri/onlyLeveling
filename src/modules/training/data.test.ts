@@ -79,9 +79,23 @@ describe('progression wiring', () => {
     expect(repRangeFor(ex({ mechanic: null }))).toEqual({ min: 10, max: 15 });
   });
 
-  it('config carries the owned list straight through', () => {
-    const cfg = progressionConfigFor(ex({}), [4, 6]);
+  const S = { daysPerWeek: 3, restSec: 90, owned: [4, 6], ownedKettlebells: [12, 16] };
+
+  it('a dumbbell exercise gets the owned dumbbells', () => {
+    const cfg = progressionConfigFor(ex({ equipment: 'dumbbell', requires: ['dumbbell'] }), S);
     expect(cfg.owned).toEqual([4, 6]);
+    expect(cfg.weighted).toBe(true);
     expect(cfg.repMin).toBe(6);
+  });
+
+  it('a kettlebell exercise gets the owned kettlebells', () => {
+    const cfg = progressionConfigFor(ex({ equipment: 'kettlebell', requires: ['kettlebell'] }), S);
+    expect(cfg.owned).toEqual([12, 16]);
+    expect(cfg.weighted).toBe(true);
+  });
+
+  it('a bodyweight or band exercise is reps only', () => {
+    expect(progressionConfigFor(ex({ equipment: 'bodyweight', requires: [] }), S).weighted).toBe(false);
+    expect(progressionConfigFor(ex({ equipment: 'band', requires: ['band'] }), S).weighted).toBe(false);
   });
 });

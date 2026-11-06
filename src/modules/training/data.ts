@@ -11,7 +11,8 @@ import type { Settings, Workout } from '../../domain/types';
 import { planFromTemplate, planIsCurrent, type Plan } from '../../domain/plan';
 import { buildTemplate } from '../../domain/template';
 import { listExercises } from '../../data/exercises';
-import { blockedIds } from '../../domain/profile';
+import { blockedIds, equipmentOf } from '../../domain/profile';
+import { loadKind } from '../../domain/exercise';
 
 // Caches one open handle. A failed open is not cached, so the next call retries. reset() drops the handle,
 // for when another tab upgrades the database and this connection is closed.
@@ -64,6 +65,7 @@ export async function currentPlan(repo: Repo, local: Repo, s: Settings, now = Da
     exercisesPerDay: TEMPLATE.exercisesPerDay,
     avoid: [...blockedIds(s, listExercises())],
     catalogue: listExercises(),
+    equipment: equipmentOf(s),
   });
   const plan = planFromTemplate(t.days, s.daysPerWeek, now);
   await local.savePlan(plan);
@@ -81,8 +83,11 @@ export function defaultSettings(): Settings {
 import { repRangeFor } from '../../domain/reps';
 export { repRangeFor };
 
-export function progressionConfigFor(ex: Exercise, owned: number[]): ProgressionConfig {
+// Dumbbell moves snap to owned dumbbells, kettlebell moves to owned kettlebells; bands and bodyweight go by reps only.
+export function progressionConfigFor(ex: Exercise, s: Settings): ProgressionConfig {
   const range = repRangeFor(ex);
+  const kind = loadKind(ex);
+  const owned = kind === 'dumbbell' ? s.owned : kind === 'kettlebell' ? (s.ownedKettlebells ?? []) : [];
   return {
     repMin: range.min,
     repMax: range.max,
@@ -90,6 +95,7 @@ export function progressionConfigFor(ex: Exercise, owned: number[]): Progression
     owned,
     gridStep: TRAINING.gridStepKg,
     startWeight: TRAINING.startWeightKg,
+    weighted: kind !== 'none',
   };
 }
 

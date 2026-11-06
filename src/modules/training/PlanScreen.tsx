@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { getExercise, listExercises } from '../../data/exercises';
 import { replaceExercise, planExerciseIds, type Plan } from '../../domain/plan';
-import { isDumbbellCompatible, movementPattern } from '../../domain/exercise';
+import { movementPattern, usableWith } from '../../domain/exercise';
 import { getRepo, getLocalRepo, defaultSettings, currentPlan } from './data';
 import { ExerciseName } from '../library/ExerciseSheet';
 import { Card } from '../../ui/primitives';
 import { PLAN_CHANGED_EVENT } from '../library/labels';
-import { blockedIds } from '../../domain/profile';
+import { blockedIds, equipmentOf } from '../../domain/profile';
+import type { EquipmentChoice } from '../../domain/types';
 
 // Saves a plan with one exercise replaced. The clock is read here, outside render.
 async function replaceAndSave(plan: Plan, fromId: string, toId: string): Promise<Plan> {
@@ -19,6 +20,7 @@ async function replaceAndSave(plan: Plan, fromId: string, toId: string): Promise
 export default function PlanScreen() {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [avoid, setAvoid] = useState<string[]>([]);
+  const [equipment, setEquipment] = useState<EquipmentChoice[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -28,6 +30,7 @@ export default function PlanScreen() {
         const repo = await getRepo();
         const s = (await repo.getSettings()) ?? defaultSettings();
         setAvoid([...blockedIds(s, listExercises())]);
+        setEquipment(equipmentOf(s));
         setPlan(await currentPlan(repo, await getLocalRepo(), s));
       })().catch(() => setError('Could not load your plan. Reload to try again.'));
     load();
@@ -40,9 +43,9 @@ export default function PlanScreen() {
   if (!plan) return <p className="muted">Loading…</p>;
 
   const inPlan = new Set(planExerciseIds(plan));
-  // Replacement choices: dumbbell-compatible, known pattern, not already in the plan, not avoided (SPEC §3.1).
+  // Replacement choices: usable with the owned equipment, known pattern, not already in the plan, not avoided (SPEC §3.1).
   const choices = listExercises().filter(
-    (ex) => isDumbbellCompatible(ex) && movementPattern(ex) !== 'unknown' && !inPlan.has(ex.id) && !avoid.includes(ex.id),
+    (ex) => usableWith(ex, equipment) && movementPattern(ex) !== 'unknown' && !inPlan.has(ex.id) && !avoid.includes(ex.id),
   );
 
   const replace = async (fromId: string, toId: string) => {

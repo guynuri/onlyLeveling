@@ -23,7 +23,7 @@ describe('readSheetContext', () => {
       savePlan: async () => void saves++,
     };
     const ctx = await readSheetContext(repo, 123, [squat]);
-    expect(ctx).toEqual({ plan, workouts: [], blocked: ['fx_x', 'squat'], sex: 'female', now: 123 });
+    expect(ctx).toEqual({ plan, workouts: [], blocked: ['fx_x', 'squat'], equipment: ['dumbbell'], sex: 'female', now: 123 });
     expect(saves).toBe(0);
   });
 

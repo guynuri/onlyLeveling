@@ -51,7 +51,7 @@ export default function WorkoutScreen() {
       setExercises(
         today.exerciseIds.map((id) => {
           const ex = getExercise(id)!;
-          const next = nextPrescription(historyFor(ws, id), progressionConfigFor(ex, s.owned));
+          const next = nextPrescription(historyFor(ws, id), progressionConfigFor(ex, s));
           // An accepted coach change sets the weight for this session only (plan.ts activeAdjustment).
           const adj = activeAdjustment(plan, id, ws);
           const p = adj === null ? next : { ...next, w: adj };

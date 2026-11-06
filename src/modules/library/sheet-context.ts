@@ -4,12 +4,14 @@
 import type { Plan } from '../../domain/plan';
 import type { Exercise } from '../../domain/exercise';
 import type { Settings, Workout } from '../../domain/types';
-import { blockedIds } from '../../domain/profile';
+import { blockedIds, equipmentOf } from '../../domain/profile';
+import type { EquipmentChoice } from '../../domain/types';
 
 export interface SheetContext {
   plan: Plan | null; // null: nothing saved yet, so no Swap
   workouts: Workout[];
   blocked: string[];
+  equipment: EquipmentChoice[];
   sex: 'male' | 'female';
   now: number;
 }
@@ -28,6 +30,7 @@ export async function readSheetContext(
     plan: plan ?? null,
     workouts,
     blocked: s ? [...blockedIds(s, catalogue)] : [],
+    equipment: s ? equipmentOf(s) : [],
     sex: s?.about?.sex ?? 'male',
     now,
   };

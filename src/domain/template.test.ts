@@ -44,6 +44,7 @@ const INPUT = (over: Partial<TemplateInput> = {}): TemplateInput => ({
   exercisesPerDay: 3,
   avoid: [],
   catalogue: CATALOGUE,
+  equipment: ['dumbbell'],
   ...over,
 });
 
@@ -100,6 +101,7 @@ describe('candidates suit a starter dumbbell plan', () => {
       daysPerWeek: 1,
       exercisesPerDay: 4,
       avoid: [],
+      equipment: ['dumbbell'],
       catalogue: [
         ex({ id: 'OK_Press' }),
         ex({ id: 'Expert_Handstand', level: 'expert' }),
@@ -118,7 +120,7 @@ describe('limits reach the plan builder', () => {
       ex({ id: 'Press', muscles: { primary: ['chest'], secondary: [] } }),
     ];
     const avoid = [...blockedIds({ daysPerWeek: 3, restSec: 90, owned: [4], limits: { parts: ['knee'], note: '' } }, catalogue)];
-    expect(candidates({ daysPerWeek: 1, exercisesPerDay: 2, avoid, catalogue }).map((e) => e.id)).toEqual(['Press']);
+    expect(candidates({ daysPerWeek: 1, exercisesPerDay: 2, avoid, catalogue, equipment: ['dumbbell'] }).map((e) => e.id)).toEqual(['Press']);
   });
 });
 
@@ -128,8 +130,21 @@ describe('candidates prefer exercises with pictures', () => {
       daysPerWeek: 1,
       exercisesPerDay: 2,
       avoid: [],
+      equipment: ['dumbbell'],
       catalogue: [ex({ id: 'A_Plain' }), ex({ id: 'B_Pictured', media: { stills: ['media/repdb/b.webp'] } })],
     });
     expect(pool.map((e) => e.id)).toEqual(['B_Pictured', 'A_Plain']);
+  });
+});
+
+describe('candidates follow the owned equipment', () => {
+  it('with nothing picked only equipment-free exercises are offered', () => {
+    const pool = candidates(INPUT({ equipment: [] }));
+    expect(pool.map((e) => e.id)).toEqual(['BW_Pushup']);
+  });
+  it('picking dumbbells adds the dumbbell exercises', () => {
+    const ids = candidates(INPUT({ equipment: ['dumbbell'] })).map((e) => e.id);
+    expect(ids).toContain('DB_Press');
+    expect(ids).toContain('BW_Pushup');
   });
 });

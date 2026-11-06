@@ -5,7 +5,7 @@ import { ownedUp } from '../../../domain/dumbbells';
 import type { Exercise } from '../../../domain/exercise';
 import { deloadWeight, planExerciseIds, type Plan } from '../../../domain/plan';
 import { suggestionId, type Suggestion, type SuggestionAction, type SuggestionRule } from '../../../domain/suggestion';
-import type { Workout } from '../../../domain/types';
+import type { EquipmentChoice, Workout } from '../../../domain/types';
 import { pickSwap } from './swap';
 import { detectStale, detectStall, detectTooEasy, historyOf, missedSessions } from './rules';
 
@@ -23,6 +23,7 @@ export interface CoachInput {
   now: number;
   plan: Plan;
   owned: readonly number[];
+  equipment: readonly EquipmentChoice[];
   catalogue: readonly Exercise[];
   workouts: readonly Workout[];
   stored: readonly Suggestion[];
@@ -53,7 +54,7 @@ export function candidates(input: CoachInput): Candidate[] {
     const name = ex.name;
     const base = { exerciseId, lastLogged: last.date };
     const swapTo = () =>
-      pickSwap({ exercise: ex, catalogue: input.catalogue, inPlan, avoid: input.blocked ?? new Set(), lastUsed, now });
+      pickSwap({ exercise: ex, catalogue: input.catalogue, inPlan, avoid: input.blocked ?? new Set(), equipment: input.equipment, lastUsed, now });
     const deload: SuggestionAction = { kind: 'deload', w: deloadWeight(lastW, owned, factor) };
 
     const stall = detectStall(hist, now);

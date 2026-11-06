@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isDumbbellCompatible, movementPattern, type Exercise } from './exercise';
+import { loadKind, movementPattern, usableWith, type Exercise } from './exercise';
 
 const ex = (over: Partial<Exercise>): Exercise => ({
   id: 'fx_x',
@@ -25,31 +25,45 @@ const ex = (over: Partial<Exercise>): Exercise => ({
   ...over,
 });
 
-describe('isDumbbellCompatible', () => {
-  it.each([
-    ['dumbbell', true],
-    ['bodyweight', true],
-    ['barbell', false],
-    ['machine', false],
-    ['cable', false],
-    ['kettlebell', false],
-    ['band', false],
-    ['other', false],
-    ['unknown', false],
-  ] as const)('%s → %s', (equipment, expected) => {
-    expect(isDumbbellCompatible(ex({ equipment }))).toBe(expected);
+describe('usableWith', () => {
+  it('an equipment-free exercise is usable with nothing picked', () => {
+    expect(usableWith(ex({ equipment: 'bodyweight', requires: [] }), [])).toBe(true);
+  });
+  it('a dumbbell exercise needs dumbbells picked', () => {
+    expect(usableWith(ex({ equipment: 'dumbbell', requires: ['dumbbell'] }), [])).toBe(false);
+    expect(usableWith(ex({ equipment: 'dumbbell', requires: ['dumbbell'] }), ['dumbbell'])).toBe(true);
+  });
+  it('every required kit must be owned', () => {
+    const press = ex({ equipment: 'dumbbell', requires: ['dumbbell', 'bench'] });
+    expect(usableWith(press, ['dumbbell'])).toBe(false);
+    expect(usableWith(press, ['dumbbell', 'bench'])).toBe(true);
+  });
+  it('a bodyweight exercise that needs a bar is not usable without one', () => {
+    const pull = ex({ equipment: 'bodyweight', requires: ['pullup_bar'] });
+    expect(usableWith(pull, [])).toBe(false);
+    expect(usableWith(pull, ['pullup_bar'])).toBe(true);
+  });
+  it('kettlebell and band exercises need their own kit', () => {
+    expect(usableWith(ex({ equipment: 'kettlebell', requires: ['kettlebell'] }), ['dumbbell'])).toBe(false);
+    expect(usableWith(ex({ equipment: 'kettlebell', requires: ['kettlebell'] }), ['kettlebell'])).toBe(true);
+    expect(usableWith(ex({ equipment: 'band', requires: ['band'] }), ['band'])).toBe(true);
+  });
+  it.each(['barbell', 'machine', 'cable', 'other', 'unknown'] as const)('%s is never usable', (equipment) => {
+    expect(usableWith(ex({ equipment }), ['dumbbell', 'kettlebell', 'bench', 'pullup_bar', 'band'])).toBe(false);
   });
 });
 
-describe('isDumbbellCompatible with required kit', () => {
-  it('rejects an exercise that also needs a bench', () => {
-    expect(isDumbbellCompatible(ex({ equipment: 'dumbbell', requires: ['dumbbell', 'bench'] }))).toBe(false);
+describe('loadKind', () => {
+  it('dumbbell equipment or a dumbbell requirement is dumbbell-loaded', () => {
+    expect(loadKind(ex({ equipment: 'dumbbell', requires: ['dumbbell'] }))).toBe('dumbbell');
+    expect(loadKind(ex({ equipment: 'bodyweight', requires: ['dumbbell'] }))).toBe('dumbbell');
   });
-  it('accepts an equipment-free exercise', () => {
-    expect(isDumbbellCompatible(ex({ equipment: 'bodyweight', requires: [] }))).toBe(true);
+  it('kettlebell equipment is kettlebell-loaded', () => {
+    expect(loadKind(ex({ equipment: 'kettlebell', requires: ['kettlebell'] }))).toBe('kettlebell');
   });
-  it('rejects a bodyweight exercise that needs a pull-up bar', () => {
-    expect(isDumbbellCompatible(ex({ equipment: 'bodyweight', requires: ['pullup_bar'] }))).toBe(false);
+  it('bodyweight and band exercises carry no weight', () => {
+    expect(loadKind(ex({ equipment: 'bodyweight', requires: [] }))).toBe('none');
+    expect(loadKind(ex({ equipment: 'band', requires: ['band'] }))).toBe('none');
   });
 });
 

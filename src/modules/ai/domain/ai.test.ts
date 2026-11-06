@@ -94,7 +94,7 @@ describe('what leaves the device (SPEC §5.3)', () => {
   });
 
   it('only dumbbell exercises with a known pattern, and not avoided ones, reach the AI', () => {
-    const c = candidatesOf(catalogue, ['fx_avoid']);
+    const c = candidatesOf(catalogue, ['fx_avoid'], ['dumbbell']);
     expect(Object.keys(c).sort()).toEqual(['fx_iso', 'fx_press']);
     expect(c.fx_iso).toEqual({ name: 'Curl', repMin: 10, repMax: 15 });
   });

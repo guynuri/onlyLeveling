@@ -122,7 +122,7 @@ describe('candidates', () => {
       },
     ];
     const cat = [ex('a', 'chest'), ex('b', 'chest')];
-    const out = candidates({ now: NOW, plan, owned: [8], catalogue: cat, workouts, stored: [], repMaxFor: () => 15 });
+    const out = candidates({ now: NOW, plan, owned: [8], equipment: ['dumbbell'], catalogue: cat, workouts, stored: [], repMaxFor: () => 15 });
     expect(out.map((c) => c.rule)).toContain('stale');
     expect(out.find((c) => c.rule === 'stale')?.action).toEqual({ kind: 'swap', toId: 'b' });
   });
@@ -147,11 +147,11 @@ describe('candidates', () => {
       status: 'accepted',
       deloadTried: true,
     };
-    const first = candidates({ now: NOW, plan, owned: [8], catalogue: cat, workouts, stored: [tried], repMaxFor: () => 12 });
+    const first = candidates({ now: NOW, plan, owned: [8], equipment: ['dumbbell'], catalogue: cat, workouts, stored: [tried], repMaxFor: () => 12 });
     expect(first.find((c) => c.rule === 'stall')?.action).toEqual({ kind: 'swap', toId: 'b' });
     // The card comes back and is saved; the flag must survive, so the next load still offers the swap.
     const saved = reconcile([tried], first, NOW).save.find((s) => s.id === 'stall:a')!;
-    const second = candidates({ now: NOW, plan, owned: [8], catalogue: cat, workouts, stored: [saved], repMaxFor: () => 12 });
+    const second = candidates({ now: NOW, plan, owned: [8], equipment: ['dumbbell'], catalogue: cat, workouts, stored: [saved], repMaxFor: () => 12 });
     expect(second.find((c) => c.rule === 'stall')?.action).toEqual({ kind: 'swap', toId: 'b' });
   });
 });
