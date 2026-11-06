@@ -13,7 +13,7 @@ export interface Adjustment {
 
 // A training block (UX design §5): its length, when it started, and whether its last week is a planned deload.
 export interface Block {
-  weeks: 4 | 6 | 8 | 12;
+  weeks: number; // 4, 6, 8 or 12 when made (BLOCK.lengths); an extension can land in between, up to BLOCK.maxWeeks
   startedAt: number; // epoch ms
   deloadLastWeek: boolean;
 }
