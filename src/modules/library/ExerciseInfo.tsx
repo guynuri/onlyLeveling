@@ -7,7 +7,8 @@ import type { Plan } from '../../domain/plan';
 import { replaceExercise, planExerciseIds } from '../../domain/plan';
 import type { Workout } from '../../domain/types';
 import { pickSwap } from '../coach/domain/swap';
-import { getRepo, getLocalRepo, defaultSettings, currentPlan } from '../training/data';
+import { getRepo } from '../training/data';
+import { readSheetContext, type SheetContext } from './sheet-context';
 import { Button, Card } from '../../ui/primitives';
 import { toast } from '../../ui/controls';
 import { ExerciseMedia } from '../../ui/ExerciseMedia';
@@ -15,16 +16,19 @@ import { BodyMap } from '../../ui/body/BodyMap';
 import { LEVEL_LABEL, PLAN_CHANGED_EVENT, kitLabel, mechanicLabel } from './labels';
 import { recentSessions, sourceLine, youtubeSearchUrl } from './exercise-facts';
 
-// The saved plan and history, read once per opened exercise. Failures leave the sections out, never the sheet.
+// The saved plan and history, read once per opened exercise and never written (sheet-context.ts). Failures leave
+// the sections out, never the sheet.
 function useTrainingContext() {
-  const [ctx, setCtx] = useState<{ plan: Plan; workouts: Workout[]; avoid: string[]; now: number } | null>(null);
+  const [ctx, setCtx] = useState<SheetContext | null>(null);
   useEffect(() => {
-    (async () => {
-      const repo = await getRepo();
-      const s = (await repo.getSettings()) ?? defaultSettings();
-      const [plan, workouts] = await Promise.all([currentPlan(repo, await getLocalRepo(), s), repo.listWorkouts()]);
-      setCtx({ plan, workouts, avoid: s.avoid ?? [], now: Date.now() });
-    })().catch(() => setCtx(null));
+    let alive = true;
+    getRepo()
+      .then((repo) => readSheetContext(repo, Date.now()))
+      .then((c) => alive && setCtx(c))
+      .catch(() => alive && setCtx(null));
+    return () => {
+      alive = false;
+    };
   }, []);
   return [ctx, setCtx] as const;
 }
@@ -125,7 +129,7 @@ export default function ExerciseInfo({ id }: { id: string }) {
       )}
 
       <div className="ui-row">
-        {ctx && <SwapButton ex={ex} plan={ctx.plan} workouts={ctx.workouts} avoid={ctx.avoid} now={ctx.now} onSwapped={(plan) => setCtx({ ...ctx, plan })} />}
+        {ctx?.plan && <SwapButton ex={ex} plan={ctx.plan} workouts={ctx.workouts} avoid={ctx.avoid} now={ctx.now} onSwapped={(plan) => setCtx({ ...ctx, plan })} />}
         <a className="ui-btn ui-btn--ghost ui-btn--md" href={youtubeSearchUrl(ex.name)} target="_blank" rel="noopener noreferrer">
           Watch a demo
         </a>

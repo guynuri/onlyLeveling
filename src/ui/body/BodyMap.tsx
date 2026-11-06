@@ -2,26 +2,28 @@
 // openGym. It is ~90 KB, so it loads on first use and is shared by every map; until then the figure keeps its size.
 import { useEffect, useState } from 'react';
 import { BODY_SLUGS, SLUG_LABEL, type BodySlug } from '../../domain/muscle-map';
+import { createLoader } from './geometry-loader';
 
 type View = { vb: string; p: Record<string, string[]> };
 type Geometry = Record<'male' | 'female', { front: View; back: View }>;
 
 const INERT = ['head', 'hair', 'neck', 'hands', 'feet', 'knees', 'ankles'];
 
-let cache: Geometry | null = null;
-let pending: Promise<Geometry> | null = null;
+const loadGeometry = createLoader<Geometry>(() => import('./body-paths.js').then((m) => m.default));
 
 function useGeometry(): Geometry | null {
-  const [g, setG] = useState(cache);
+  const [g, setG] = useState(loadGeometry.cached);
   useEffect(() => {
-    if (cache) return;
+    if (g) return;
     let alive = true;
-    pending ??= import('./body-paths.js').then((m) => (cache = m.default));
-    pending.then((v) => alive && setG(v)).catch(() => undefined);
+    // A failure leaves this map blank; the loader forgets it, so the next map that mounts retries.
+    loadGeometry()
+      .then((v) => alive && setG(v))
+      .catch(() => undefined);
     return () => {
       alive = false;
     };
-  }, []);
+  }, [g]);
   return g;
 }
 
