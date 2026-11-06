@@ -317,3 +317,24 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
 .ui-body-m { fill: var(--surface-2); stroke: var(--bg); stroke-width: 2; }
 .ui-body-m--secondary { fill: var(--accent); fill-opacity: 0.4; }
 .ui-body-m--primary { fill: var(--accent); }
+
+/* Exercise media: start/peak crossfade loop, or one still, or a clip */
+.ui-media {
+  position: relative;
+  width: 100%; max-width: 320px; margin: 0 auto;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.ui-media-item { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.ui-media--loop .ui-media-peak { animation: ui-media-swap 2.4s ease-in-out infinite; }
+@keyframes ui-media-swap {
+  0%, 35% { opacity: 0; }
+  50%, 85% { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* Reduced motion: no loop, rest on the peak position (the global rule stops the animation; this pins the frame). */
+@media (prefers-reduced-motion: reduce) {
+  .ui-media--loop .ui-media-peak { animation: none; opacity: 1; }
+}
