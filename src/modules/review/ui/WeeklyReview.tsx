@@ -1,40 +1,41 @@
-// The weekly review card on Today (PLAN, SPEC Phase 2). Shows last week's review once. Dismissing it is remembered on
-// this device for that week only; if the browser cannot store it, the card simply comes back next time.
+// The weekly review card on Today (PLAN, SPEC Phase 2). Shown once per week: the week it was last shown is kept on this
+// device. Dismissing it counts as shown. If the browser cannot store that, the card shows again next time.
 import { useEffect, useState } from 'react';
 import { loadWeeklyReview, type ReviewView } from '../actions';
+import { showReviewCard } from '../domain/review';
 
-const dismissKey = (week: string) => `weekly-review-dismissed:${week}`;
+const LAST_SHOWN_KEY = 'weekly-review-last-shown';
 
-function wasDismissed(week: string): boolean {
+function readLastShown(): string | null {
   try {
-    return localStorage.getItem(dismissKey(week)) === '1';
+    return localStorage.getItem(LAST_SHOWN_KEY);
   } catch {
-    return false;
+    return null;
   }
 }
 
-function rememberDismissed(week: string): void {
+function writeLastShown(week: string): void {
   try {
-    localStorage.setItem(dismissKey(week), '1');
+    localStorage.setItem(LAST_SHOWN_KEY, week);
   } catch {
-    // Storage is unavailable: nothing to remember.
+    // Storage is unavailable: the card may show again on a later open.
   }
 }
 
 export function WeeklyReview() {
   const [view, setView] = useState<ReviewView | null>(null);
-  const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
     loadWeeklyReview()
       .then((v) => {
+        if (!v || !showReviewCard(readLastShown(), v.week)) return;
+        writeLastShown(v.week); // the first open of the week is the one that shows it
         setView(v);
-        setHidden(v !== null && wasDismissed(v.week));
       })
       .catch(() => setView(null));
   }, []);
 
-  if (!view || hidden) return null;
+  if (!view) return null;
 
   return (
     <section className="weekly-review" aria-label="Last week">
@@ -42,13 +43,7 @@ export function WeeklyReview() {
       <p>{view.text}</p>
       {view.label === 'rules' && <p className="muted small">Built by rules; AI unavailable.</p>}
       <p className="muted small">Training guidance, not medical advice.</p>
-      <button
-        type="button"
-        onClick={() => {
-          rememberDismissed(view.week);
-          setHidden(true);
-        }}
-      >
+      <button type="button" onClick={() => setView(null)}>
         Dismiss
       </button>
     </section>

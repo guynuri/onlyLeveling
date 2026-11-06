@@ -73,7 +73,9 @@ export async function generateReview(db: D1Database, userId: string, facts: Week
       .bind(userId, facts.week, out.value, out.provider, deps.now)
       .run();
     await record(db, userId, hash, out.provider, 'ai', deps.now);
-    return { status: 'ai', text: out.value, provider: out.provider };
+    // Return what is stored, not what this call got: an overlapping request may have stored its own answer first.
+    const stored = await getReview(db, userId, facts.week);
+    return { status: 'ai', text: stored?.text ?? out.value, provider: stored?.provider ?? out.provider };
   }
   await record(db, userId, hash, null, 'fallback', deps.now);
   return { status: 'fallback', reason: out.reason };

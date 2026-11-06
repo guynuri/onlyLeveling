@@ -37,6 +37,23 @@ describe('generateReview', () => {
     expect(f.calls()).toBe(1);
   });
 
+  it('two overlapping requests for one week: both callers get the text that was stored first', async () => {
+    const racing: Provider = {
+      name: 'workers-ai',
+      complete: async () => {
+        // Another request stores its answer while this one is waiting on the provider.
+        await db
+          .prepare('INSERT INTO weekly_reviews (user_id, week, text, provider, created_at) VALUES (?, ?, ?, ?, ?)')
+          .bind(U, facts.week, 'Stored first.', 'workers-ai', NOW)
+          .run();
+        return 'Second answer.';
+      },
+    };
+    const out = await generateReview(db, U, facts, deps([racing]));
+    expect(out).toEqual({ status: 'ai', text: 'Stored first.', provider: 'workers-ai' });
+    expect(await getReview(db, U, facts.week)).toEqual({ text: 'Stored first.', provider: 'workers-ai' });
+  });
+
   it('markup in the answer is rejected: nothing is stored, and the outcome is a fallback', async () => {
     const f = fake('<b>Great week</b>');
     const out = await generateReview(db, U, facts, deps([f.provider]));

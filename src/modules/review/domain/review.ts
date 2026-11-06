@@ -28,6 +28,17 @@ export function sessionsIn(week: string, workouts: readonly Workout[]): number {
   return workouts.filter((w) => w.start >= from && w.start < to).length;
 }
 
+// The card shows once per week: it is shown unless it was already shown for this week (the last week shown is kept).
+export function showReviewCard(lastShownWeek: string | null, week: string): boolean {
+  return lastShownWeek !== week;
+}
+
+// A rules text is stored only when the AI itself did not answer. A spent daily quota is not an AI failure: the week
+// stays open, so a later open can still ask the AI.
+export function shouldStoreRules(reason: string): boolean {
+  return reason !== 'capped';
+}
+
 export function buildFacts(input: {
   week: string;
   workouts: readonly Workout[];

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { lastClosedWeekStart, sessionsIn, buildFacts } from './review';
+import { lastClosedWeekStart, sessionsIn, buildFacts, showReviewCard, shouldStoreRules } from './review';
 import type { Workout } from '../../../domain/types';
 
 // Wednesday 11 Nov 2026, local. The closed week is the one that started Monday 2 Nov.
@@ -19,6 +19,20 @@ describe('the closed week', () => {
 
   it('on a Sunday, the closed week is still the one before this week', () => {
     expect(lastClosedWeekStart(new Date(2026, 10, 8, 23))).toBe('2026-10-26');
+  });
+});
+
+describe('the card', () => {
+  it('shows on the first open of a week, hides on the next opens, and shows again in a new week', () => {
+    expect(showReviewCard(null, '2026-11-02')).toBe(true); // first open this week
+    expect(showReviewCard('2026-11-02', '2026-11-02')).toBe(false); // shown already this week
+    expect(showReviewCard('2026-11-02', '2026-11-09')).toBe(true); // a new week
+  });
+
+  it('a rules text is stored unless the quota was spent: an AI failure settles the week, a quota does not', () => {
+    expect(shouldStoreRules('invalid')).toBe(true);
+    expect(shouldStoreRules('unreachable')).toBe(true);
+    expect(shouldStoreRules('capped')).toBe(false);
   });
 });
 

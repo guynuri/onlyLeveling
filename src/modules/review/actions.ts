@@ -6,7 +6,7 @@ import { getExercise } from '../../data/exercises';
 import { repRangeFor } from '../../domain/reps';
 import { computeProgress } from '../xp/domain/progress';
 import { rulesReviewText, type WeekFacts } from '../../../shared/ai-review';
-import { lastClosedWeekStart, buildFacts } from './domain/review';
+import { lastClosedWeekStart, buildFacts, shouldStoreRules } from './domain/review';
 
 export interface ReviewView {
   week: string;
@@ -58,12 +58,13 @@ export async function loadWeeklyReview(now: Date = new Date()): Promise<ReviewVi
       return { week, text: row.text, label: row.provider ? 'ai' : 'rules' };
     }
     const asked = await api('POST', '/api/ai/review', { facts });
-    const out = asked.json as { status: string; text?: string };
+    const out = asked.json as { status: string; text?: string; reason?: string };
     if (out.status === 'ai' && out.text) {
       return { week, text: out.text, label: 'ai' };
     }
-    // The AI did not answer: store the rules text so this week is settled and not asked again.
-    await api('POST', '/api/ai/review/rules', { week, text: rules.text });
+    // The AI failed: store the rules text so this week is settled and not asked again. A spent quota stores nothing,
+    // so a later open can still ask the AI for this week.
+    if (shouldStoreRules(out.reason ?? '')) await api('POST', '/api/ai/review/rules', { week, text: rules.text });
     return rules;
   } catch {
     // Not signed in, or the Worker is unreachable: show the rules text, store nothing.
