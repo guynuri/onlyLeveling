@@ -14,6 +14,9 @@ const ex = (over: Partial<Exercise>): Exercise => ({
   secondaryMuscles: [],
   movementPattern: 'push',
   instructions: [],
+  requires: [],
+  mode: 'reps',
+  muscles: { primary: [], secondary: [] },
   source: 'free-exercise-db',
   textSource: 'free-exercise-db',
   license: 'Unlicense',
@@ -35,6 +38,18 @@ describe('isDumbbellCompatible', () => {
     ['unknown', false],
   ] as const)('%s → %s', (equipment, expected) => {
     expect(isDumbbellCompatible(ex({ equipment }))).toBe(expected);
+  });
+});
+
+describe('isDumbbellCompatible with required kit', () => {
+  it('rejects an exercise that also needs a bench', () => {
+    expect(isDumbbellCompatible(ex({ equipment: 'dumbbell', requires: ['dumbbell', 'bench'] }))).toBe(false);
+  });
+  it('accepts an equipment-free exercise', () => {
+    expect(isDumbbellCompatible(ex({ equipment: 'bodyweight', requires: [] }))).toBe(true);
+  });
+  it('rejects a bodyweight exercise that needs a pull-up bar', () => {
+    expect(isDumbbellCompatible(ex({ equipment: 'bodyweight', requires: ['pullup_bar'] }))).toBe(false);
   });
 });
 
