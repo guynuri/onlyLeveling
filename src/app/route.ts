@@ -49,6 +49,12 @@ export function parseRoute(hash: string): Route {
   return screen ? { screen } : { screen: 'home' };
 }
 
+// Onboarding is required (owner decision 2026-11-06): until it is finished, only onboarding and Settings (where a
+// returning user signs in, so their settings come back) can be shown.
+export function allowedWhileOnboarding(route: Route): boolean {
+  return route.screen === 'onboarding' || route.screen === 'settings';
+}
+
 // Which bottom tab is highlighted for a route: More owns its sub-screens, onboarding sits under Home.
 export function tabFor(route: Route): Tab {
   switch (route.screen) {

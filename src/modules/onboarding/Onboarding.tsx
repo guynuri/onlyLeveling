@@ -1,9 +1,9 @@
-// Onboarding v2 (UX design §4). The steps come from onboardingSteps(): all nine for a new account, the five new ones
-// for an account onboarded before v2 (pre-filled from what it already has). Each Continue saves that step's answer
-// on top of the stored settings, so leaving halfway loses nothing.
+// Onboarding v2 (UX design §4). Required: until all nine steps are done (the plan step sets onboardedV2At) the app
+// keeps coming back here. Each Continue saves that step's answer on top of the stored settings, so leaving halfway
+// loses nothing and the next run starts pre-filled. A new account starts with nothing ticked, weights included.
 import { useEffect, useState } from 'react';
 import { PROFILE } from '../../config/thresholds';
-import { equipmentOf, goalsOf, onboardingSteps, parseAbout, validateWeights, V2_STEPS, type Step } from '../../domain/profile';
+import { ALL_STEPS, equipmentOf, goalsOf, onboardingDone, parseAbout, validateWeights, type Step } from '../../domain/profile';
 import { SYNC_EVENT } from '../sync/actions';
 import type { BodyPart, EquipmentChoice, Goal, Settings } from '../../domain/types';
 import { Button } from '../../ui/primitives';
@@ -60,7 +60,7 @@ function draftFrom(s: Settings): Draft {
 }
 
 export default function Onboarding() {
-  const [steps, setSteps] = useState<Step[] | null>(null);
+  const steps = ALL_STEPS;
   const [draft, setDraft] = useState<Draft | null>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [i, setI] = useState(0);
@@ -71,12 +71,10 @@ export default function Onboarding() {
     getRepo()
       .then((r) => r.getSettings())
       .then((saved) => {
-        const s = saved ?? defaultSettings();
-        const list = onboardingSteps(s);
+        // No stored settings: a new account, so no default weights are ticked for the user.
+        const s = saved ?? { ...defaultSettings(), owned: [] };
         setSettings(s);
         setDraft(draftFrom(s));
-        // Opened with nothing left to answer (from Settings or a link): offer the v2 questions again.
-        setSteps(list.length > 0 ? list : [...V2_STEPS]);
       })
       .catch(() => setError('Could not load your settings. Reload to try again.'));
   }, []);
@@ -91,7 +89,7 @@ export default function Onboarding() {
         .then((r) => r.getSettings())
         .then((fresh) => {
           if (!fresh || JSON.stringify(fresh) === JSON.stringify(settings)) return;
-          if (onboardingSteps(fresh).length === 0 && onboardingSteps(settings).length > 0) {
+          if (onboardingDone(fresh)) {
             window.location.hash = '#/home';
             return;
           }
@@ -104,10 +102,8 @@ export default function Onboarding() {
     return () => window.removeEventListener(SYNC_EVENT, onSync);
   }, [settings]);
 
-  if (!steps || !draft || !settings) return <p className="muted">{error ?? 'Loading…'}</p>;
+  if (!draft || !settings) return <p className="muted">{error ?? 'Loading…'}</p>;
   const step = steps[i];
-  const isLast = i === steps.length - 1;
-  const v2Done = !steps.slice(i + 1).some((s) => s !== 'plan');
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft({ ...draft, [k]: v });
 
   // What this step saves, or an error that keeps the user on it.
@@ -149,11 +145,8 @@ export default function Onboarding() {
         setError(patch);
         return;
       }
-      // The last v2 question marks the new steps answered; a full first run finishes after the plan step.
-      const saved = await saveProfilePatch(await getRepo(), { ...patch, ...(v2Done ? { onboardedV2At: Date.now() } : {}) });
-      setSettings(saved);
-      if (isLast) window.location.hash = '#/home';
-      else setI(i + 1);
+      setSettings(await saveProfilePatch(await getRepo(), patch));
+      setI(i + 1);
     } catch {
       setError('Could not save that. Try again.');
     } finally {
@@ -165,7 +158,7 @@ export default function Onboarding() {
 
   return (
     <section className="ob-pad">
-      <div className="ob-dots" aria-label={`Step ${i + 1} of ${steps.length}`}>
+      <div className="ob-dots" role="img" aria-label={`Step ${i + 1} of ${steps.length}`}>
         {steps.map((s, k) => (
           <span key={s} className="ob-dot" data-on={k <= i} />
         ))}
@@ -174,6 +167,9 @@ export default function Onboarding() {
       {step === 'goals' && (
         <StepFrame eyebrow="Your goals" title="What are you training for?" why="Pick as many as you like. They count equally and shape your plan.">
           <GoalsStep value={draft.goals} onChange={(v) => set('goals', v)} />
+          <p className="muted small">
+            Already have an account? <a href="#/settings">Sign in</a> and your settings come back.
+          </p>
         </StepFrame>
       )}
       {step === 'about' && (
@@ -223,7 +219,9 @@ export default function Onboarding() {
         <ProposePlan
           settings={settings}
           onSaved={async () => {
-            await saveProfilePatch(await getRepo(), { onboardedAt: Date.now() });
+            // Choosing a plan is the last step: only now is onboarding finished.
+            const now = Date.now();
+            await saveProfilePatch(await getRepo(), { onboardedAt: now, onboardedV2At: now });
             window.location.hash = '#/home';
           }}
         />
@@ -245,7 +243,7 @@ export default function Onboarding() {
             <span />
           )}
           <Button onClick={next} disabled={busy}>
-            {skippable && isBlank(step, draft) ? 'Skip' : isLast ? 'Done' : 'Continue'}
+            {skippable && isBlank(step, draft) ? 'Skip' : 'Continue'}
           </Button>
         </div>
       )}

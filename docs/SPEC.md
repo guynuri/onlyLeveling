@@ -27,11 +27,12 @@ First sign-up runs a short **onboarding interview**. Answers are stored as setti
 
 | Setting | Default / value | Notes |
 |---|---|---|
-| Goals | One or more of build muscle, strength, lose fat, endurance, mobility, health (equal weight) | UX design §4 (U3). Blend table `GOAL_BLEND` in config. An old single `goal` reads as a one-item list. |
-| About you | Optional sex, age, height (U3) | Never leaves the device. Sex picks the body figure; a weight given here starts the bodyweight log. |
+| Goals | One or more of build muscle, strength, lose fat, endurance, mobility, health (equal weight) | UX design §4 (U3). Sent to the AI, which shapes the plan; `GOAL_BLEND` in config is the fail-safe for the rules plan. An old single `goal` reads as a one-item list. |
+| About you | Optional sex, age, height (U3) | Sent to the AI with the latest bodyweight to fit the plan (owner decision 2026-11-06). Sex picks the body figure; a weight given here starts the bodyweight log. |
+| Onboarding | Required (U3) | Until all nine steps end with a chosen plan, the app shows only onboarding and Settings (to sign in). No default weights for a new account. Unfinished = start again. |
 | Days per week | 3 | Plan builder respects it. Changeable any time. |
 | Session length | ~45 min | Limits exercises per session. |
-| Dumbbells owned | Picked on a chip grid of common weights 1–50 kg (U3) | Owned weights in kg, per unit, stored as an exact list. Kettlebell weights too when a kettlebell is owned. See §3.4. |
+| Dumbbells owned | Picked on a chip grid of common weights 1–50 kg, plus any weight typed in (U3) | Owned weights in kg, per unit, stored as an exact list. Kettlebell weights too when a kettlebell is owned. See §3.4. |
 | Load meaning | `as entered` per exercise | `as entered` / `each bell` / `total`, per `REFERENCE_NOTES.md` §8. |
 | Equipment | Multi-select: dumbbells, kettlebell, bench, pull-up bar, bands (U3) | Library defaults to it. Plans and swaps stay dumbbell / equipment-free until U4 reads it. No barbell. |
 | Experience | Returning after a break | Drives the starting load and progression pace. Editable. |
@@ -40,7 +41,7 @@ First sign-up runs a short **onboarding interview**. Answers are stored as setti
 | Units | kg | |
 | Rest between sets | 90 s (`restSec`) | Ported default, `REFERENCE_NOTES.md` §5. 0 = off. |
 | Warm-up pause (rest-pause) | 15 s | |
-| Bodyweight | Logged over time | Needed for strength-standard ranks (§4b). Not sent to AI. |
+| Bodyweight | Logged over time | Needed for strength-standard ranks (§4b). The latest entry is sent to the AI with the plan request (owner decision 2026-11-06). |
 | Push notifications | Rest-timer end, workout reminder | §6.4. |
 
 Settings live in one config module with thresholds (§4.5). No thresholds are scattered through the code.

@@ -8,10 +8,12 @@ import { PROFILE } from '../../../config/thresholds';
 import type { Candidate } from '../../../../shared/ai-plan';
 import type { PlanRequest } from '../../../../shared/ai-prompt';
 
-// About you (sex, age, height) and bodyweight never leave the device. The limits note is the one free-text field
-// (UX design §4), capped.
-export function summaryOf(s: Settings): Record<string, unknown> {
+// Body stats (sex, age, height, latest bodyweight) are sent so the AI can fit the plan (owner decision 2026-11-06,
+// replacing SPEC §5.3's "no bodyweight"). The limits note is the one free-text field (UX design §4), capped.
+// Never sent: account identity, dates of birth, raw logs.
+export function summaryOf(s: Settings, bodyweightKg: number | null = null): Record<string, unknown> {
   return {
+    body: { ...s.about, ...(bodyweightKg !== null ? { weightKg: bodyweightKg } : {}) },
     goals: goalsOf(s),
     daysPerWeek: s.daysPerWeek,
     sessionMinutes: s.sessionMinutes ?? null,
@@ -37,10 +39,15 @@ export function candidatesOf(catalogue: readonly Exercise[], avoid: readonly str
   return out;
 }
 
-export function buildPlanRequest(s: Settings, catalogue: readonly Exercise[], exercisesPerDay: number): PlanRequest {
+export function buildPlanRequest(
+  s: Settings,
+  catalogue: readonly Exercise[],
+  exercisesPerDay: number,
+  bodyweightKg: number | null = null,
+): PlanRequest {
   const avoid = s.avoid ?? [];
   return {
-    summary: summaryOf(s),
+    summary: summaryOf(s, bodyweightKg),
     // Limits remove candidates here too: the AI never sees an exercise the rules would refuse.
     candidates: candidatesOf(catalogue, [...blockedIds(s, catalogue)]),
     daysPerWeek: s.daysPerWeek,

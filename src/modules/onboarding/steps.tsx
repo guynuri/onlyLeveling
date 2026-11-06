@@ -1,5 +1,6 @@
 // Onboarding v2 steps (UX design §4), shared with Settings. Each is controlled: value + onChange, no saving here.
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+import { addWeight } from '../../domain/profile';
 import { Activity, Dumbbell, Flame, HeartPulse, Move, Trophy } from 'lucide-react';
 import type { BodyPart, EquipmentChoice, Goal, Settings } from '../../domain/types';
 import { toggleIn } from '../../ui/select';
@@ -140,24 +141,52 @@ export function EquipmentStep(props: { value: readonly EquipmentChoice[]; onChan
   );
 }
 
+// The grid of common weights plus any the user typed in (shown as chips too, so they can be unticked).
 export function WeightsStep(props: { label: string; grid: readonly number[]; value: readonly number[]; onChange: (v: number[]) => void }) {
+  const [typed, setTyped] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const sorted = (xs: number[]) => [...xs].sort((a, b) => a - b);
+  const options = sorted([...new Set([...props.grid, ...props.value])]);
+  const add = () => {
+    const r = addWeight(props.value, typed);
+    if (!r.ok) {
+      setError(r.error);
+      return;
+    }
+    setError(null);
+    setTyped('');
+    props.onChange(r.value);
+  };
   return (
     <div className="ui-stack ob-weights">
       <ChipGroup
         label={props.label}
-        options={props.grid.map((w) => ({ value: w, label: `${w}` }))}
+        options={options.map((w) => ({ value: w, label: `${w}` }))}
         value={props.value}
         onChange={(v) => props.onChange(sorted(v))}
       />
       <div className="ui-row">
-        <Button variant="secondary" size="sm" onClick={() => props.onChange([...props.grid])}>
+        <Button variant="secondary" size="sm" onClick={() => props.onChange(sorted([...new Set([...props.grid, ...props.value])]))}>
           Select all
         </Button>
         <Button variant="ghost" size="sm" onClick={() => props.onChange([])}>
           Clear
         </Button>
       </div>
+      <div className="ob-add-weight">
+        <input
+          inputMode="decimal"
+          placeholder="Another weight, kg"
+          aria-label={`Add a weight to ${props.label}`}
+          value={typed}
+          onChange={(e) => setTyped(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && add()}
+        />
+        <Button variant="secondary" onClick={add}>
+          Add
+        </Button>
+      </div>
+      {error && <p className="error small">{error}</p>}
     </div>
   );
 }

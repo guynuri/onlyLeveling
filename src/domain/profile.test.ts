@@ -5,7 +5,8 @@ import {
   blendGoals,
   excludedByLimits,
   blockedIds,
-  onboardingSteps,
+  onboardingDone,
+  addWeight,
   parseAbout,
   validateWeights,
 } from './profile';
@@ -59,15 +60,22 @@ describe('blockedIds', () => {
   });
 });
 
-describe('onboardingSteps', () => {
-  it('a new account runs all nine steps', () => {
-    expect(onboardingSteps(base)).toHaveLength(9);
+describe('onboardingDone', () => {
+  it('only a finished v2 onboarding counts; anything else starts it again', () => {
+    expect(onboardingDone(base)).toBe(false);
+    expect(onboardingDone({ ...base, goal: 'strength', owned: [4], onboardedAt: 1 })).toBe(false);
+    expect(onboardingDone({ ...base, onboardedAt: 1, onboardedV2At: 2 })).toBe(true);
   });
-  it('an account onboarded before v2 sees only the new steps', () => {
-    expect(onboardingSteps({ ...base, goal: 'strength', owned: [4], onboardedAt: 1 })).toEqual(['goals', 'about', 'equipment', 'weights', 'limits']);
+});
+
+describe('addWeight', () => {
+  it('adds a typed weight to the owned list, sorted, without duplicates', () => {
+    expect(addWeight([4, 8], '11.25')).toEqual({ ok: true, value: [4, 8, 11.25] });
+    expect(addWeight([4, 8], '8')).toEqual({ ok: true, value: [4, 8] });
+    expect(addWeight([], ' 6,5 ')).toEqual({ ok: true, value: [6.5] });
   });
-  it('a fully onboarded account sees none', () => {
-    expect(onboardingSteps({ ...base, onboardedAt: 1, onboardedV2At: 2 })).toEqual([]);
+  it('refuses blanks, zero, negatives and silly values', () => {
+    for (const t of ['', 'abc', '0', '-2', '500']) expect(addWeight([], t).ok, t).toBe(false);
   });
 });
 

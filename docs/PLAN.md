@@ -648,7 +648,8 @@ in standalone mode before its status says done.
 - Pure: `blockWeek(plan, now)`, `isDeloadWeek`, `nextSession(plan, history)` for rotation and weekdays,
   starter templates filtered by equipment, validation of AI plans against equipment, limits, blend table.
 - Plan screen: Generate/regenerate (existing AI chain + preview + accept), templates, Week X of N, edit in place
-  (add from library, remove, reorder, sets/reps, swap). End-of-block offer: review + next block, or extend.
+  (add any library exercise yourself, remove, reorder, sets/reps, swap), so anyone can change a template or an AI
+  plan however they want (owner, 2026-11-06). Goals go to the AI; `GOAL_BLEND` is the rules plan's fail-safe. End-of-block offer: review + next block, or extend.
 - Limits added later → coach cards proposing swaps (existing accept flow).
 - **Done when:** the user can build, edit and regenerate a plan without leaving the Plan screen, and Home/Plan show
   the block week.

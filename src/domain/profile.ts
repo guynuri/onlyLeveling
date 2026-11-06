@@ -10,7 +10,6 @@ type Parsed<T> = { ok: true; value: T } | { ok: false; error: string };
 export type Step = 'goals' | 'about' | 'experience' | 'days' | 'session' | 'equipment' | 'weights' | 'limits' | 'plan';
 
 export const ALL_STEPS: readonly Step[] = ['goals', 'about', 'experience', 'days', 'session', 'equipment', 'weights', 'limits', 'plan'];
-export const V2_STEPS: readonly Step[] = ['goals', 'about', 'equipment', 'weights', 'limits'];
 
 export function goalsOf(s: Settings): Goal[] {
   if (s.goals && s.goals.length > 0) return s.goals;
@@ -60,9 +59,20 @@ export function blockedIds(s: Settings, catalogue: readonly Pick<Exercise, 'id' 
   return out;
 }
 
-export function onboardingSteps(s: Settings): Step[] {
-  if (!s.onboardedAt) return [...ALL_STEPS];
-  return s.onboardedV2At ? [] : [...V2_STEPS];
+// Onboarding is finished only when the v2 run reached its last step (the plan). Anything else, older accounts
+// included, starts it again from the top (owner decision: test-stage data need not be kept).
+export function onboardingDone(s: Settings): boolean {
+  return !!s.onboardedV2At;
+}
+
+// A weight the user types in, for bells the grid does not list (e.g. 11.25 kg). Commas count as decimal points.
+export function addWeight(list: readonly number[], text: string): Parsed<number[]> {
+  const t = text.trim().replace(',', '.');
+  const n = Number(t);
+  if (t === '' || !Number.isFinite(n) || n <= 0 || n > PROFILE.maxCustomWeightKg) {
+    return { ok: false, error: `Enter a weight in kg, more than 0 and up to ${PROFILE.maxCustomWeightKg}.` };
+  }
+  return { ok: true, value: [...new Set([...list, n])].sort((a, b) => a - b) };
 }
 
 const RANGE_NAME = { age: 'Age', heightCm: 'Height (cm)', weightKg: 'Weight (kg)' } as const;

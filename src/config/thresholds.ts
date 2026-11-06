@@ -98,11 +98,13 @@ export const PROFILE = {
   ],
   kettlebellGrid: [4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 32, 36, 40, 44, 48],
   about: { age: [13, 100], heightCm: [100, 250], weightKg: [30, 300] },
+  maxCustomWeightKg: 100, // a typed-in bell weight above this is a typo
   limitsNoteMax: 200,
 } as const;
 
 // Goal blend (UX design §4): goals are a set; each asks for this much, and the blend takes the most of each.
-// Used by plans from U4. The user reviews these numbers.
+// The goals themselves go to the AI, which shapes the plan; this table is the fail-safe for the rules plan (no AI,
+// or an AI answer that fails validation). Owner decision, 2026-11-06.
 export const GOAL_BLEND = {
   'build-muscle': { cardioSessions: 0, cardioMinutes: 0, mobilityMinutes: 0, repBias: 'none' },
   strength: { cardioSessions: 0, cardioMinutes: 0, mobilityMinutes: 0, repBias: 'heavier' },
