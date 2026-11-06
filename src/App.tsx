@@ -12,6 +12,7 @@ import ExerciseList from './modules/library/ExerciseList';
 import CreditsScreen from './modules/library/CreditsScreen';
 import WorkoutScreen from './modules/training/WorkoutScreen';
 import PlanScreen from './modules/training/PlanScreen';
+import CardioScreen from './modules/training/CardioScreen';
 import HistoryScreen from './modules/training/HistoryScreen';
 import SettingsScreen from './modules/training/SettingsScreen';
 import ProgressScreen from './modules/progress/ProgressScreen';
@@ -52,6 +53,8 @@ function Screen({ route }: { route: Route }) {
       return <SettingsScreen />;
     case 'credits':
       return <CreditsScreen />;
+    case 'cardio':
+      return <CardioScreen />;
     case 'progress':
       return <ProgressScreen />;
     case 'onboarding':

@@ -99,7 +99,7 @@ function afterDaysChanged(plan: Plan, days: TemplateDay[], now: number): Plan {
     ...(plan.schedule === 'weekdays' ? rest : plan),
     schedule: plan.schedule === 'weekdays' ? 'rotation' : plan.schedule,
     days,
-    daysPerWeek: days.length,
+    daysPerWeek: days.filter((d) => d.kind !== 'cardio').length, // lifting days: the coach's missed-session rule reads this
     adjustments: plan.adjustments.filter((a) => used.has(a.exerciseId)),
     updatedAt: now,
   };

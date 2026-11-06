@@ -49,3 +49,13 @@ export function cardioXp(c: Pick<CardioSession, 'minutes' | 'effort'>): number {
 export function countsForStreak(c: CardioSession): boolean {
   return c.planDay !== undefined;
 }
+
+// A new session from the form's parsed values. The id comes from the clock, so a second tap in the same millisecond
+// cannot happen on a phone; the caller passes the link for a planned day or a post-lift block.
+export function makeCardio(
+  v: Pick<CardioSession, 'type' | 'minutes' | 'distanceKm' | 'effort'>,
+  now: number,
+  link: { planDay?: number; afterWorkoutId?: string } = {},
+): CardioSession {
+  return { id: `c_${now}`, start: now, ...v, ...link };
+}

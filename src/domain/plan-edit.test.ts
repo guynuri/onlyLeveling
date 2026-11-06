@@ -125,11 +125,11 @@ describe('blocks and schedule', () => {
 
 describe('cardio days', () => {
   const RUN = { type: 'run' as const, minutes: 30 };
-  it('addCardioDay appends a cardio day with no exercises and keeps the day count in step', () => {
+  it('addCardioDay appends a cardio day with no exercises; daysPerWeek keeps counting lifting days only (the coach reads it)', () => {
     const p = addCardioDay(base(), RUN, NOW);
     expect(p.days).toHaveLength(3);
     expect(p.days[2]).toMatchObject({ index: 2, kind: 'cardio', cardio: RUN, exerciseIds: [], label: 'Cardio' });
-    expect(p.daysPerWeek).toBe(3);
+    expect(p.daysPerWeek).toBe(2);
     expect(addCardioDay(p, RUN, NOW).days[3].label).toBe('Cardio 2');
   });
   it('addCardioDay drops a weekdays list that no longer fits and rotates instead', () => {

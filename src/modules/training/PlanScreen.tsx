@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react';
 import { listExercises } from '../../data/exercises';
 import type { Plan } from '../../domain/plan';
 import { getRepo, getLocalRepo, defaultSettings, currentPlan } from './data';
-import { Card, EmptyState } from '../../ui/primitives';
+import { Button, Card, EmptyState } from '../../ui/primitives';
+import { CARDIO } from '../../config/thresholds';
+import { addCardioDay, removeDay } from '../../domain/plan-edit';
+import { CardioDayEditor } from './CardioDayEditor';
 import { Sheet } from '../../ui/controls';
 import { PLAN_CHANGED_EVENT } from '../library/labels';
 import { blockedIds, equipmentOf } from '../../domain/profile';
@@ -20,6 +23,7 @@ export default function PlanScreen() {
   const [equipment, setEquipment] = useState<EquipmentChoice[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [building, setBuilding] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState<number | null>(null);
   const [now] = useState(() => Date.now());
   const { edit, error: saveError } = usePlanEditor(plan, setPlan);
 
@@ -57,20 +61,41 @@ export default function PlanScreen() {
     );
   }
 
+  const lifting = plan.days.filter((d) => d.kind !== 'cardio').length;
+  // Remove a day after a second tap, so one slip does not drop it.
+  const removeButton = (index: number) =>
+    plan.days.length > 1 &&
+    (confirmRemove === index ? (
+      <Button size="sm" variant="danger" onClick={() => { setConfirmRemove(null); edit((p, at) => removeDay(p, index, at)); }}>
+        Yes, remove this day
+      </Button>
+    ) : (
+      <Button size="sm" variant="ghost" onClick={() => setConfirmRemove(index)}>
+        Remove day
+      </Button>
+    ));
+
   return (
     <section>
       <h1>Plan</h1>
       {saveError && <p className="error">{saveError}</p>}
       <PlanHeader key={`${plan.block?.startedAt ?? 0}-${plan.days.length}`} plan={plan} now={now} onEdit={edit} onRegenerate={() => setBuilding(true)} />
-      {plan.days.length !== settings.daysPerWeek && (
+      {lifting !== settings.daysPerWeek && (
         <p className="muted small">
-          Your plan has {plan.days.length} days; Settings says {settings.daysPerWeek} a week. Tap “New plan” to match.
+          Your plan has {lifting} lifting {lifting === 1 ? 'day' : 'days'}; Settings says {settings.daysPerWeek} a week. Tap “New plan” to match.
         </p>
       )}
       <p className="muted small">
         Your plan. Change it however you like, or build a new one. Tap an exercise to see how it is done.
       </p>
-      {plan.days.map((day) => (
+      {plan.days.map((day) =>
+        day.kind === 'cardio' ? (
+          <Card key={day.index} title={day.label ?? 'Cardio'}>
+            <p className="muted small">A cardio day. Logging it from Train counts toward the week’s target.</p>
+            <CardioDayEditor day={day} onEdit={edit} />
+            {removeButton(day.index)}
+          </Card>
+        ) : (
         <Card key={day.index} title={day.label ?? `Day ${day.index + 1}`}>
           <h3>Warm-up</h3>
           <ul className="ui-list">
@@ -98,8 +123,13 @@ export default function PlanScreen() {
               </li>
             ))}
           </ul>
+          {removeButton(day.index)}
         </Card>
-      ))}
+        ),
+      )}
+      <Button variant="secondary" onClick={() => edit((p, at) => addCardioDay(p, { type: 'walk', minutes: CARDIO.defaultMinutes }, at))}>
+        Add cardio day
+      </Button>
       <Sheet open={building} onClose={() => setBuilding(false)} title="New plan">
         <ProposePlan settings={settings} onSaved={built} />
       </Sheet>

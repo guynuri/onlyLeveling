@@ -3,7 +3,9 @@
 // killed iOS PWA does not lose it; only Finish saves a Workout.
 import { useEffect, useState } from 'react';
 import { getExercise, listExercises } from '../../data/exercises';
-import { isDeloadWeek, nextSession, sessionsInBlock } from '../../domain/block';
+import { isDeloadWeek, nextSession, sessionStarts, sessionsInBlock } from '../../domain/block';
+import { CARDIO } from '../../config/thresholds';
+import { cardioXp, makeCardio, type CardioSession } from '../../domain/cardio';
 import { loadKind } from '../../domain/exercise';
 import { buildLive, canFinish, currentPosition, logSet, nextSetDefaults, setRir, toEntries, undoLastSet, type LiveExercise } from '../../domain/live-session';
 import type { Plan } from '../../domain/plan';
@@ -25,6 +27,7 @@ import { RestBar } from './RestBar';
 import { startRest, type RestTimer } from './rest-timer';
 import { RirPicker } from './RirPicker';
 import { SetControls } from './SetControls';
+import { CardioLog } from './CardioLog';
 import { usePlanEditor } from './usePlanEditor';
 
 type Stage = 'preview' | 'logging' | 'summary';
@@ -58,6 +61,8 @@ export default function WorkoutScreen() {
   const [status, setStatus] = useState('');
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0); // bumped after Done, so the next session loads fresh
+  const [cardioDone, setCardioDone] = useState<CardioSession | null>(null); // today's planned cardio day, once logged
+  const [postCardio, setPostCardio] = useState<CardioSession | null>(null); // the cardio after today's lifting, once logged
   const { edit, error: saveError } = usePlanEditor(plan, setPlan);
 
   // Load settings, history and today's day, and pick up a session that was in progress. Failures are shown.
@@ -68,7 +73,9 @@ export default function WorkoutScreen() {
       const ws = await repo.listWorkouts();
       const p = await currentPlan(repo, await getLocalRepo(), s);
       const at = nowMs();
-      const today = nextSession(p, sessionsInBlock(p, ws), at, ws.map((w) => w.start));
+      // Finished sessions: lifting workouts and finished planned cardio days (not extra or post-lift cardio).
+      const starts = sessionStarts(ws, await repo.listCardio());
+      const today = nextSession(p, sessionsInBlock(p, starts.map((start) => ({ start }))), at, starts);
       if (!today) {
         setLoadError('No plan days yet. Build a plan on the Plan tab.');
         return;
@@ -77,7 +84,7 @@ export default function WorkoutScreen() {
       setPlan(p);
       setView(workoutViewOf(s));
       const draft = await readDraft(await getDb());
-      if (draft && isRestorable(draft, today.index, p.updatedAt, at)) {
+      if (draft && today.kind !== 'cardio' && isRestorable(draft, today.index, p.updatedAt, at)) {
         setLive(draft.exercises);
         setStartedAt(draft.startedAt);
         setStage('logging');
@@ -205,27 +212,83 @@ export default function WorkoutScreen() {
     setStage('preview');
   };
 
+  // Home and Train share this screen, so leaving by hash alone would keep the summary: reset it and load again.
+  const leave = () => {
+    setSummary(null);
+    setLive([]);
+    setPending({});
+    setCardioDone(null);
+    setPostCardio(null);
+    setStage('preview');
+    setLoaded(null);
+    setReloadKey((k) => k + 1);
+    window.location.hash = '#/home';
+  };
+
   if (stage === 'summary' && summary) {
     return (
       <FinishSummary
         summary={summary}
         names={names}
         sex={settings.about?.sex ?? 'male'}
-        onDone={() => {
-          // Home and Train share this screen, so leaving by hash alone would keep the summary: reset it and load again.
-          setSummary(null);
-          setLive([]);
-          setPending({});
-          setStage('preview');
-          setLoaded(null);
-          setReloadKey((k) => k + 1);
-          window.location.hash = '#/home';
-        }}
+        onDone={leave}
+        extra={
+          day.postCardioMinutes ? (
+            <Card title="Cardio after lifting">
+              {postCardio ? (
+                <p>Logged: {postCardio.minutes} min, +{cardioXp(postCardio)} XP. It belongs to this session, so it does not count as another one.</p>
+              ) : (
+                <CardioLog
+                  defaults={{ type: 'walk', minutes: day.postCardioMinutes }}
+                  onSave={async (v) => {
+                    const c = makeCardio(v, nowMs(), { afterWorkoutId: `w_${startedAt}` });
+                    await (await getRepo()).saveCardio(c);
+                    setPostCardio(c);
+                  }}
+                />
+              )}
+            </Card>
+          ) : null
+        }
       />
     );
   }
 
   const title = day.label ?? `Day ${day.index + 1}`;
+
+  if (day.kind === 'cardio') {
+    const planned = day.cardio ?? { type: 'walk' as const, minutes: CARDIO.defaultMinutes };
+    return (
+      <section className="ui-stack">
+        <h1>Today · {title}</h1>
+        <Card title="Cardio day">
+          {cardioDone ? (
+            <>
+              <p>Logged: {cardioDone.minutes} min, +{cardioXp(cardioDone)} XP. This day counts toward this week’s target.</p>
+              <Button block onClick={leave}>
+                Done
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="muted">
+                Planned: {CARDIO.types.find((t) => t.value === planned.type)?.label ?? 'Cardio'}, {planned.minutes} min.
+              </p>
+              <CardioLog
+                defaults={planned}
+                saveLabel="Log cardio day"
+                onSave={async (v) => {
+                  const c = makeCardio(v, nowMs(), { planDay: day.index });
+                  await (await getRepo()).saveCardio(c);
+                  setCardioDone(c);
+                }}
+              />
+            </>
+          )}
+        </Card>
+      </section>
+    );
+  }
 
   if (stage === 'preview') {
     const items = prescriptions();

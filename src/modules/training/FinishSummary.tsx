@@ -1,4 +1,5 @@
 // After Finish (UX design §6.4): how long, how much, any records, the XP earned, the muscles worked and any rank-ups.
+import type { ReactNode } from 'react';
 import { Button, Card, RankBadge } from '../../ui/primitives';
 import { BodyMap } from '../../ui/body/BodyMap';
 import type { SessionSummary } from '../xp/domain/sessionSummary';
@@ -21,6 +22,7 @@ export function FinishSummary(props: {
   names: Record<string, string>; // exercise id → name
   sex: 'male' | 'female';
   onDone: () => void;
+  extra?: ReactNode; // e.g. the post-lift cardio card, shown above Done
 }) {
   const s = props.summary;
   return (
@@ -71,6 +73,7 @@ export function FinishSummary(props: {
       <Card title="Muscles worked">
         <BodyMap primary={s.primary} secondary={s.secondary} sex={props.sex} />
       </Card>
+      {props.extra}
       <Button block onClick={props.onDone}>
         Done
       </Button>

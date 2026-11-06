@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cardioXp, countsForStreak, parseCardio, type CardioSession } from './cardio';
+import { cardioXp, countsForStreak, makeCardio, parseCardio, type CardioSession } from './cardio';
 
 const form = (over: Partial<Parameters<typeof parseCardio>[0]> = {}) => ({ type: 'run', minutes: 30, distanceKm: null, effort: null, ...over });
 
@@ -47,5 +47,17 @@ describe('countsForStreak', () => {
   it('is false for an extra session and for a post-lift block', () => {
     expect(countsForStreak(base)).toBe(false);
     expect(countsForStreak({ ...base, afterWorkoutId: 'w_1' })).toBe(false);
+  });
+});
+
+describe('makeCardio', () => {
+  const v = { type: 'run' as const, minutes: 30, effort: 6 };
+  it('builds a session with an id and start from the clock', () => {
+    expect(makeCardio(v, 1234)).toEqual({ id: 'c_1234', start: 1234, ...v });
+  });
+  it('links it to a planned day or to the lift it follows', () => {
+    expect(makeCardio(v, 1, { planDay: 2 }).planDay).toBe(2);
+    expect(makeCardio(v, 1, { afterWorkoutId: 'w_9' }).afterWorkoutId).toBe('w_9');
+    expect(makeCardio(v, 1).planDay).toBeUndefined();
   });
 });
