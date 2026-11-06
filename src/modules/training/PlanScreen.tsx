@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { listExercises } from '../../data/exercises';
 import type { Plan } from '../../domain/plan';
 import { getRepo, getLocalRepo, defaultSettings, currentPlan } from './data';
@@ -10,9 +10,7 @@ import type { EquipmentChoice, Settings } from '../../domain/types';
 import { ProposePlan } from '../ai/ui/ProposePlan';
 import { PlanHeader } from './PlanHeader';
 import { DayEditor } from './DayEditor';
-
-// Applies an edit to the latest plan with the clock read here, outside render.
-const applyEdit = (cur: Plan, fn: (plan: Plan, now: number) => Plan): Plan => fn(cur, Date.now());
+import { usePlanEditor } from './usePlanEditor';
 
 // The saved plan. Warm-up and cool-down are shown as their own blocks, never as exercises.
 export default function PlanScreen() {
@@ -21,11 +19,9 @@ export default function PlanScreen() {
   const [avoid, setAvoid] = useState<string[]>([]);
   const [equipment, setEquipment] = useState<EquipmentChoice[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
   const [building, setBuilding] = useState(false);
   const [now] = useState(() => Date.now());
-  const latest = useRef<Plan | null>(null); // the newest plan, so quick taps build on each other
-  const saves = useRef<Promise<unknown>>(Promise.resolve()); // saves run one after another, in order
+  const { edit, error: saveError } = usePlanEditor(plan, setPlan);
 
   useEffect(() => {
     const load = () =>
@@ -35,9 +31,7 @@ export default function PlanScreen() {
         setSettings(s);
         setAvoid([...blockedIds(s, listExercises())]);
         setEquipment(equipmentOf(s));
-        const p = await currentPlan(repo, await getLocalRepo(), s);
-        latest.current = p;
-        setPlan(p);
+        setPlan(await currentPlan(repo, await getLocalRepo(), s));
       })().catch(() => setError('Could not load your plan. Reload to try again.'));
     load();
     // A swap from the exercise sheet, or a new plan from the builder, saves the plan behind this screen.
@@ -62,19 +56,6 @@ export default function PlanScreen() {
       </section>
     );
   }
-
-  // Shown at once, saved in the background in order; a failed save says so.
-  const edit = (fn: (plan: Plan, now: number) => Plan) => {
-    const cur = latest.current ?? plan;
-    const next = applyEdit(cur, fn);
-    if (next === cur) return;
-    latest.current = next;
-    setPlan(next);
-    setSaveError(null);
-    saves.current = saves.current
-      .then(async () => (await getRepo()).savePlan(next))
-      .catch(() => setSaveError('Could not save your last change. Check it, then try again.'));
-  };
 
   return (
     <section>
