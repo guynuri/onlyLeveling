@@ -656,19 +656,22 @@ in standalone mode before its status says done.
 - **Done when:** the user can build, edit and regenerate a plan without leaving the Plan screen, and Home/Plan show
   the block week.
 
-## U5: Workout v2 and cardio logging (§6.4, §6.5)
-- Moved from U4 (owner, 2026-11-07): edit the plan in place from a session's detail and the pre-workout preview
-  (reuse U4's `DayEditor`), and standalone cardio days in the plan (U4 only stores post-lift cardio and mobility minutes).
-- Focus view (default) and list view (setting), current exercise and set highlighted, `Stepper` on `stepOwned`,
-  one-tap ✓ on pre-filled sets (3-tap rule kept), timed sets for `mode: 'time'`.
-- RIR picker 0–4+ with colours and one plain line per level. Rest timer as pinned bar/overlay (existing timer).
-- Live PR badge (`prs.ts`). Finish summary: duration, volume, PRs, XP, muscles hit on the body map, rank-ups.
-- Cardio session log (type, duration, distance?, effort?) and post-lift cardio blocks; record type and migration
-  `0090_cardio.sql`; synced.
+## U5a: Workout v2 (§6.4). Detailed plan: `docs/superpowers/plans/2026-11-07-u5a-workout-v2.md`
+- Focus view (default) and list view (setting), current exercise and set highlighted, `Stepper` on owned weights,
+  one-tap ✓ on pre-filled sets (3-tap rule kept), timed sets for `mode: 'time'` (seconds in `SetRow.r`).
+- RIR picker 0–4+ with colours and one plain line per level. Rest timer as a pinned bar (existing timer and alert).
+- Live PR badge. Finish summary: duration, volume, PRs, XP, muscles hit on the body map, rank-ups.
+- Preview before starting, with the day editable in place (U4's `DayEditor`). The session in progress is kept on the
+  device and restored after a reload; only Finish saves a workout.
+- **Done when:** a full session logs one-handed with no typing in the common case.
+
+## U5b: Cardio logging and unweighted XP (§3.3, §6.5)
+- Cardio session log (type, duration, distance?, effort?); record type and migration `0090_cardio.sql`; synced.
+- Standalone cardio days in the plan (U4 only stores post-lift cardio and mobility minutes), and post-lift cardio blocks
+  logged from the workout screen.
 - XP: bodyweight-fraction and band-load table (§3.3) feeding existing volume/strength maths; cardio XP =
   duration × effort rule; streak counts planned cardio days as sessions.
-- **Done when:** a full session logs one-handed with no typing in the common case, and a planned cardio day counts
-  for the streak.
+- **Done when:** a planned cardio day counts for the streak, and bodyweight and band sets earn XP.
 
 ## U6: Home hub and Progress v2 (§6.2, §6.6)
 - Home tiles: next workout (name, Week X of N, thumbnails, mini body map, Start), Level & XP, Streak, Coach count;
@@ -711,7 +714,8 @@ in standalone mode before its status says done.
 | U2 Library and media | 3 | implemented: 1,984 exercises (876 free-exercise-db, 399 RepDB, 709 openGym text), 442 with RepDB pictures fetched at build (never committed), MuscleMap body map, exercise sheet v2, library filters, pictures cached on first view. Browser-checked at 375 px incl. offline; iPhone standalone check not done |
 | U3 Onboarding v2 | 3 | implemented: settings v2 (goals, about, equipment, kettlebell weights, limits); nine-step onboarding with multi-picks and the weight chip grid; pre-v2 accounts re-run all nine steps, pre-filled; Settings edits the same answers; limits filter plans, swaps, the AI list and replace lists; library defaults to owned equipment. Browser-checked; iPhone standalone check not done |
 | U4 Plan v2 | 3 | implemented: plans, swaps, AI candidates and progression follow owned equipment (nothing picked → bodyweight only; band and bodyweight reps-only); blocks of 4/6/8/12 weeks with Week X of N, deload week, rotation or weekday schedule; rules plan builder with full-body / upper-lower / push-pull-legs templates and the goal blend (cardio and mobility minutes); AI plans validated per exercise loads; Plan screen: generate, templates, preview beside the current plan and confirm before replacing, edit in place, end-of-block extend or rebuild; coach limit swap cards. Browser-checked on desktop; iPhone standalone check not done. Editing from the session preview and standalone cardio days are in U5 |
-| U5 Workout v2, cardio | 3 | not started |
+| U5a Workout v2 | 3 | implemented: focus and list views, one-tap ✓ on pre-filled sets with owned-weight steppers, RIR picker, pinned rest bar, live PR badge, preview with in-place day editing, finish summary (time, volume, records, XP, muscles worked, rank-ups), session in progress kept on the device. Browser-checked on a production build on desktop; iPhone standalone check not done |
+| U5b Cardio, unweighted XP | 3 | not started |
 | U6 Home hub, Progress v2 | 3 | not started |
 | U7 Game layer | 3 | not started |
 | U8 Restyle | 3 | not started, waits for the user's inspirations |

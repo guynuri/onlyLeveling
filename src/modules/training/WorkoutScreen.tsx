@@ -57,6 +57,7 @@ export default function WorkoutScreen() {
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [status, setStatus] = useState('');
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0); // bumped after Done, so the next session loads fresh
   const { edit, error: saveError } = usePlanEditor(plan, setPlan);
 
   // Load settings, history and today's day, and pick up a session that was in progress. Failures are shown.
@@ -82,7 +83,7 @@ export default function WorkoutScreen() {
         setStage('logging');
       }
     })().catch(() => setLoadError('Could not load today’s session. Reload the page to try again.'));
-  }, []);
+  }, [reloadKey]);
 
   // Keep the session in progress on the device after every change.
   useEffect(() => {
@@ -211,6 +212,13 @@ export default function WorkoutScreen() {
         names={names}
         sex={settings.about?.sex ?? 'male'}
         onDone={() => {
+          // Home and Train share this screen, so leaving by hash alone would keep the summary: reset it and load again.
+          setSummary(null);
+          setLive([]);
+          setPending({});
+          setStage('preview');
+          setLoaded(null);
+          setReloadKey((k) => k + 1);
           window.location.hash = '#/home';
         }}
       />
