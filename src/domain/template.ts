@@ -1,5 +1,6 @@
 // Rules-based plan (SPEC §5.6 fallback; PLAN Phase 3). Deterministic: same input, same plan.
 import { movementPattern, usableWith, type Exercise } from './exercise';
+import type { CardioType } from './cardio';
 import type { EquipmentChoice } from './types';
 
 export interface TemplateInput {
@@ -27,6 +28,8 @@ export interface TemplateDay {
   index: number;
   label?: string; // e.g. "Upper", "Pull"
   targets?: Record<string, Target>; // by exercise id
+  kind?: 'cardio'; // a standalone cardio day: no exercises, logged with the cardio form (U5b)
+  cardio?: { type: CardioType; minutes: number }; // what a cardio day asks for
   postCardioMinutes?: number; // a cardio block after the lifting (U5 logs it)
   mobilityMinutes?: number;
   warmup: RoutineItem[];

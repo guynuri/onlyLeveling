@@ -1,5 +1,6 @@
 // Block and schedule maths for a plan (UX design §5, U4). Pure: the clock is always passed in.
 import { BLOCK, COACH, TRAINING } from '../config/thresholds';
+import { countsForStreak, type CardioSession } from './cardio';
 import type { Exercise } from './exercise';
 import { deloadWeight, type Block, type Plan } from './plan';
 import type { Prescription } from './progression';
@@ -46,6 +47,12 @@ export function nextSession(plan: Plan, finishedSessions: number, now: number, w
     return plan.days[i === -1 ? 0 : i];
   }
   return plan.days[finishedSessions % n];
+}
+
+// The starts of everything that counts as a finished session: lifting workouts and finished planned cardio days. An extra
+// cardio session or a post-lift block does not (UX design §6.5). Used for the rotation, the weekday check and the streak.
+export function sessionStarts(workouts: readonly { start: number }[], cardio: readonly CardioSession[]): number[] {
+  return [...workouts.map((w) => w.start), ...cardio.filter(countsForStreak).map((c) => c.start)];
 }
 
 // Workouts logged since the plan's block started: a rotation starts at the first day of a new plan or block, not

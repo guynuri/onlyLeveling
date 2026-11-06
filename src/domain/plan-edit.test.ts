@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addExercise, extendBlock, moveExercise, removeExercise, replaceInDay, setDeload, setSchedule, setTarget, startBlock } from './plan-edit';
+import { addCardioDay, addExercise, extendBlock, moveExercise, removeExercise, replaceInDay, setDeload, setSchedule, setTarget, startBlock, removeDay, setCardioDay } from './plan-edit';
 import type { Plan } from './plan';
 
 const T = { sets: 3, repMin: 8, repMax: 12 };
@@ -122,3 +122,47 @@ describe('blocks and schedule', () => {
     expect(r.weekdays).toBeUndefined();
   });
 });
+
+describe('cardio days', () => {
+  const RUN = { type: 'run' as const, minutes: 30 };
+  it('addCardioDay appends a cardio day with no exercises and keeps the day count in step', () => {
+    const p = addCardioDay(base(), RUN, NOW);
+    expect(p.days).toHaveLength(3);
+    expect(p.days[2]).toMatchObject({ index: 2, kind: 'cardio', cardio: RUN, exerciseIds: [], label: 'Cardio' });
+    expect(p.daysPerWeek).toBe(3);
+    expect(addCardioDay(p, RUN, NOW).days[3].label).toBe('Cardio 2');
+  });
+  it('addCardioDay drops a weekdays list that no longer fits and rotates instead', () => {
+    const weekly = setSchedule(base(), 'weekdays', [1, 4], NOW);
+    const p = addCardioDay(weekly, RUN, NOW);
+    expect(p.schedule).toBe('rotation');
+    expect(p.weekdays).toBeUndefined();
+  });
+  it('addCardioDay refuses bad minutes', () => {
+    const p = base();
+    expect(addCardioDay(p, { type: 'run', minutes: 0 }, NOW)).toBe(p);
+  });
+  it('an exercise cannot be added to a cardio day', () => {
+    const p = addCardioDay(base(), RUN, NOW);
+    expect(addExercise(p, 2, 'z', T, NOW)).toBe(p);
+  });
+  it('removeDay refuses the last day, re-indexes the rest and rotates a weekdays plan', () => {
+    const one = removeDay(base(), 0, NOW);
+    expect(one.days.map((d) => d.index)).toEqual([0]);
+    expect(one.days[0].exerciseIds).toEqual(['b', 'c']);
+    expect(one.daysPerWeek).toBe(1);
+    expect(removeDay(one, 0, NOW)).toBe(one);
+    const weekly = setSchedule(base(), 'weekdays', [1, 4], NOW);
+    expect(removeDay(weekly, 1, NOW).schedule).toBe('rotation');
+  });
+  it('removeDay drops the weight adjustment of an exercise no day uses any more', () => {
+    expect(removeDay(base(), 0, NOW).adjustments).toEqual([]);
+  });
+  it('setCardioDay edits only a cardio day and rejects bad minutes', () => {
+    const p = addCardioDay(base(), RUN, NOW);
+    expect(setCardioDay(p, 2, { type: 'bike', minutes: 45 }, NOW).days[2].cardio).toEqual({ type: 'bike', minutes: 45 });
+    expect(setCardioDay(p, 0, { type: 'bike', minutes: 45 }, NOW)).toBe(p);
+    expect(setCardioDay(p, 2, { type: 'bike', minutes: 0 }, NOW)).toBe(p);
+  });
+});
+
