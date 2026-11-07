@@ -59,9 +59,16 @@ export function workersAiProvider(ai: unknown, model: string, maxTokens = 0): Pr
   return {
     name: 'workers-ai',
     async complete(prompt) {
-      const out = (await binding.run(model, { messages: [{ role: 'user', content: prompt }], ...(maxTokens > 0 ? { max_tokens: maxTokens } : {}) })) as { response?: unknown };
-      if (typeof out.response !== 'string') throw new Error('no text in response');
-      return out.response;
+      const out = (await binding.run(model, { messages: [{ role: 'user', content: prompt }], ...(maxTokens > 0 ? { max_tokens: maxTokens } : {}) })) as {
+        response?: unknown;
+        choices?: { message?: { content?: unknown } }[];
+      };
+      // Models answer as { response: text }, some as an already-parsed object, newer ones OpenAI-style.
+      if (typeof out.response === 'string') return out.response;
+      if (out.response && typeof out.response === 'object') return JSON.stringify(out.response);
+      const content = out.choices?.[0]?.message?.content;
+      if (typeof content === 'string') return content;
+      throw new Error('no text in response');
     },
   };
 }
