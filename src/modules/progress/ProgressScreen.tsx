@@ -7,7 +7,7 @@ import { RECOVERY, XP } from '../../config/thresholds';
 import { BadgeGrid } from './BadgeGrid';
 import { volumeRank } from '../xp/domain/rank';
 import { GROUPS, GROUP_LABEL, BENCHMARK, type Group } from '../xp/domain/muscles';
-import { GROUP_SLUGS, rankNote, exercisesFor, groupOfSlug, recoveryOf, xpToNextRank, type Recovery } from '../xp/domain/hub';
+import { GROUP_SLUGS, rankNote, rankProgress, exercisesFor, groupOfSlug, recoveryOf, xpToNextRank, type Recovery } from '../xp/domain/hub';
 import { ExerciseName } from '../library/ExerciseSheet';
 import { BodyMap } from '../../ui/body/BodyMap';
 import { SegmentedControl } from '../../ui/controls';
@@ -30,6 +30,17 @@ const RECOVERY_LABEL: Record<Recovery, string> = {
 };
 
 type Mode = 'ranks' | 'recovery';
+
+// Volume progress toward the next rank, in that rank's colour.
+function RankBar({ xp, big }: { xp: number; big?: boolean }) {
+  const next = xpToNextRank(xp);
+  const pct = Math.round(rankProgress(xp) * 100);
+  return (
+    <span className={big ? 'rank-bar rank-bar--big' : 'rank-bar'} role="progressbar" aria-label={next ? `${pct}% of the way to ${next.next}` : 'Top rank'} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
+      <span className="rank-bar-fill" style={{ width: `${pct}%`, background: `var(--rank-${next?.next ?? 'SSS'})` }} />
+    </span>
+  );
+}
 
 export default function ProgressScreen() {
   const [data, setData] = useState<{ loaded: Loaded; now: number } | null>(null);
@@ -109,7 +120,10 @@ export default function ProgressScreen() {
             <button key={g} type="button" aria-pressed={g === selected} onClick={() => setSelected(g)}>
               <span>{LABEL[g]}</span>
               {mode === 'ranks' ? (
-                <RankBadge rank={state.muscles[g].rank} />
+                <>
+                  <RankBadge rank={state.muscles[g].rank} />
+                  <RankBar xp={state.muscles[g].xp} />
+                </>
               ) : (
                 <span className="prog-dot" role="img" style={{ background: RECOVERY_COLOR[recovery[g]] }} aria-label={RECOVERY_LABEL[recovery[g]]} />
               )}
@@ -123,6 +137,7 @@ export default function ProgressScreen() {
           {Math.round(picked.xp).toLocaleString()} XP
           {next ? ` · ${Math.round(next.need).toLocaleString()} XP to ${next.next}` : ' · top rank'}. Best so far: {picked.maxRank}.
         </p>
+        <RankBar xp={picked.xp} big />
         {note && <p className="prog-note">{note}</p>}
         <p className="muted small">{RECOVERY_LABEL[recovery[selected]]}.</p>
         <p className="muted small">

@@ -42,6 +42,14 @@ export function xpToNextRank(xp: number): { next: Rank; need: number } | null {
   return next ? { next, need: XP.rankXp[next] - xp } : null;
 }
 
+// Share of the way from the current volume rank's XP to the next one, 0 to 1 (1 at the top rank).
+export function rankProgress(xp: number): number {
+  const next = RANKS.find((r) => XP.rankXp[r] > xp);
+  if (!next) return 1;
+  const from = XP.rankXp[RANKS[RANKS.indexOf(next) - 1]];
+  return (xp - from) / (XP.rankXp[next] - from);
+}
+
 export type Recovery = 'recovering' | 'ready' | 'neglected';
 
 // Per group: when its primary muscles last did a finished working set.

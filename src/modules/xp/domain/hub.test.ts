@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { BODY_SLUGS } from '../../../domain/muscle-map';
 import type { Workout } from '../../../domain/types';
 import { GROUPS } from './muscles';
-import { GROUP_SLUGS, rankNote, exercisesFor, groupOfSlug, levelOf, recoveryOf, weightTrend, xpToNextRank } from './hub';
+import { GROUP_SLUGS, rankNote, rankProgress, exercisesFor, groupOfSlug, levelOf, recoveryOf, weightTrend, xpToNextRank } from './hub';
 
 const DAY = 86_400_000;
 const NOW = new Date(2026, 10, 7, 12).getTime();
@@ -89,5 +89,14 @@ describe('rankNote', () => {
     );
     expect(rankNote({ xp: 16000, rank: 'F', strength: 'F' }, 81.4)).toContain('25 kg'); // 0.3 × 81.4 = 24.42, rounded up
     expect(rankNote({ xp: 1e9, rank: 'SSS', strength: 'SSS' }, 80)).toBeNull();
+  });
+});
+
+describe('rankProgress', () => {
+  it('runs 0 to 1 between volume ranks, 1 at the top', () => {
+    expect(rankProgress(0)).toBe(0);
+    expect(rankProgress(2500)).toBe(0.5); // F 0 to E 5000
+    expect(rankProgress(10000)).toBe(0.5); // E 5000 to D 15000
+    expect(rankProgress(1e9)).toBe(1);
   });
 });

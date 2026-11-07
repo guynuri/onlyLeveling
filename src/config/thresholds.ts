@@ -39,6 +39,7 @@ export const E1RM = {
 
 // The workout screen (UX design §6.4, U5).
 export const WORKOUT = {
+  missMax: 3, // the effort scale goes down to -3: "missed 3+ reps"
   draftMaxHours: 12, // a session in progress is restored on reopen only if it was started this recently
   timedStepSec: 5, // seconds per tap on a timed set
   timedMaxSec: 600,
@@ -92,6 +93,14 @@ export const ROUTINE = {
     { name: 'Easy walk', seconds: 300 },
     { name: 'Static stretch', seconds: 240 },
   ],
+  // Real routines (domain/routine.ts): a pulse raiser, then stretches for the day's most-worked muscles.
+  pulseIds: ['fx_Fast_Skipping', 'fx_Double_Leg_Butt_Kick', 'fx_Star_Jump'],
+  pulseSeconds: 180,
+  warmupStretches: 2,
+  warmupStretchSeconds: 45,
+  cooldownStretches: 3,
+  cooldownStretchSeconds: 60,
+  aiMaxItems: 4, // per warm-up or cool-down from the AI
 } as const;
 
 // Coach rules (SPEC §4). These are the spec defaults; each Wave 2 module edits only its own section.

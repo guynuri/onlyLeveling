@@ -13,6 +13,7 @@ import type { EquipmentChoice, Settings } from '../../domain/types';
 import { ProposePlan } from '../ai/ui/ProposePlan';
 import { PlanHeader } from './PlanHeader';
 import { DayEditor } from './DayEditor';
+import { RoutineList } from './RoutineList';
 import { usePlanEditor } from './usePlanEditor';
 
 const minutesOf = (items: readonly { seconds: number }[]) => Math.round(items.reduce((s, r) => s + r.seconds, 0) / 60);
@@ -106,17 +107,8 @@ export default function PlanScreen() {
               {day.postCardioMinutes ? ` · cardio after ${day.postCardioMinutes} min` : ''}
               {day.mobilityMinutes ? ` · mobility ${day.mobilityMinutes} min` : ''}
             </summary>
-            <ul className="ui-list">
-              {[...day.warmup.map((r) => ({ ...r, part: 'Warm-up' })), ...day.cooldown.map((r) => ({ ...r, part: 'Cool-down' }))].map((r) => (
-                <li key={r.part + r.name}>
-                  <span>
-                    <span className="muted small">{r.part} · </span>
-                    {r.name}
-                  </span>
-                  <span className="muted small">{Math.round(r.seconds / 60)} min</span>
-                </li>
-              ))}
-            </ul>
+            <RoutineList items={day.warmup} part="Warm-up" />
+            <RoutineList items={day.cooldown} part="Cool-down" />
           </details>
           <DayEditor plan={plan} day={day} equipment={equipment} blocked={avoid} onEdit={edit} />
           {removeButton(day.index)}

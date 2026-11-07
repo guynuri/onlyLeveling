@@ -3,6 +3,7 @@
 import { TRAINING, WORKOUT } from '../../config/thresholds';
 import { Button } from '../../ui/primitives';
 import { Stepper } from '../../ui/controls';
+import { ArrowRight } from 'lucide-react';
 
 export function SetControls(props: {
   mode: 'reps' | 'time';
@@ -12,6 +13,7 @@ export function SetControls(props: {
   owned: readonly number[];
   onChange: (v: { w: number; r: number }) => void;
   onLog: () => void;
+  onNext?: () => void; // all sets done: the main button moves on, logging an extra set becomes the small one
   setNumber: number; // 1-based, for the button label
   setsTotal: number;
 }) {
@@ -46,9 +48,20 @@ export function SetControls(props: {
           />
         </div>
       </div>
-      <Button block className="ui-log" onClick={props.onLog}>
-        {props.setNumber > props.setsTotal ? '✓ Log extra set' : `✓ Log set ${props.setNumber} of ${props.setsTotal}`}
-      </Button>
+      {props.onNext ? (
+        <div className="ui-done-row">
+          <Button variant="ghost" onClick={props.onLog}>
+            + Extra set
+          </Button>
+          <Button className="ui-log ui-next" onClick={props.onNext} icon={<ArrowRight />}>
+            Next exercise
+          </Button>
+        </div>
+      ) : (
+        <Button block className="ui-log" onClick={props.onLog}>
+          {props.setNumber > props.setsTotal ? '✓ Log extra set' : `✓ Log set ${props.setNumber} of ${props.setsTotal}`}
+        </Button>
+      )}
     </div>
   );
 }

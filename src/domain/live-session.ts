@@ -4,6 +4,7 @@ import type { Exercise } from './exercise';
 import type { Prescription } from './progression';
 import type { SetRow } from './session';
 import type { Entry } from './types';
+import { WORKOUT } from '../config/thresholds';
 
 export interface LiveExercise {
   exerciseId: string;
@@ -38,6 +39,31 @@ export function setRir(le: LiveExercise, setIndex: number, rir: number | undefin
   const { rir: _old, ...rest } = row;
   const next: SetRow = rir === undefined ? rest : { ...rest, rir };
   return { ...le, sets: le.sets.map((s, i) => (i === setIndex ? next : s)) };
+}
+
+// How the set felt, on one scale (owner request 2026-11-07): 0 to 4+ is reps left in reserve; below zero means the set
+// fell that many reps short, so `r` drops by that much (never below 0) and `missed` keeps the difference, which lets
+// the rating move back up. RIR is 0 for a missed set. undefined clears the rating and restores the reps.
+export function rateSet(le: LiveExercise, setIndex: number, v: number | undefined): LiveExercise {
+  const row = le.sets[setIndex];
+  if (!row) return le;
+  if (v !== undefined && !(Number.isInteger(v) && v >= -WORKOUT.missMax && v <= 4)) return le;
+  const { rir: _rir, missed: _missed, ...rest } = row;
+  const full = row.r + (row.missed ?? 0);
+  let next: SetRow;
+  if (v === undefined) next = { ...rest, r: full };
+  else if (v >= 0) next = { ...rest, r: full, rir: v };
+  else {
+    const r = Math.max(0, full + v);
+    next = { ...rest, r, rir: 0, missed: full - r };
+  }
+  return { ...le, sets: le.sets.map((s, i) => (i === setIndex ? next : s)) };
+}
+
+// The rating a set shows on the scale: minus the missed reps, else its RIR.
+export function ratingOf(row: SetRow | undefined): number | undefined {
+  if (!row) return undefined;
+  return row.missed ? -row.missed : row.rir;
 }
 
 export function undoLastSet(le: LiveExercise): LiveExercise {
