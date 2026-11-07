@@ -6,12 +6,11 @@ import { sessionStarts } from '../../domain/block';
 import type { Plan } from '../../domain/plan';
 import { goalsOf } from '../../domain/profile';
 import type { BodyweightEntry, Settings, Workout } from '../../domain/types';
-import { GAME } from '../../config/thresholds';
 import type { Repo } from '../../data/repo';
 import { readSyncState } from '../sync/actions';
 import { getLocalRepo, getRepo, defaultSettings, repRangeFor, currentPlan } from '../training/data';
 import { computeProgress, type ProgressInput, type ProgressState } from '../xp/domain/progress';
-import { GROUPS, groupOf, type Group } from '../xp/domain/muscles';
+import { groupOf, type Group } from '../xp/domain/muscles';
 import { generateQuests, questBonusByGroup, monthBounds, monthKey, monthlyRecap, questHave, weekKey, type MonthlyRecap, type Quest } from '../xp/domain/game';
 
 export interface Loaded {
