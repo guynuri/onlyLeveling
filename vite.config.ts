@@ -24,8 +24,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icons/apple-touch-icon.png', 'icons/icon.svg'],
       manifest: {
-        name: 'onlyLeveling',
-        short_name: 'onlyLeveling',
+        name: 'train-train-train',
+        short_name: 'train-train-train',
         description: 'Home training coach for adjustable dumbbells',
         theme_color: '#030409',
         background_color: '#030409',

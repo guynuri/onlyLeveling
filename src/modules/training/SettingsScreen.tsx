@@ -53,11 +53,24 @@ export default function SettingsScreen() {
 
   if (!loaded || !current) return <p className="muted">{status || 'Loading…'}</p>;
 
+  // The lock is an account setting: it saves (and syncs to the server) the moment it is tapped, not on Save.
+  async function toggleLock() {
+    const next = !lock;
+    setLock(next);
+    try {
+      setCurrent(await saveProfilePatch(await getRepo(), { lockByRank: next }));
+      toast(next ? 'Harder exercises now unlock with ranks.' : 'All exercises are open.');
+    } catch {
+      setLock(!next);
+      setStatus('Could not save. Nothing changed; try again.');
+    }
+  }
+
   // Days and rest only; the steppers keep both in range. Weights live in the Equipment card.
   async function save() {
     try {
       const repo = await getRepo(); // queued for the server as well
-      setCurrent(await saveProfilePatch(repo, { daysPerWeek: days, restSec: rest, workoutView: view, lockByRank: lock }));
+      setCurrent(await saveProfilePatch(repo, { daysPerWeek: days, restSec: rest, workoutView: view }));
       setStatus('');
       toast('Saved on this device.');
     } catch {
@@ -145,7 +158,7 @@ export default function SettingsScreen() {
         </div>
         <p className="muted small">Focus shows one exercise at a time. List shows the whole session.</p>
         <h3>Harder exercises</h3>
-        <Chip selected={lock} onToggle={() => setLock(!lock)}>
+        <Chip selected={lock} onToggle={() => void toggleLock()}>
           Unlock with muscle ranks
         </Chip>
         <p className="muted small">
