@@ -2,7 +2,8 @@
 // user owns (no equipment + dumbbells until settings load).
 import { useEffect, useMemo, useState } from 'react';
 import { getRepo } from '../training/data';
-import { equipmentOf } from '../../domain/profile';
+import { equipmentOf, lockedUntil } from '../../domain/profile';
+import { readRanks } from '../progress/ranks-cache';
 import { listExercises } from '../../data/exercises';
 import { BODY_SLUGS, SLUG_LABEL, type BodySlug } from '../../domain/muscle-map';
 import { Button, Chip, ChipGroup, EmptyState } from '../../ui/primitives';
@@ -26,17 +27,23 @@ export default function ExerciseList() {
   const [kit, setKit] = useState<KitChoice[]>(['none', 'dumbbell']);
   const [muscle, setMuscle] = useState<BodySlug | null>(null);
   const [shown, setShown] = useState(PAGE);
+  const [lock, setLock] = useState(false); // difficulty lock on: locked rows say which rank opens them
   // Default the equipment chips to what the user owns (UX design §3.3), once, when settings load.
   useEffect(() => {
     let alive = true;
     getRepo()
       .then((r) => r.getSettings())
-      .then((s) => alive && s && setKit(['none', ...equipmentOf(s)]))
+      .then((s) => {
+        if (!alive || !s) return;
+        setKit(['none', ...equipmentOf(s)]);
+        setLock(!!s.lockByRank);
+      })
       .catch(() => undefined);
     return () => {
       alive = false;
     };
   }, []);
+  const ranks = useMemo(() => readRanks(), []);
   const rows = useMemo(() => filterLibrary(listExercises(), { text, kit, muscle }), [text, kit, muscle]);
 
   return (
@@ -75,6 +82,7 @@ export default function ExerciseList() {
                 <span>{ex.name}</span>
                 <span className="muted small">
                   {kitLabel(ex)} · {ex.muscles.primary.map((s) => SLUG_LABEL[s]).join(', ') || 'Muscles unknown'}
+                  {lock && ranks && lockedUntil(ex, ranks) && <span className="lib-lock"> · Locked until rank {lockedUntil(ex, ranks)}</span>}
                 </span>
               </span>
             </a>

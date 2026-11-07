@@ -26,6 +26,7 @@ export type ProposeResult =
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const MAX_ROUTINE = 150;
+const FOCUS_GROUP = /^(chest|back|shoulders|biceps|triceps|quads|hamstrings|glutes|calves|core)$/;
 const ROUTINE_ID = /^(fx|rp|og)_[A-Za-z0-9_.()'-]{1,90}$/;
 const intIn = (v: unknown, lo: number, hi: number) => typeof v === 'number' && Number.isInteger(v) && v >= lo && v <= hi;
 
@@ -56,8 +57,11 @@ export function parsePlanRequest(body: unknown): PlanRequest | null {
     // Library-shaped ids and short names only; anything else is dropped, so client text cannot pad the prompt.
     routine = Object.fromEntries(rs.filter(([id, n]) => ROUTINE_ID.test(id) && typeof n === 'string' && n.length <= 60 && !/[\r\n]/.test(n))) as Record<string, string>;
   }
+  // Focus muscles reach the prompt: only known group names, at most 5.
+  const summary = { ...body.summary };
+  if ('focus' in summary) summary.focus = Array.isArray(summary.focus) ? summary.focus.filter((g) => typeof g === 'string' && FOCUS_GROUP.test(g)).slice(0, 5) : [];
   return {
-    summary: body.summary,
+    summary,
     candidates,
     daysPerWeek: body.daysPerWeek as number,
     exercisesPerDay: body.exercisesPerDay as number,

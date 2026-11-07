@@ -22,6 +22,7 @@ import {
   WeightsStep,
   type AboutDraft,
 } from './steps';
+import { FocusPicker } from './FocusPicker';
 
 const todayIso = () => {
   const d = new Date();
@@ -38,6 +39,7 @@ interface Draft {
   owned: number[];
   kettlebells: number[];
   limits: { parts: BodyPart[]; note: string };
+  focus: string[];
 }
 
 function draftFrom(s: Settings): Draft {
@@ -56,6 +58,7 @@ function draftFrom(s: Settings): Draft {
     owned: [...s.owned],
     kettlebells: [...(s.ownedKettlebells ?? [])],
     limits: s.limits ?? { parts: [], note: '' },
+    focus: s.focusMuscles ?? [],
   };
 }
 
@@ -111,6 +114,8 @@ export default function Onboarding() {
     switch (step) {
       case 'goals':
         return draft.goals.length > 0 ? { goals: draft.goals } : 'Pick at least one goal.';
+      case 'focus':
+        return { focusMuscles: draft.focus };
       case 'about': {
         const r = parseAbout(draft.about);
         if (!r.ok) return r.error;
@@ -154,7 +159,7 @@ export default function Onboarding() {
     }
   };
 
-  const skippable = step === 'about' || step === 'limits';
+  const skippable = step === 'about' || step === 'limits' || step === 'focus';
 
   return (
     <section className="ob-pad">
@@ -170,6 +175,11 @@ export default function Onboarding() {
           <p className="muted small">
             Already have an account? <a href="#/settings">Sign in</a> and your settings come back.
           </p>
+        </StepFrame>
+      )}
+      {step === 'focus' && (
+        <StepFrame eyebrow="Focus" title="Which muscles matter most to you?" why="Your plan gives them more work. Optional: skip to train everything evenly.">
+          <FocusPicker value={draft.focus} onChange={(v) => set('focus', v)} />
         </StepFrame>
       )}
       {step === 'about' && (
@@ -254,5 +264,6 @@ export default function Onboarding() {
 function isBlank(step: Step, d: Draft): boolean {
   if (step === 'about') return !d.about.sex && !d.about.age && !d.about.heightCm && !d.about.weightKg;
   if (step === 'limits') return d.limits.parts.length === 0 && !d.limits.note.trim();
+  if (step === 'focus') return d.focus.length === 0;
   return false;
 }

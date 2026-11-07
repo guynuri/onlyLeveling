@@ -5,6 +5,7 @@ import {
   blendGoals,
   excludedByLimits,
   blockedIds,
+  lockedUntil,
   onboardingDone,
   addWeight,
   parseAbout,
@@ -112,5 +113,25 @@ describe('validateWeights', () => {
     expect(validateWeights(['dumbbell', 'kettlebell'], [4], [])).toMatch(/kettlebell/i);
     expect(validateWeights(['band'], [], [])).toBeNull();
     expect(validateWeights(['dumbbell'], [4, 6], [])).toBeNull();
+  });
+});
+
+describe('difficulty lock (lockedUntil, blockedIds)', () => {
+  const ex = (id: string, level: Exercise['level'], primaryMuscles = ['chest']) =>
+    ({ id, level, primaryMuscles, muscles: { primary: [], secondary: [] }, tags: [] }) as unknown as Exercise;
+  const cat = [ex('easy', 'beginner'), ex('mid', 'intermediate'), ex('hard', 'expert'), ex('open', null)];
+  it('intermediate needs D, expert needs B on every primary muscle', () => {
+    expect(lockedUntil(cat[1], {})).toBe('D');
+    expect(lockedUntil(cat[1], { chest: 'D' })).toBeNull();
+    expect(lockedUntil(cat[2], { chest: 'C' })).toBe('B');
+    expect(lockedUntil(ex('two', 'intermediate', ['chest', 'triceps']), { chest: 'A' })).toBe('D');
+    expect(lockedUntil(cat[0], {})).toBeNull();
+    expect(lockedUntil(cat[3], {})).toBeNull();
+  });
+  it('blocks only when the setting is on', () => {
+    const s: Settings = { daysPerWeek: 3, restSec: 90, owned: [] };
+    expect([...blockedIds(s, cat, {})]).toEqual([]);
+    expect([...blockedIds({ ...s, lockByRank: true }, cat, { chest: 'D' })]).toEqual(['hard']);
+    expect([...blockedIds({ ...s, lockByRank: true }, cat, null)]).toEqual([]); // ranks not known yet: the lock waits
   });
 });

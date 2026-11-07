@@ -18,6 +18,7 @@ import { CopyPasteFallback } from './CopyPasteFallback';
 import { Button, Card, Chip, ChoiceCard } from '../../../ui/primitives';
 import { SegmentedControl } from '../../../ui/controls';
 import { ExerciseName } from '../../library/ExerciseSheet';
+import { readRanks } from '../../progress/ranks-cache';
 
 interface Candidate {
   plan: Plan;
@@ -104,7 +105,7 @@ export function ProposePlan(props: { settings: Settings; onSaved: () => void }) 
     };
   }, []);
   // The copy-paste prompt carries the same summary the Worker gets, body stats included.
-  const request = buildPlanRequest(props.settings, listExercises(), TEMPLATE.exercisesPerDay, bodyweight, supersets);
+  const request = buildPlanRequest(props.settings, listExercises(), TEMPLATE.exercisesPerDay, bodyweight, supersets, readRanks());
 
   const fromAi = (v: ValidPlan, corrections: Correction[], now: number): Candidate => ({
     plan: planFromProposal(v, props.settings, weeks, repRange, now),
@@ -114,7 +115,7 @@ export function ProposePlan(props: { settings: Settings; onSaved: () => void }) 
   });
 
   const fromRules = (kind: TemplateKind | 'auto', title: string, now: number, reason?: string): Candidate | null => {
-    const built = buildRulesPlan({ settings: props.settings, catalogue: listExercises(), kind, weeks, now });
+    const built = buildRulesPlan({ settings: props.settings, catalogue: listExercises(), kind, weeks, now, ranks: readRanks() });
     if (!built.ok) {
       setError(NO_FIT);
       return null;

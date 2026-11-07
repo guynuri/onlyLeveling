@@ -9,7 +9,7 @@ import { cardioXp, makeCardio, type CardioSession } from '../../domain/cardio';
 import { loadKind } from '../../domain/exercise';
 import { buildLive, canFinish, currentPosition, logSet, nextSetDefaults, rateSet, ratingOf, toEntries, undoLastSet, type LiveExercise } from '../../domain/live-session';
 import type { Plan } from '../../domain/plan';
-import { blockedIds, equipmentOf, workoutViewOf } from '../../domain/profile';
+import { equipmentOf, workoutViewOf } from '../../domain/profile';
 import type { BodyweightEntry, Settings, Workout } from '../../domain/types';
 import { CoachCards } from '../coach/CoachCards';
 import { scheduleRestAlert, cancelRestAlert } from '../push/actions';
@@ -40,6 +40,7 @@ import { RirPicker } from './RirPicker';
 import { SetControls } from './SetControls';
 import { CardioLog } from './CardioLog';
 import { usePlanEditor } from './usePlanEditor';
+import { blockedFor } from '../progress/ranks-cache';
 
 type Stage = 'preview' | 'warmup' | 'logging' | 'cooldown' | 'summary';
 type Values = { w: number; r: number };
@@ -400,7 +401,7 @@ export default function WorkoutScreen() {
           }
         >
           {editing ? (
-            <DayEditor plan={plan} day={day} equipment={equipmentOf(settings)} blocked={[...blockedIds(settings, listExercises())]} onEdit={edit} />
+            <DayEditor plan={plan} day={day} equipment={equipmentOf(settings)} blocked={[...blockedFor(settings, listExercises())]} onEdit={edit} />
           ) : (
             <ol className="ui-list ui-list--numbered">
               {items.map(({ exercise, prescription }, i) => (

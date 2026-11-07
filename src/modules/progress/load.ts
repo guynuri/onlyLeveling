@@ -12,6 +12,7 @@ import { getLocalRepo, getRepo, defaultSettings, repRangeFor, currentPlan } from
 import { computeProgress, type ProgressInput, type ProgressState } from '../xp/domain/progress';
 import { groupOf, type Group } from '../xp/domain/muscles';
 import { generateQuests, questBonusByGroup, monthBounds, monthKey, monthlyRecap, questHave, weekKey, type MonthlyRecap, type Quest } from '../xp/domain/game';
+import { saveRanks } from './ranks-cache';
 
 export interface Loaded {
   settings: Settings;
@@ -83,6 +84,7 @@ export async function loadProgress(now = Date.now()): Promise<Loaded> {
   for (const key of p.badges) await repo.awardBadge(key, now);
   const stored = (await repo.listBadges()).map((b) => b.badgeKey);
   const state = { ...p, badges: [...new Set([...stored, ...p.badges])] };
+  saveRanks(Object.fromEntries(Object.entries(p.muscles).map(([g, m]) => [g, m.rank])));
 
   // Last month's recap shows from the first open of a new month until dismissed, if anything happened in it.
   const last = monthBounds(now).from - 1;

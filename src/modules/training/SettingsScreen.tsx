@@ -4,7 +4,7 @@ import { saveProfilePatch } from './validate';
 import { ProfileSettings } from '../onboarding/ProfileSettings';
 import type { Settings } from '../../domain/types';
 import { workoutViewOf } from '../../domain/profile';
-import { Button, Card } from '../../ui/primitives';
+import { Button, Card, Chip } from '../../ui/primitives';
 import { SegmentedControl, Stepper, toast } from '../../ui/controls';
 import { applyTheme, readTheme, type ThemeChoice } from '../../ui/theme';
 import { setSoundOn, soundOn } from '../../ui/sound';
@@ -21,6 +21,8 @@ import {
 import { fetchExport, type SyncState } from '../../data/sync-engine';
 import { PushSettings } from '../push/ui/PushSettings';
 import { AuthClientError } from '../../data/auth-client';
+import { FocusPicker } from '../onboarding/FocusPicker';
+import { DIFFICULTY_LOCK } from '../../config/thresholds';
 
 const DEFAULT_SERVER = 'https://onlyleveling-api.guynuri.workers.dev';
 type Mode = 'signin' | 'signup' | 'recover';
@@ -48,6 +50,8 @@ export default function SettingsScreen() {
   const [days, setDays] = useState(3);
   const [rest, setRest] = useState(90);
   const [view, setView] = useState<'focus' | 'list'>('focus');
+  const [focus, setFocus] = useState<string[]>([]);
+  const [lock, setLock] = useState(false);
   const [theme, setTheme] = useState<ThemeChoice>(readTheme);
   const [sound, setSound] = useState(soundOn);
   const [loaded, setLoaded] = useState(false);
@@ -69,6 +73,8 @@ export default function SettingsScreen() {
         setDays(cur.daysPerWeek);
         setRest(cur.restSec);
         setView(workoutViewOf(cur));
+        setFocus(cur.focusMuscles ?? []);
+        setLock(!!cur.lockByRank);
         setSync(st);
         if (st.config) setServer(st.config.baseUrl);
         setLoaded(true);
@@ -82,7 +88,7 @@ export default function SettingsScreen() {
   async function save() {
     try {
       const repo = await getRepo(); // queued for the server as well
-      setCurrent(await saveProfilePatch(repo, { daysPerWeek: days, restSec: rest, workoutView: view }));
+      setCurrent(await saveProfilePatch(repo, { daysPerWeek: days, restSec: rest, workoutView: view, focusMuscles: focus, lockByRank: lock }));
       setStatus('');
       toast('Saved on this device.');
     } catch {
@@ -185,6 +191,16 @@ export default function SettingsScreen() {
           />
         </div>
         <p className="muted small">Focus shows one exercise at a time. List shows the whole session.</p>
+        <h3>Focus muscles</h3>
+        <FocusPicker value={focus} onChange={setFocus} />
+        <h3>Harder exercises</h3>
+        <Chip selected={lock} onToggle={() => setLock(!lock)}>
+          Unlock with muscle ranks
+        </Chip>
+        <p className="muted small">
+          When on, intermediate exercises open at rank {DIFFICULTY_LOCK.intermediate} of the muscles they train and expert ones at rank{' '}
+          {DIFFICULTY_LOCK.expert}. Plans, swaps and the AI only use open ones. Your current plan stays as it is: a new plan applies focus and locks (rules plans add the extra work, the AI gets focus as a priority).
+        </p>
         <Button onClick={save}>Save</Button>
       </Card>
 

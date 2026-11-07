@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyBlend, buildRulesPlan } from './plan-builder';
+import { addFocus, applyBlend, buildRulesPlan, focusOf } from './plan-builder';
 import type { Exercise } from './exercise';
 import type { BodySlug } from './muscle-map';
 import type { Plan } from './plan';
@@ -159,5 +159,37 @@ describe('applyBlend', () => {
   it('leaves the days alone for a goal with no cardio or mobility', () => {
     const days = planOf(build()).days;
     expect(applyBlend(days, ['build-muscle'])).toEqual(days);
+  });
+});
+
+describe('focus muscles (addFocus)', () => {
+  const pool = [
+    { id: 'press', primaryMuscles: ['chest'], mechanic: 'compound', mode: 'reps' },
+    { id: 'fly', primaryMuscles: ['chest'], mechanic: 'isolation', mode: 'reps' },
+    { id: 'curl', primaryMuscles: ['biceps'], mechanic: 'isolation', mode: 'reps' },
+  ] as unknown as Exercise[];
+  const day = (index: number, ids: string[]) => ({
+    index,
+    warmup: [],
+    cooldown: [],
+    exerciseIds: ids,
+    targets: Object.fromEntries(ids.map((id) => [id, { sets: 3, repMin: 8, repMax: 12 }])),
+  });
+  it('adds an exercise and a set on the day that trains the muscle', () => {
+    const out = addFocus([day(0, ['curl']), day(1, ['press'])], ['chest'], pool, 'none');
+    expect(out[1].exerciseIds).toEqual(['press', 'fly']);
+    expect(out[1].targets?.press.sets).toBe(4);
+    expect(out[0].exerciseIds).toEqual(['curl']);
+  });
+  it('a muscle no day trains goes to the shortest day', () => {
+    const out = addFocus([day(0, ['press', 'fly']), day(1, ['curl'])], ['triceps', 'biceps'], pool, 'none');
+    expect(out[1].exerciseIds).toEqual(['curl']); // nothing in the pool trains triceps, and no other biceps move
+    expect(out[1].targets?.curl.sets).toBe(4);
+  });
+  it('focusOf drops repeats', () => {
+    expect(focusOf({ focusMuscles: ['chest', 'chest', 'back'] })).toEqual(['chest', 'back']);
+  });
+  it('focusOf keeps known groups, at most 5', () => {
+    expect(focusOf({ focusMuscles: ['chest', 'x', 'back', 'quads', 'calves', 'core', 'glutes'] })).toEqual(['chest', 'back', 'quads', 'calves', 'core']);
   });
 });

@@ -8,13 +8,14 @@ import { addCardioDay, removeDay } from '../../domain/plan-edit';
 import { CardioDayEditor } from './CardioDayEditor';
 import { Sheet } from '../../ui/controls';
 import { PLAN_CHANGED_EVENT } from '../library/labels';
-import { blockedIds, equipmentOf } from '../../domain/profile';
+import { equipmentOf } from '../../domain/profile';
 import type { EquipmentChoice, Settings } from '../../domain/types';
 import { ProposePlan } from '../ai/ui/ProposePlan';
 import { PlanHeader } from './PlanHeader';
 import { DayEditor } from './DayEditor';
 import { RoutineList } from './RoutineList';
 import { usePlanEditor } from './usePlanEditor';
+import { blockedFor } from '../progress/ranks-cache';
 
 const minutesOf = (items: readonly { seconds: number }[]) => Math.round(items.reduce((s, r) => s + r.seconds, 0) / 60);
 
@@ -36,7 +37,7 @@ export default function PlanScreen() {
         const repo = await getRepo();
         const s = (await repo.getSettings()) ?? defaultSettings();
         setSettings(s);
-        setAvoid([...blockedIds(s, listExercises())]);
+        setAvoid([...blockedFor(s, listExercises())]);
         setEquipment(equipmentOf(s));
         setPlan(await currentPlan(repo, await getLocalRepo(), s));
       })().catch(() => setError('Could not load your plan. Reload to try again.'));

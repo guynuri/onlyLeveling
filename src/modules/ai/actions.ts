@@ -8,6 +8,7 @@ import { TEMPLATE } from '../../config/thresholds';
 import type { Correction, ValidPlan } from '../../../shared/ai-plan';
 import { buildPlanRequest } from './domain/request';
 import { getRepo, defaultSettings } from '../training/data';
+import { readRanks } from '../progress/ranks-cache';
 
 
 export type Proposal =
@@ -33,7 +34,7 @@ export async function requestProposal(s: Settings, fetchImpl: typeof fetch = fet
     res = await fetchImpl(`${cfg.baseUrl}/api/ai/plan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.token}` },
-      body: JSON.stringify(buildPlanRequest(s, listExercises(), TEMPLATE.exercisesPerDay, latest, supersets)),
+      body: JSON.stringify(buildPlanRequest(s, listExercises(), TEMPLATE.exercisesPerDay, latest, supersets, readRanks())),
     });
   } catch {
     return { status: 'fallback', reason: 'unreachable' };

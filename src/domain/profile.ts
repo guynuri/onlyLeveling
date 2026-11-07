@@ -4,12 +4,15 @@ import { GOAL_BLEND, LIMIT_RULES, PROFILE } from '../config/thresholds';
 import type { Exercise } from './exercise';
 import type { BodySlug } from './muscle-map';
 import type { BodyPart, EquipmentChoice, Goal, Settings } from './types';
+import { DIFFICULTY_LOCK } from '../config/thresholds';
+import { groupOf, type Group } from '../modules/xp/domain/muscles';
+import { rankAtLeast, type Rank } from '../modules/xp/domain/rank';
 
 type Parsed<T> = { ok: true; value: T } | { ok: false; error: string };
 
-export type Step = 'goals' | 'about' | 'experience' | 'days' | 'session' | 'equipment' | 'weights' | 'limits' | 'plan';
+export type Step = 'goals' | 'focus' | 'about' | 'experience' | 'days' | 'session' | 'equipment' | 'weights' | 'limits' | 'plan';
 
-export const ALL_STEPS: readonly Step[] = ['goals', 'about', 'experience', 'days', 'session', 'equipment', 'weights', 'limits', 'plan'];
+export const ALL_STEPS: readonly Step[] = ['goals', 'focus', 'about', 'experience', 'days', 'session', 'equipment', 'weights', 'limits', 'plan'];
 
 export function goalsOf(s: Settings): Goal[] {
   if (s.goals && s.goals.length > 0) return s.goals;
@@ -56,10 +59,27 @@ export function excludedByLimits(ex: Pick<Exercise, 'muscles' | 'tags'>, parts: 
 }
 
 // Everything plans, swaps and the AI must not offer: the avoid list plus what the limits rule out.
-export function blockedIds(s: Settings, catalogue: readonly Pick<Exercise, 'id' | 'muscles' | 'tags'>[]): Set<string> {
+// The rank an exercise needs under the difficulty lock, or null when it is open: beginner and unknown levels always
+// are; otherwise every XP group of its primary muscles must have reached DIFFICULTY_LOCK[level].
+export function lockedUntil(ex: Pick<Exercise, 'level' | 'primaryMuscles'>, ranks: Readonly<Partial<Record<Group, Rank>>>): Rank | null {
+  if (ex.level !== 'intermediate' && ex.level !== 'expert') return null;
+  const need: Rank = DIFFICULTY_LOCK[ex.level];
+  const groups = ex.primaryMuscles.map(groupOf).filter((g): g is Group => g !== null);
+  return groups.some((g) => !rankAtLeast(ranks[g] ?? 'F', need)) ? need : null;
+}
+
+// Exercises plans, swaps and the AI must not use: the avoid list, the limits, and (when the lock is on) exercises
+// harder than the user's muscle ranks allow. `ranks` null means not known yet on this device: the lock waits rather
+// than locking everything; an empty object counts every muscle as F.
+export function blockedIds(
+  s: Settings,
+  catalogue: readonly Pick<Exercise, 'id' | 'muscles' | 'tags' | 'level' | 'primaryMuscles'>[],
+  ranks: Readonly<Partial<Record<Group, Rank>>> | null = {},
+): Set<string> {
   const out = new Set(s.avoid ?? []);
   const parts = s.limits?.parts ?? [];
   if (parts.length > 0) for (const ex of catalogue) if (excludedByLimits(ex, parts)) out.add(ex.id);
+  if (s.lockByRank && ranks) for (const ex of catalogue) if (lockedUntil(ex, ranks)) out.add(ex.id);
   return out;
 }
 
