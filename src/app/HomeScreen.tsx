@@ -92,7 +92,7 @@ export default function HomeScreen() {
         href="#/workout"
         icon={<MessageCircle />}
         label="Coach"
-        value={`${coach === null || coach === 0 ? 'No suggestions' : `${coach} ${coach === 1 ? 'suggestion' : 'suggestions'}`} · weekly review`}
+        value={coach === null ? 'Suggestions and weekly review' : `${coach === 0 ? 'No suggestions' : `${coach} ${coach === 1 ? 'suggestion' : 'suggestions'}`} · weekly review`}
         badge={coach ?? undefined}
       />
     </section>
