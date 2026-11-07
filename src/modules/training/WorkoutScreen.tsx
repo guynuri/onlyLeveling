@@ -18,7 +18,7 @@ import { isLivePr, summarize, type SessionSummary } from '../xp/domain/sessionSu
 import { Button, Card } from '../../ui/primitives';
 import { SegmentedControl } from '../../ui/controls';
 import { ExerciseName } from '../library/ExerciseSheet';
-import { getDb, getRepo, getLocalRepo, defaultSettings, currentPlan, historyFor, repRangeFor } from './data';
+import { getDb, getRepo, getLocalRepo, defaultSettings, currentPlan, historyFor, ownedWeightsFor, repRangeFor } from './data';
 import { clearDraft, isRestorable, readDraft, writeDraft } from './draft';
 import { DayEditor } from './DayEditor';
 import { FinishSummary } from './FinishSummary';
@@ -84,7 +84,7 @@ export default function WorkoutScreen() {
       setPlan(p);
       setView(workoutViewOf(s));
       const draft = await readDraft(await getDb());
-      if (draft && today.kind !== 'cardio' && isRestorable(draft, today.index, p.updatedAt, at)) {
+      if (draft && today.kind !== 'cardio' && isRestorable(draft, today.index, at)) {
         setLive(draft.exercises);
         setStartedAt(draft.startedAt);
         setStage('logging');
@@ -95,7 +95,7 @@ export default function WorkoutScreen() {
   // Keep the session in progress on the device after every change.
   useEffect(() => {
     if (stage !== 'logging' || !loaded || !plan) return;
-    void getDb().then((db) => writeDraft(db, { dayIndex: loaded.dayIndex, planUpdatedAt: plan.updatedAt, startedAt, exercises: live }));
+    void getDb().then((db) => writeDraft(db, { dayIndex: loaded.dayIndex, startedAt, exercises: live }));
   }, [live, stage, startedAt, loaded, plan]);
 
   // Tick once a second while a rest runs (wall-clock based, see rest-timer.ts).
@@ -110,7 +110,6 @@ export default function WorkoutScreen() {
 
   const { settings } = loaded;
   const day = plan.days.find((d) => d.index === loaded.dayIndex) ?? plan.days[0];
-  const owned = settings.owned;
   const names = Object.fromEntries(listExercises().map((e) => [e.id, e.name]));
 
   const prescriptions = () =>
@@ -380,7 +379,7 @@ export default function WorkoutScreen() {
               weighted={weighted}
               w={v.w}
               r={v.r}
-              owned={owned}
+              owned={ex ? ownedWeightsFor(ex, settings) : []}
               setNumber={le.sets.length + 1}
               setsTotal={le.prescription.sets}
               onChange={(nv) => setPending({ ...pending, [le.exerciseId]: nv })}

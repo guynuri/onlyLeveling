@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createRepoCache, historyFor, progressionConfigFor, repRangeFor } from './data';
+import { createRepoCache, historyFor, ownedWeightsFor, progressionConfigFor, repRangeFor } from './data';
 import type { Workout } from '../../domain/types';
 import type { Exercise } from '../../domain/exercise';
 
@@ -97,5 +97,19 @@ describe('progression wiring', () => {
   it('a bodyweight or band exercise is reps only', () => {
     expect(progressionConfigFor(ex({ equipment: 'bodyweight', requires: [] }), S).weighted).toBe(false);
     expect(progressionConfigFor(ex({ equipment: 'band', requires: ['band'] }), S).weighted).toBe(false);
+  });
+});
+
+describe('ownedWeightsFor: the weights a stepper offers', () => {
+  const S = { daysPerWeek: 3, restSec: 90, owned: [4, 6], ownedKettlebells: [12, 16] };
+  it('a dumbbell exercise gets the dumbbells, a kettlebell exercise the kettlebells', () => {
+    expect(ownedWeightsFor(ex({ equipment: 'dumbbell', requires: ['dumbbell'] }), S)).toEqual([4, 6]);
+    expect(ownedWeightsFor(ex({ equipment: 'kettlebell', requires: ['kettlebell'] }), S)).toEqual([12, 16]);
+  });
+  it('a kettlebell exercise with no kettlebells listed gets an empty list, never the dumbbells', () => {
+    expect(ownedWeightsFor(ex({ equipment: 'kettlebell', requires: ['kettlebell'] }), { ...S, ownedKettlebells: undefined })).toEqual([]);
+  });
+  it('bodyweight and band exercises have no weights', () => {
+    expect(ownedWeightsFor(ex({ equipment: 'bodyweight', requires: [] }), S)).toEqual([]);
   });
 });

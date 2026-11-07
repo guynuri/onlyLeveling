@@ -51,11 +51,12 @@ function isoDay(s: string): number {
   return Date.UTC(y, m - 1, d) / DAY;
 }
 
-// The latest bodyweight on or before the session day, within the window. Null when there is none.
+// The latest bodyweight on or before the moment `ms`, within the window. Null when there is none.
 export function bodyweightAt(ms: number, entries: readonly BodyweightEntry[]): number | null {
   return bodyweightFor(localDay(ms), entries);
 }
 
+// The latest bodyweight on or before the session day, within the window. Null when there is none.
 function bodyweightFor(day: number, entries: readonly BodyweightEntry[]): number | null {
   let best: BodyweightEntry | null = null;
   for (const e of entries) {

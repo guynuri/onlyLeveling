@@ -264,6 +264,25 @@ describe('cardio sessions (U5b)', () => {
     expect((await exportAll(db, B)).cardio).toEqual([]);
   });
 
+  it.each([
+    ['a missing start', { start: undefined }],
+    ['a non-numeric start', { start: 'now' }],
+    ['effort 11', { effort: 11 }],
+    ['effort 0', { effort: 0 }],
+    ['a distance of 0', { distanceKm: 0 }],
+    ['a distance over 500', { distanceKm: 501 }],
+    ['a fractional plan day', { planDay: 1.5 }],
+    ['a negative plan day', { planDay: -1 }],
+    ['minutes over 600', { minutes: 601 }],
+    ['an afterWorkoutId that is not text', { afterWorkoutId: 7 }],
+  ])('rejects %s', (_name, over) => {
+    const data = { id: 'c1', start: 5, minutes: 30, type: 'run', ...over };
+    expect(() => parseOps({ ops: [{ opId: 'x', kind: 'cardio', data, updatedAt: 1 }] })).toThrow();
+  });
+  it('accepts the optional fields when they are valid', () => {
+    const data = { id: 'c1', start: 5, minutes: 30, type: 'run', effort: 7, distanceKm: 5.2, planDay: 0, afterWorkoutId: 'w_1' };
+    expect(parseOps({ ops: [{ opId: 'x', kind: 'cardio', data, updatedAt: 1 }] })).toHaveLength(1);
+  });
   it('rejects a cardio op with no minutes, no type or no id', () => {
     const bad = (data: Record<string, unknown>) => () => parseOps({ ops: [{ opId: 'x', kind: 'cardio', data, updatedAt: 1 }] });
     expect(bad({ id: 'c1', type: 'run' })).toThrow();

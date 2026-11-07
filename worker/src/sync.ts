@@ -65,6 +65,17 @@ export function parseOps(body: unknown): Op[] {
       if (!isObj(raw.data) || !isStr(raw.data.id) || !isStr(raw.data.type) || !isNum(raw.data.minutes) || raw.data.minutes <= 0) {
         throw new ValidationError(`op ${i}: cardio needs id, type and minutes`);
       }
+      // The same limits as parseCardio in the app (src/domain/cardio.ts, CARDIO in thresholds): the Worker is the trust
+      // boundary, and a bad start, effort or plan day would reach the streak, the rotation and the XP.
+      const d = raw.data;
+      const bad =
+        d.minutes > 600 ||
+        !isNum(d.start) ||
+        (d.effort !== undefined && !(Number.isInteger(d.effort) && (d.effort as number) >= 1 && (d.effort as number) <= 10)) ||
+        (d.distanceKm !== undefined && !(isNum(d.distanceKm) && d.distanceKm > 0 && d.distanceKm <= 500)) ||
+        (d.planDay !== undefined && !(Number.isInteger(d.planDay) && (d.planDay as number) >= 0)) ||
+        (d.afterWorkoutId !== undefined && !isStr(d.afterWorkoutId));
+      if (bad) throw new ValidationError(`op ${i}: cardio has a field out of range`);
       return { ...common, kind: 'cardio', data: raw.data as { id: string } & Record<string, unknown> };
     }
     throw new ValidationError(`op ${i}: unknown kind`);

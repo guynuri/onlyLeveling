@@ -6,7 +6,6 @@ import { openAppDb } from '../../db/idb';
 const HOUR = 3_600_000;
 const draft = (over: Partial<Draft> = {}): Draft => ({
   dayIndex: 1,
-  planUpdatedAt: 500,
   startedAt: 1_000_000,
   exercises: [{ exerciseId: 'a', mode: 'reps', prescription: { w: 8, reps: 10, sets: 3 }, sets: [] }],
   ...over,
@@ -14,20 +13,21 @@ const draft = (over: Partial<Draft> = {}): Draft => ({
 
 describe('isRestorable', () => {
   const now = 1_000_000 + HOUR;
-  it('a draft from the same day and plan, started recently, is restorable', () => {
-    expect(isRestorable(draft(), 1, 500, now)).toBe(true);
+  it('a draft for the same plan day, started recently, is restorable', () => {
+    expect(isRestorable(draft(), 1, now)).toBe(true);
   });
   it('another plan day is not', () => {
-    expect(isRestorable(draft(), 2, 500, now)).toBe(false);
+    expect(isRestorable(draft(), 2, now)).toBe(false);
   });
-  it('an edited plan is not', () => {
-    expect(isRestorable(draft(), 1, 501, now)).toBe(false);
+  it('editing the plan while the session runs does not drop the logged sets: the draft carries its own exercises', () => {
+    // the plan's updatedAt is no longer part of the check at all
+    expect(isRestorable(draft(), 1, now)).toBe(true);
   });
   it('a draft older than 12 hours is not', () => {
-    expect(isRestorable(draft(), 1, 500, 1_000_000 + 13 * HOUR)).toBe(false);
+    expect(isRestorable(draft(), 1, 1_000_000 + 13 * HOUR)).toBe(false);
   });
   it('no draft is not restorable', () => {
-    expect(isRestorable(undefined, 1, 500, now)).toBe(false);
+    expect(isRestorable(undefined, 1, now)).toBe(false);
   });
 });
 
