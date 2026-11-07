@@ -7,7 +7,7 @@ import { GROUP_LABEL, type Group } from '../xp/domain/muscles';
 import type { MonthlyRecap, Quest } from '../xp/domain/game';
 import { Button, Card, ProgressBar, RankBadge } from '../../ui/primitives';
 import { dismissRecap } from './load';
-import { playLevelUp } from '../../ui/sound';
+import { playFanfare } from '../../ui/sound';
 import { badgeCatalogue, badgeLabel } from '../xp/domain/badges';
 import { Medal } from 'lucide-react';
 
@@ -100,12 +100,12 @@ export function RecapCard(props: { recap: { key: string; month: number; recap: M
   );
 }
 
-// Full-screen moment after a session that levels the user up or ranks a muscle up. CSS only; reduced motion keeps it
+// Full-screen moment after a session that ranks a muscle up or earns a badge. CSS only; reduced motion keeps it
 // still (ui.css).
 // Rank-ups and newly earned badges after a session (owner request 2026-11-07: badges get a moment too).
 export function Celebration(props: { rankUps: readonly { group: Group; to: string }[]; badges: readonly string[]; onClose: () => void }) {
   const [open, setOpen] = useState(true);
-  useEffect(() => playLevelUp(), []);
+  useEffect(() => playFanfare(), []);
   const { onClose } = props;
   useEffect(() => {
     if (!open) return;

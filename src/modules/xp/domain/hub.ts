@@ -1,4 +1,4 @@
-// Numbers for the Home hub and Progress v2 (UX design §6.2, §6.6, U6): player level, XP to the next rank, the
+// Numbers for the Home hub and Progress v2 (UX design §6.2, §6.6, U6): XP to the next rank, the
 // body-map slugs per XP group, recovery/neglect per group, and the bodyweight trend. Pure: the clock is passed in.
 import { RECOVERY, WEIGHT_TREND_DAYS, XP } from '../../../config/thresholds';
 import type { BodySlug } from '../../../domain/muscle-map';

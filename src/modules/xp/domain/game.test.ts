@@ -152,4 +152,10 @@ describe('questBonusByGroup', () => {
     );
     expect(bonus).toEqual({ back: 500 + 250, chest: 250 }); // pr not done: nothing
   });
+  it('a week without lifting spreads a finished quest over every muscle', () => {
+    const h = { workouts: [], cardio: [{ start: wk(4) } as CardioSession], slotStarts: [wk(4)], exerciseById: byId };
+    const bonus = questBonusByGroup([{ weekOf: wk(4), quests: [{ kind: 'sessions', need: 1 }] }], h);
+    expect(bonus.chest).toBe(50);
+    expect(Object.values(bonus).reduce((a, b) => a + b, 0)).toBe(500);
+  });
 });

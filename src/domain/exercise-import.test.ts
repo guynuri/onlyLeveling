@@ -89,5 +89,8 @@ describe('kitOf', () => {
     expect(kitOf('bodyweight', 'Hanging Leg Raise')).toEqual(['pullup_bar']);
     expect(kitOf('dumbbell', 'Dumbbell Bicep Curl')).toEqual(['dumbbell']);
     expect(kitOf('bodyweight', 'Pushups')).toEqual([]);
+    expect(kitOf('bodyweight', 'Incline Push-Up')).toEqual([]);
+    expect(kitOf('bodyweight', 'Hyperextensions With No Hyperextension Bench')).toEqual([]);
+    expect(kitOf('bodyweight', 'Wide Pull Up')).toEqual(['pullup_bar']);
   });
 });

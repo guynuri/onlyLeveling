@@ -66,12 +66,12 @@ function SetChips({ count, children }: { count: number; children: ReactNode }) {
   );
 }
 
-type Moment = { rankUps: { group: Group; to: Rank }[]; badges: string[] };
+type Moment = { rankUps: { group: Group; from: Rank; to: Rank }[]; badges: string[] };
 
 // What changed between two Progress states: muscles that ranked up and badges not held before.
 function momentOf(before: ProgressState, after: ProgressState): Moment {
   return {
-    rankUps: GROUPS.filter((g) => RANKS.indexOf(after.muscles[g].rank) > RANKS.indexOf(before.muscles[g].rank)).map((g) => ({ group: g, to: after.muscles[g].rank })),
+    rankUps: GROUPS.filter((g) => RANKS.indexOf(after.muscles[g].rank) > RANKS.indexOf(before.muscles[g].rank)).map((g) => ({ group: g, from: before.muscles[g].rank, to: after.muscles[g].rank })),
     badges: after.badges.filter((b) => !before.badges.includes(b)),
   };
 }
