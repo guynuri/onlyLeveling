@@ -21,7 +21,9 @@ import { RoutineList } from './RoutineList';
 import { ExerciseMedia } from '../../ui/ExerciseMedia';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { unlockSound } from '../../ui/sound';
-import { levelOf } from '../xp/domain/hub';
+import { GROUPS, type Group } from '../xp/domain/muscles';
+import { RANKS, type Rank } from '../xp/domain/rank';
+import type { ProgressState } from '../xp/domain/progress';
 import { Button, Card } from '../../ui/primitives';
 import { SegmentedControl } from '../../ui/controls';
 import { ExerciseName } from '../library/ExerciseSheet';
@@ -63,6 +65,16 @@ function SetChips({ count, children }: { count: number; children: ReactNode }) {
   );
 }
 
+type Moment = { rankUps: { group: Group; to: Rank }[]; badges: string[] };
+
+// What changed between two Progress states: muscles that ranked up and badges not held before.
+function momentOf(before: ProgressState, after: ProgressState): Moment {
+  return {
+    rankUps: GROUPS.filter((g) => RANKS.indexOf(after.muscles[g].rank) > RANKS.indexOf(before.muscles[g].rank)).map((g) => ({ group: g, to: after.muscles[g].rank })),
+    badges: after.badges.filter((b) => !before.badges.includes(b)),
+  };
+}
+
 // The clock is read here, outside render.
 const nowMs = () => Date.now();
 
@@ -80,7 +92,7 @@ export default function WorkoutScreen() {
   const [editing, setEditing] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [summary, setSummary] = useState<SessionSummary | null>(null);
-  const [levelUp, setLevelUp] = useState<{ from: number; to: number } | null>(null);
+  const [moment, setMoment] = useState<Moment | null>(null); // rank-ups and new badges to celebrate
   const [status, setStatus] = useState('');
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0); // bumped after Done, so the next session loads fresh
@@ -218,11 +230,13 @@ export default function WorkoutScreen() {
       const workout: Workout = { id: `w_${startedAt}`, start: startedAt, end: nowMs(), entries: toEntries(live) };
       const repo = await getRepo();
       // Player level before and after, for the celebration (U7). A failed read only skips the moment.
-      const levelNow = () => loadProgress().then((l) => levelOf(l.totalXp).level).catch(() => null);
-      const levelBefore = await levelNow();
+      // Ranks and badges before and after, quest XP included, so the celebration matches Progress. A failed read only
+      // skips the moment.
+      const snapshot = () => loadProgress().then((l) => l.state).catch(() => null);
+      const before = await snapshot();
       await repo.saveWorkout(workout);
-      const levelAfter = await levelNow();
-      setLevelUp(levelBefore !== null && levelAfter !== null && levelAfter > levelBefore ? { from: levelBefore, to: levelAfter } : null);
+      const after = await snapshot();
+      setMoment(before && after ? momentOf(before, after) : null);
       // A finished workout ends any pending rest alert and the draft. A failed cancel must not block saving.
       cancelRestAlert().catch(() => undefined);
       await clearDraft(await getDb());
@@ -273,7 +287,7 @@ export default function WorkoutScreen() {
     return (
       <FinishSummary
         summary={summary}
-        levelUp={levelUp ?? undefined}
+        moment={moment ?? undefined}
         cooldown={day.cooldown}
         names={names}
         sex={settings.about?.sex ?? 'male'}

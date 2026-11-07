@@ -50,12 +50,12 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 }
 
 // Workers AI through its binding (no API key). The only place that knows the binding's shape.
-export function workersAiProvider(ai: unknown, model: string): Provider {
+export function workersAiProvider(ai: unknown, model: string, maxTokens = 0): Provider {
   const binding = ai as { run(model: string, input: object): Promise<unknown> };
   return {
     name: 'workers-ai',
     async complete(prompt) {
-      const out = (await binding.run(model, { messages: [{ role: 'user', content: prompt }] })) as { response?: unknown };
+      const out = (await binding.run(model, { messages: [{ role: 'user', content: prompt }], ...(maxTokens > 0 ? { max_tokens: maxTokens } : {}) })) as { response?: unknown };
       if (typeof out.response !== 'string') throw new Error('no text in response');
       return out.response;
     },

@@ -14,6 +14,10 @@
   --danger: #ff5c6c;
   --success: #3ddc97;
   --warn: #ffb547;
+  /* Purple is for actions and progress only (owner 2026-11-07); selection and highlights are neutral slate. */
+  --sel: #263044;
+  --hl: #94a3b8;
+  --muscle: #fb7a3c; /* worked muscles on the body map */
 
   /* Body map: the figure sits on --body-bg so the silhouette and untrained muscles always stand out. */
   --body-bg: #1d2436;
@@ -28,7 +32,7 @@
   --tone-green: linear-gradient(135deg, #10b981, #065f46);
   --medal-shine: rgb(255 255 255 / 55%);
   --tone-red: linear-gradient(135deg, #fca5a5, #dc2626);
-  --bg-glow: radial-gradient(120% 60% at 50% -10%, rgb(139 92 246 / 18%), transparent 60%);
+  --bg-glow: radial-gradient(120% 60% at 50% -10%, rgb(148 163 184 / 9%), transparent 60%);
 
   --rank-F: #6b7280;
   --rank-E: #8a9a5b;
@@ -85,7 +89,9 @@
     --body-bg: #e3e8f4;
     --body-sil: #9aa4bd;
     --body-muscle: #c5cddf;
-    --bg-glow: radial-gradient(120% 60% at 50% -10%, rgb(124 58 237 / 10%), transparent 60%);
+    --bg-glow: radial-gradient(120% 60% at 50% -10%, rgb(100 116 139 / 8%), transparent 60%);
+    --sel: #dfe5f0;
+    --hl: #64748b;
     color-scheme: light;
   }
 }
@@ -104,7 +110,9 @@
   --body-bg: #e3e8f4;
   --body-sil: #9aa4bd;
   --body-muscle: #c5cddf;
-  --bg-glow: radial-gradient(120% 60% at 50% -10%, rgb(124 58 237 / 10%), transparent 60%);
+  --bg-glow: radial-gradient(120% 60% at 50% -10%, rgb(100 116 139 / 8%), transparent 60%);
+  --sel: #dfe5f0;
+  --hl: #64748b;
   color-scheme: light;
 }
 
@@ -123,10 +131,7 @@ html, body {
 }
 
 h1, h2, h3 { line-height: 1.2; margin: 0 0 var(--s-3); }
-h1 {
-  font-size: var(--fs-xl); font-weight: var(--fw-bold); letter-spacing: -0.01em;
-  background: linear-gradient(90deg, var(--fg) 40%, var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent;
-}
+h1 { font-size: var(--fs-xl); font-weight: var(--fw-bold); letter-spacing: -0.01em; }
 h2 { font-size: var(--fs-lg); }
 h3 { font-size: var(--fs-md); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
 p { margin: 0 0 var(--s-3); }

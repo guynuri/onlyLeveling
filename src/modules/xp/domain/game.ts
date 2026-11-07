@@ -129,6 +129,28 @@ export function questHave(
   return Math.min(have, q.need);
 }
 
+// Muscle XP from finished quests (owner decision 2026-11-07: no player level; quest XP goes to the muscles). A "train
+// X" quest gives its group the whole bonus; any other finished quest splits it over the groups trained that week.
+export function questBonusByGroup(
+  weeks: readonly { quests: readonly Quest[]; weekOf: number }[],
+  h: { workouts: readonly Workout[]; cardio: readonly CardioSession[]; slotStarts: readonly number[]; exerciseById: ById },
+): Partial<Record<Group, number>> {
+  const out: Partial<Record<Group, number>> = {};
+  const add = (g: Group, xp: number) => (out[g] = (out[g] ?? 0) + xp);
+  for (const w of weeks) {
+    const from = weekStart(w.weekOf);
+    const to = nextWeek(from);
+    const ws = h.workouts.filter((x) => x.start >= from && x.start < to);
+    const trained = GROUPS.filter((g) => ws.some((x) => trains(x, g, h.exerciseById)));
+    for (const q of w.quests) {
+      if (questHave(q, { ...h, weekOf: w.weekOf }) < q.need) continue;
+      if (q.kind === 'group') add(q.group, GAME.questBonusXp);
+      else for (const g of trained) add(g, GAME.questBonusXp / trained.length);
+    }
+  }
+  return out;
+}
+
 export interface MonthlyRecap {
   sessions: number; // lifting + cardio
   volumeKg: number;

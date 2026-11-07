@@ -12,7 +12,7 @@ import { readSyncState } from '../sync/actions';
 import { getLocalRepo, getRepo, defaultSettings, repRangeFor, currentPlan } from '../training/data';
 import { computeProgress, type ProgressInput, type ProgressState } from '../xp/domain/progress';
 import { GROUPS, groupOf, type Group } from '../xp/domain/muscles';
-import { generateQuests, monthBounds, monthKey, monthlyRecap, questHave, weekKey, type MonthlyRecap, type Quest } from '../xp/domain/game';
+import { generateQuests, questBonusByGroup, monthBounds, monthKey, monthlyRecap, questHave, weekKey, type MonthlyRecap, type Quest } from '../xp/domain/game';
 
 export interface Loaded {
   settings: Settings;
@@ -20,7 +20,6 @@ export interface Loaded {
   workouts: Workout[];
   bodyweight: BodyweightEntry[];
   state: ProgressState;
-  totalXp: number; // every muscle, cardio and quest bonus: the player level reads this
   slotStarts: number[]; // finished sessions (lifting + planned cardio days), for the next-session pick
   quests: { quest: Quest; have: number }[]; // this week
   recap: { key: string; month: number; recap: MonthlyRecap } | null; // last month, until dismissed
@@ -63,26 +62,28 @@ export async function loadProgress(now = Date.now()): Promise<Loaded> {
     },
     now,
   };
-  const p = computeProgress(input);
-  for (const key of p.badges) await repo.awardBadge(key, now);
-  const stored = (await repo.listBadges()).map((b) => b.badgeKey);
-  const state = { ...p, badges: [...new Set([...stored, ...p.badges])] };
   const slotStarts = sessionStarts(workouts, cardio);
 
+  // Quests first: finished ones give their muscles XP, which the ranks below include.
   // Not synced yet this open: show this week's quests without storing them (no bonus until they are stored).
   const draft = await ensureQuests(repo, plan, settings, workouts, input.daysPerWeek, now, await syncedThisOpen());
   const records = await repo.listGame();
   const history = { workouts, cardio, slotStarts, exerciseById: getExercise };
-  let bonusXp = 0;
+  const weeks: { quests: Quest[]; weekOf: number }[] = [];
   let quests: Loaded['quests'] = [];
   for (const r of records) {
     if (!r.key.startsWith('quests:') || !isQuests(r.data)) continue;
     const weekOf = dayOf(r.key.slice('quests:'.length));
-    const rows = r.data.map((quest) => ({ quest, have: questHave(quest, { ...history, weekOf }) }));
-    bonusXp += rows.filter((x) => x.have >= x.quest.need).length * GAME.questBonusXp;
-    if (r.key === `quests:${weekKey(now)}`) quests = rows;
+    weeks.push({ quests: r.data, weekOf });
+    if (r.key === `quests:${weekKey(now)}`) quests = r.data.map((quest) => ({ quest, have: questHave(quest, { ...history, weekOf }) }));
   }
   if (quests.length === 0 && draft) quests = draft.map((quest) => ({ quest, have: questHave(quest, { ...history, weekOf: now }) }));
+  input.bonusXp = questBonusByGroup(weeks, history);
+
+  const p = computeProgress(input);
+  for (const key of p.badges) await repo.awardBadge(key, now);
+  const stored = (await repo.listBadges()).map((b) => b.badgeKey);
+  const state = { ...p, badges: [...new Set([...stored, ...p.badges])] };
 
   // Last month's recap shows from the first open of a new month until dismissed, if anything happened in it.
   const last = monthBounds(now).from - 1;
@@ -91,8 +92,7 @@ export async function loadProgress(now = Date.now()): Promise<Loaded> {
   const active = slotStarts.some((t) => t >= from && t <= last) || cardio.some((c) => c.start >= from && c.start <= last);
   const recap = active && !records.some((r) => r.key === key) ? { key, month: last, recap: monthlyRecap(input, last) } : null;
 
-  const totalXp = GROUPS.reduce((sum, g) => sum + p.muscles[g].xp, p.cardioXp + bonusXp);
-  return { settings, plan, workouts, bodyweight, state, totalXp, slotStarts, quests, recap };
+  return { settings, plan, workouts, bodyweight, state, slotStarts, quests, recap };
 }
 
 // Returns the generated quests when they were not stored (not synced yet), else null.

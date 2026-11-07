@@ -21,6 +21,7 @@ export interface ProgressInput {
   daysPerWeek: number; // the plan's sessions per week, cardio days included
   repMaxFor: (exerciseId: string) => number;
   now: number;
+  bonusXp?: Partial<Record<Group, number>>; // quest XP per muscle (game.ts questBonusByGroup), added after the sessions
 }
 
 export interface MuscleProgress {
@@ -149,12 +150,14 @@ export function computeProgress(input: ProgressInput): ProgressState {
     seen.push({ start: w.start, entries });
   }
 
+  for (const g of GROUPS) xp[g] += input.bonusXp?.[g] ?? 0;
   const hasBodyweightNow = input.bodyweight.length > 0;
   const muscles = Object.fromEntries(
     GROUPS.map((g) => {
       const strength = BENCHMARK[g] ? strengthRank(ratios[g]) : null;
       const now = muscleRank(xp[g], strength, hasBodyweightNow);
-      return [g, { xp: xp[g], rank: now, maxRank: maxRank[g], strength }];
+      const best = RANKS.indexOf(now) > RANKS.indexOf(maxRank[g]) ? now : maxRank[g]; // quest XP can rank a muscle up too
+      return [g, { xp: xp[g], rank: now, maxRank: best, strength }];
     }),
   ) as Record<Group, MuscleProgress>;
 

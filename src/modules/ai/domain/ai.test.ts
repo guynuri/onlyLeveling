@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildPlanRequest, candidatesOf, summaryOf } from './request';
+import { buildPlanRequest, candidatesOf, spread, summaryOf } from './request';
 import { planFromProposal } from './apply';
 import { replaceExercise } from '../../../domain/plan';
 import type { Exercise } from '../../../domain/exercise';
@@ -100,7 +100,8 @@ describe('what leaves the device (SPEC §5.3)', () => {
     const s: Settings = { ...settings, equipment: ['dumbbell'] };
     const prompt = buildPrompt({ ...buildPlanRequest(s, [...catalogue, push], 4), });
     expect(prompt).toContain('bw_push | Push-up | reps 6-10 | no weight (w 0)');
-    expect(prompt).toContain('fx_press | Press | reps 6-10 | weights 4, 8, 10');
+    expect(prompt).toContain('fx_press | Press | reps 6-10\n'); // dumbbell work: the owned list applies
+    expect(prompt).toContain('owned list: 4, 8, 10');
     expect(prompt).not.toContain('dumbbells only');
   });
 
@@ -110,10 +111,10 @@ describe('what leaves the device (SPEC §5.3)', () => {
     expect(bare.bw_push.loads).toBeNull();
   });
 
-  it('dumbbell candidates carry the owned dumbbells, kettlebell ones the owned kettlebells', () => {
+  it('dumbbell candidates use the owned list (no per-exercise copy), kettlebell ones the owned kettlebells', () => {
     const s: Settings = { ...settings, equipment: ['dumbbell', 'kettlebell'], ownedKettlebells: [12, 16] };
     const c = candidatesOf([...catalogue, push, swing], [], s);
-    expect(c.fx_press.loads).toEqual([4, 8, 10]);
+    expect(c.fx_press.loads).toBeUndefined();
     expect(c.kb_swing.loads).toEqual([12, 16]);
     expect(c.bw_push.loads).toBeNull();
   });
@@ -121,7 +122,7 @@ describe('what leaves the device (SPEC §5.3)', () => {
   it('only dumbbell exercises with a known pattern, and not avoided ones, reach the AI', () => {
     const c = candidatesOf(catalogue, ['fx_avoid'], settings);
     expect(Object.keys(c).sort()).toEqual(['fx_iso', 'fx_press']);
-    expect(c.fx_iso).toEqual({ name: 'Curl', repMin: 10, repMax: 15, loads: [4, 8, 10] });
+    expect(c.fx_iso).toEqual({ name: 'Curl', repMin: 10, repMax: 15 });
   });
 
   it('the request carries the settings and candidates, nothing else', () => {
@@ -210,5 +211,13 @@ describe('the frontend never names a provider endpoint or key', () => {
     walk(join(process.cwd(), 'shared'));
     const hits = files.filter((f) => forbidden.some((w) => readFileSync(f, 'utf8').includes(w)));
     expect(hits).toEqual([]);
+  });
+});
+
+describe('spread (short varied lists for the AI)', () => {
+  it('takes one per group in turn, each group in its own order, up to n', () => {
+    const items = ['a1', 'a2', 'a3', 'b1', 'c1', 'c2'];
+    expect(spread(items, (s) => s[0], 4)).toEqual(['a1', 'b1', 'c1', 'a2']);
+    expect(spread(items, (s) => s[0], 99)).toEqual(['a1', 'b1', 'c1', 'a2', 'c2', 'a3']);
   });
 });
