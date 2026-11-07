@@ -10,7 +10,7 @@ import { loadProgress, type Loaded } from '../modules/progress/load';
 import { loadCoachCards } from '../modules/coach/actions';
 import { levelOf } from '../modules/xp/domain/hub';
 import { BodyMap } from '../ui/body/BodyMap';
-import { Card, ProgressBar, Tile } from '../ui/primitives';
+import { Card, ProgressBar, Tile, toneVar } from '../ui/primitives';
 
 const thumb = (path: string) => import.meta.env.BASE_URL + path;
 
@@ -59,7 +59,7 @@ export default function HomeScreen() {
             <div className="home-thumbs">
               {exercises.slice(0, 4).map((e) => (
                 <span key={e.id} className="ui-ex-thumb" title={e.name}>
-                  {e.media ? <img src={thumb(e.media.stills[e.media.stills.length - 1])} alt={e.name} decoding="async" /> : <span className="small">{e.name}</span>}
+                  {e.media ? <img src={thumb(e.media.stills[e.media.stills.length - 1])} alt={e.name} decoding="async" /> : <BodyMap primary={e.muscles.primary} size="sm" sex={settings.about?.sex} label={e.name} />}
                 </span>
               ))}
               {exercises.length > 4 && <span className="muted small">+{exercises.length - 4}</span>}
@@ -73,7 +73,7 @@ export default function HomeScreen() {
       </Card>
 
       <a className="ui-tile home-level" href="#/progress">
-        <span className="ui-tile-icon">
+        <span className="ui-tile-icon" style={toneVar('amber')}>
           <Trophy />
         </span>
         <span className="ui-tile-text">
@@ -87,18 +87,21 @@ export default function HomeScreen() {
       <Tile
         href="#/progress"
         icon={<Flame />}
+        tone="red"
         label="Streak"
         value={`${state.streak > 0 ? `${state.streak} ${state.streak === 1 ? 'week' : 'weeks'} in a row` : 'Finish this week’s sessions to start one'}${state.freezes > 0 ? ` · ${state.freezes} ${state.freezes === 1 ? 'freeze' : 'freezes'}` : ''}`}
       />
       <Tile
         href="#/progress"
         icon={<Swords />}
+        tone="cyan"
         label="Weekly quests"
         value={`${loaded.quests.filter((q) => q.have >= q.quest.need).length} of ${loaded.quests.length} done`}
       />
       <Tile
         href="#/workout"
         icon={<MessageCircle />}
+        tone="green"
         label="Coach"
         value={coach === null ? 'Suggestions and weekly review' : `${coach === 0 ? 'No suggestions' : `${coach} ${coach === 1 ? 'suggestion' : 'suggestions'}`} · weekly review`}
         badge={coach ?? undefined}

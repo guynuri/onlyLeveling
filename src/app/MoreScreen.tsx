@@ -8,11 +8,11 @@ export default function MoreScreen() {
     <section>
       <h1>More</h1>
       <div className="ui-stack">
-        <Tile href="#/library" icon={<BookOpen />} label={libraryModule.label} value="Every exercise, how to do it" />
-        <Tile href="#/cardio" icon={<Activity />} label="Log cardio" value="An extra session" />
-        <Tile href="#/history" icon={<HistoryIcon />} label="History" value="Past workouts" />
-        <Tile href="#/settings" icon={<Settings />} label="Settings" value="Training, account, notifications" />
-        <Tile href="#/credits" icon={<Info />} label="Credits" value="Data sources and licences" />
+        <Tile href="#/library" icon={<BookOpen />} tone="cyan" label={libraryModule.label} value="Every exercise, how to do it" />
+        <Tile href="#/cardio" icon={<Activity />} tone="green" label="Log cardio" value="An extra session" />
+        <Tile href="#/history" icon={<HistoryIcon />} tone="amber" label="History" value="Past workouts" />
+        <Tile href="#/settings" icon={<Settings />} tone="violet" label="Settings" value="Training, account, notifications" />
+        <Tile href="#/credits" icon={<Info />} tone="pink" label="Credits" value="Data sources and licences" />
       </div>
     </section>
   );

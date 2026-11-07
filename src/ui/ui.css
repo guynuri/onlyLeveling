@@ -26,7 +26,7 @@
 
 /* Card */
 .ui-card {
-  background: var(--surface);
+  background: linear-gradient(180deg, rgb(255 255 255 / 3%), transparent 40%), var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   padding: var(--s-4);
@@ -49,8 +49,13 @@
   text-decoration: none;
 }
 .ui-tile:active { background: var(--surface-2); }
-.ui-tile-icon { display: inline-flex; color: var(--accent); }
-.ui-tile-icon svg { width: 22px; height: 22px; }
+.ui-tile-icon {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: var(--r-md);
+  background: var(--tone, var(--tone-violet)); color: #fff;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 35%), inset 0 1px 0 rgb(255 255 255 / 25%);
+}
+.ui-tile-icon svg { width: 22px; height: 22px; filter: drop-shadow(0 1px 1px rgb(0 0 0 / 30%)); }
 .ui-tile-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .ui-tile-label { font-weight: 600; }
 .ui-tile-value { color: var(--muted); font-size: var(--fs-sm); }
@@ -235,7 +240,7 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
   width: 52px; height: 52px; margin-top: -22px;
   align-items: center; justify-content: center;
   border-radius: var(--r-pill);
-  background: var(--accent); color: var(--on-accent);
+  background: var(--tone-violet); color: var(--on-accent);
   box-shadow: var(--glow);
 }
 .ui-tab--train .ui-tab-icon svg { width: 26px; height: 26px; fill: currentColor; }
@@ -313,8 +318,8 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
 .ui-body--md { height: 220px; }
 .ui-body--sm { height: 120px; }
 .ui-body-view { height: 100%; width: auto; }
-.ui-body-sil { fill: var(--border); }
-.ui-body-m { fill: var(--surface-2); stroke: var(--bg); stroke-width: 2; }
+.ui-body-sil { fill: var(--body-sil); }
+.ui-body-m { fill: var(--body-muscle); stroke: var(--body-bg); stroke-width: 2; }
 .ui-body-m--secondary { fill: var(--accent); fill-opacity: 0.4; }
 .ui-body-m--primary { fill: var(--accent); }
 
@@ -348,7 +353,7 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
   flex: none; width: 56px; height: 56px;
   display: flex; align-items: center; justify-content: center;
   border-radius: var(--r-md); overflow: hidden;
-  background: var(--surface-2);
+  background: var(--body-bg);
 }
 .ui-ex-thumb img { width: 100%; height: 100%; object-fit: contain; }
 .ui-ex-thumb .ui-body--sm { height: 52px; gap: 2px; }
@@ -431,7 +436,8 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
 .home-next { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-3); }
 .home-next .ui-body--sm { height: 96px; flex: none; }
 .home-thumbs { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); min-width: 0; }
-.home-thumbs .ui-ex-thumb { width: 48px; height: 48px; font-size: var(--fs-xs); text-align: center; padding: 2px; }
+.home-thumbs .ui-ex-thumb { width: 48px; height: 48px; padding: 2px; }
+.home-thumbs .ui-ex-thumb .ui-body--sm { height: 44px; gap: 1px; background: none; padding: 0; }
 .home-level .ui-tile-text { gap: var(--s-1); }
 
 /* Progress v2 (U6): tappable body map, selected muscle, weight chart */
@@ -439,9 +445,43 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
 .ui-body-m--selected { stroke: var(--fg); stroke-width: 3; }
 .prog-legend { display: flex; flex-wrap: wrap; gap: var(--s-3); justify-content: center; font-size: var(--fs-xs); color: var(--muted); }
 .prog-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
-.prog-chart { width: 100%; height: 140px; display: block; }
-.prog-chart .raw { fill: var(--muted); }
-.prog-chart .avg { fill: none; stroke: var(--accent); stroke-width: 2.5; vector-effect: non-scaling-stroke; }
+/* Bodyweight card */
+.bw-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-3); margin-bottom: var(--s-2); }
+.bw-now { font-size: var(--fs-xxl); font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; line-height: 1; }
+.bw-unit { font-size: var(--fs-md); color: var(--muted); font-weight: 400; }
+.bw-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: var(--fs-sm); color: var(--muted); }
+.bw-up { color: var(--warn); }
+.bw-down { color: var(--success); }
+.bw-chart { width: 100%; height: 120px; display: block; margin: var(--s-2) 0 var(--s-3); }
+.bw-dot { fill: var(--muted); }
+.bw-line { fill: none; stroke: var(--accent); stroke-width: 2.5; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 4px var(--accent-glow)); }
+.bw-log { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
+.bw-log .ui-stepper { flex: 1; }
+.bw-date { display: flex; flex-direction: column; gap: var(--s-1); margin-top: var(--s-2); font-size: var(--fs-sm); color: var(--muted); }
+.prog-note { padding: var(--s-2) var(--s-3); border-left: 3px solid var(--warn); background: var(--surface-2); border-radius: var(--r-sm); font-size: var(--fs-sm); }
+
+/* Badges: medals */
+.badge-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-3) var(--s-2); }
+.badge { display: flex; flex-direction: column; align-items: center; gap: var(--s-1); text-align: center; }
+.badge-medal {
+  position: relative; width: 60px; height: 60px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--medal); color: #fff;
+  box-shadow: inset 0 2px 0 rgb(255 255 255 / 30%), inset 0 -3px 0 rgb(0 0 0 / 25%), 0 0 0 3px var(--surface-2);
+  filter: grayscale(1) brightness(0.55);
+}
+.badge--earned .badge-medal { filter: none; box-shadow: inset 0 2px 0 rgb(255 255 255 / 30%), inset 0 -3px 0 rgb(0 0 0 / 25%), 0 0 0 3px var(--surface-2), 0 0 18px var(--accent-glow); }
+.badge-medal svg { width: 26px; height: 26px; filter: drop-shadow(0 1px 1px rgb(0 0 0 / 40%)); }
+.badge-rank {
+  position: absolute; bottom: -4px; right: -4px; min-width: 22px; height: 22px; padding: 0 4px;
+  border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--border);
+  font-size: var(--fs-xs); font-weight: var(--fw-bold); line-height: 20px;
+}
+.badge-lock { position: absolute; top: -4px; right: -4px; width: 22px; height: 22px; border-radius: 50%; background: var(--surface); display: inline-flex; align-items: center; justify-content: center; color: var(--muted); filter: none; }
+.badge-lock svg { width: 12px; height: 12px; }
+.badge-label { font-size: var(--fs-sm); font-weight: 600; }
+.badge:not(.badge--earned) .badge-label { color: var(--muted); }
+.badge-hint { font-size: var(--fs-xs); color: var(--muted); line-height: 1.25; }
 .prog-muscles { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s-2); }
 .prog-muscles button {
   display: flex; align-items: center; justify-content: space-between; gap: var(--s-2);
@@ -473,3 +513,12 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
 @media (prefers-reduced-motion: reduce) {
   .celebrate, .celebrate-burst, .celebrate-big { animation: none; }
 }
+
+/* Body map panels get their own lighter backdrop so the figure reads on the dark page. */
+.ui-body--md { background: var(--body-bg); border-radius: var(--r-lg); padding: var(--s-2); }
+.home-next .ui-body--sm { background: var(--body-bg); border-radius: var(--r-md); padding: var(--s-1); }
+/* Small figures: no outlines (they swamp the shapes at this size) and a brighter body. */
+.ui-body--sm .ui-body-m { stroke: none; fill: var(--body-sil); }
+.ui-body--sm .ui-body-sil { fill: var(--body-sil); opacity: 0.75; }
+.ui-body--sm .ui-body-m--secondary { fill: var(--accent); fill-opacity: 0.55; }
+.ui-body--sm .ui-body-m--primary { fill: var(--accent); filter: drop-shadow(0 0 2px var(--accent)); }

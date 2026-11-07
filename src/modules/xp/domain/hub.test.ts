@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { BODY_SLUGS } from '../../../domain/muscle-map';
 import type { Workout } from '../../../domain/types';
 import { GROUPS } from './muscles';
-import { GROUP_SLUGS, exercisesFor, groupOfSlug, levelOf, recoveryOf, weightTrend, xpToNextRank } from './hub';
+import { GROUP_SLUGS, rankNote, exercisesFor, groupOfSlug, levelOf, recoveryOf, weightTrend, xpToNextRank } from './hub';
 
 const DAY = 86_400_000;
 const NOW = new Date(2026, 10, 7, 12).getTime();
@@ -77,5 +77,15 @@ describe('weightTrend', () => {
     expect(t.map((p) => p.date)).toEqual(['2026-11-01', '2026-11-02', '2026-11-08']);
     expect(t[1].avg).toBe(80.5);
     expect(t[2].avg).toBe(81.5); // 11-01 is 7 days back: out of the window
+  });
+});
+
+describe('rankNote', () => {
+  it('explains a rank held back by strength or missing bodyweight', () => {
+    expect(rankNote({ xp: 16000, rank: 'D', strength: 'D' }, 80)).toBeNull();
+    expect(rankNote({ xp: 16000, rank: 'F', strength: null }, null)).toBe('Volume says D. Log your bodyweight to unlock ranks.');
+    expect(rankNote({ xp: 16000, rank: 'F', strength: 'F' }, 80)).toBe(
+      'Volume says D, strength holds it at F. For E: reach an estimated max of 24 kg (both dumbbells) on the benchmark lift in 2 sessions.',
+    );
   });
 });
