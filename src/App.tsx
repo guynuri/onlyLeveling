@@ -3,6 +3,7 @@ import { ClipboardList, House, Menu, Play, TrendingUp } from 'lucide-react';
 import { allowedWhileOnboarding, parseRoute, tabFor, type Route, type Tab } from './app/route';
 import { onboardingDone } from './domain/profile';
 import MoreScreen from './app/MoreScreen';
+import HomeScreen from './app/HomeScreen';
 import { ToastHost } from './ui/controls';
 import ExerciseSheet from './modules/library/ExerciseSheet';
 import { readSyncState, runSync, syncLabel, SYNC_EVENT } from './modules/sync/actions';
@@ -35,8 +36,8 @@ const hashOf = (url: string) => new URL(url).hash;
 
 function Screen({ route }: { route: Route }) {
   switch (route.screen) {
-    // U6 replaces Home with the hub; until then Home and Train both show today's workout.
     case 'home':
+      return <HomeScreen />;
     case 'workout':
       return <WorkoutScreen />;
     case 'more':
