@@ -66,6 +66,7 @@ export default function Onboarding() {
   const steps = ALL_STEPS;
   const [draft, setDraft] = useState<Draft | null>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [retake, setRetake] = useState(false); // already onboarded: answering again from Settings
   const [i, setI] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -77,6 +78,7 @@ export default function Onboarding() {
         // No stored settings: a new account, so no default weights are ticked for the user.
         const s = saved ?? { ...defaultSettings(), owned: [] };
         setSettings(s);
+        setRetake(onboardingDone(s));
         setDraft(draftFrom(s));
       })
       .catch(() => setError('Could not load your settings. Reload to try again.'));
@@ -92,7 +94,8 @@ export default function Onboarding() {
         .then((r) => r.getSettings())
         .then((fresh) => {
           if (!fresh || JSON.stringify(fresh) === JSON.stringify(settings)) return;
-          if (onboardingDone(fresh)) {
+          // A first-time run ends when another device finishes it; a retake is the user's own and keeps going.
+          if (onboardingDone(fresh) && !retake) {
             window.location.hash = '#/home';
             return;
           }
@@ -103,7 +106,7 @@ export default function Onboarding() {
     };
     window.addEventListener(SYNC_EVENT, onSync);
     return () => window.removeEventListener(SYNC_EVENT, onSync);
-  }, [settings]);
+  }, [settings, retake]);
 
   if (!draft || !settings) return <p className="muted">{error ?? 'Loading…'}</p>;
   const step = steps[i];
@@ -243,6 +246,20 @@ export default function Onboarding() {
         </p>
       )}
 
+      {step === 'plan' && (
+        <div className="ob-foot">
+          <Button variant="ghost" onClick={() => setI(i - 1)}>
+            Back
+          </Button>
+          {retake ? (
+            <Button variant="secondary" onClick={() => (window.location.hash = '#/home')}>
+              Keep my current plan
+            </Button>
+          ) : (
+            <span />
+          )}
+        </div>
+      )}
       {step !== 'plan' && (
         <div className="ob-foot">
           {i > 0 ? (

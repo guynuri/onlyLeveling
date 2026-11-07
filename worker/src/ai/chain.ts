@@ -33,13 +33,14 @@ export async function runChain<T>(
       raw = await withTimeout(provider.complete(prompt), timeoutMs);
     } catch (e) {
       reason = 'unreachable';
-      detail = (e instanceof Error ? e.message : 'no answer').slice(0, 120);
+      // A category only: provider messages can carry internals, so they never reach the app.
+      detail = e instanceof Error && /timed? ?out/i.test(e.message) ? 'the AI took too long' : 'the AI service failed';
       continue;
     }
     const result = check(raw);
     if (result.ok) return { status: 'ai', provider: provider.name, value: result.value, attempts };
     reason = 'invalid';
-    detail = (result.errors[0] ?? 'the answer did not pass the checks').slice(0, 120);
+    detail = result.errors[0] === 'not JSON' ? 'the answer was cut off or not JSON' : 'the answer broke a plan rule';
   }
   return { status: 'fallback', reason, attempts, ...(detail ? { detail } : {}) };
 }
