@@ -68,6 +68,7 @@ export function parsePlanRequest(body: unknown): PlanRequest | null {
     owned: body.owned as number[],
     avoid: body.avoid as string[],
     supersets: body.supersets === true,
+    ...(body.supersetSize === 2 || body.supersetSize === 3 ? { supersetSize: body.supersetSize } : {}),
     ...(routine ? { routine } : {}),
   };
 }
@@ -88,6 +89,7 @@ export async function proposePlan(db: D1Database, userId: string, req: PlanReque
     avoid: req.avoid,
     candidates: req.candidates,
     supersets: req.supersets === true,
+    ...(req.supersetSize ? { supersetSize: req.supersetSize } : {}),
     ...(req.routine ? { routine: req.routine } : {}),
   };
   const out = await runChain(

@@ -36,7 +36,7 @@ export function Card(props: { title?: string; action?: ReactNode; children: Reac
 }
 
 export type Tone = 'violet' | 'amber' | 'cyan' | 'pink' | 'green' | 'red';
-export const toneVar = (t: Tone) => ({ ['--tone' as string]: `var(--tone-${t})` });
+export const toneVar = (t: Tone) => ({ ['--tone-c' as string]: `var(--tone-${t}-c)` });
 
 export function Tile(props: { href: string; icon?: ReactNode; label: string; value?: ReactNode; badge?: number; tone?: Tone }) {
   return (

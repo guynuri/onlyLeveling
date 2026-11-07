@@ -25,7 +25,7 @@ export async function latestBodyweightKg(): Promise<number | null> {
 }
 
 // The Worker's answer, or a fallback reason. Offline, signed out, and over the daily cap all fall back to the rules.
-export async function requestProposal(s: Settings, fetchImpl: typeof fetch = fetch, supersets = false): Promise<Proposal> {
+export async function requestProposal(s: Settings, fetchImpl: typeof fetch = fetch, supersets = false, supersetSize?: 2 | 3): Promise<Proposal> {
   const cfg = (await readSyncState()).config;
   if (!cfg) return { status: 'fallback', reason: 'signed-out' };
   const latest = await latestBodyweightKg();
@@ -34,7 +34,7 @@ export async function requestProposal(s: Settings, fetchImpl: typeof fetch = fet
     res = await fetchImpl(`${cfg.baseUrl}/api/ai/plan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.token}` },
-      body: JSON.stringify(buildPlanRequest(s, listExercises(), TEMPLATE.exercisesPerDay, latest, supersets, readRanks())),
+      body: JSON.stringify(buildPlanRequest(s, listExercises(), TEMPLATE.exercisesPerDay, latest, supersets, readRanks(), supersetSize)),
     });
   } catch {
     return { status: 'fallback', reason: 'unreachable' };

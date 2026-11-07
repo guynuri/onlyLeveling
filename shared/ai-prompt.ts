@@ -11,6 +11,7 @@ export interface PlanRequest {
   owned: number[];
   avoid: string[];
   supersets?: boolean; // the athlete asked for supersets (a switch, not free text)
+  supersetSize?: 2 | 3; // the largest superset they want
   routine?: Record<string, string>; // warm-up and cool-down choices, id → name
 }
 
@@ -25,7 +26,7 @@ export function buildPrompt(req: PlanRequest): string {
     `Weights w are in kg and must come from the exercise's own weights list; when it says no weight, use w 0. Otherwise use the owned list: ${req.owned.join(', ') || 'any'}.`,
     'Use only exerciseId values from the list below. Do not use exercises not on the list.',
     req.supersets
-      ? `Use supersets: give ${SUPERSET.minSize} to ${SUPERSET.maxSize} exercises that sit next to each other in a day the same "superset" letter (A, B, ...). Pair muscles that do not compete, for example a push with a pull. A letter is used for one run of exercises only.`
+      ? `Use supersets: give ${req.supersetSize === 2 ? 'exactly 2' : `${SUPERSET.minSize} to ${req.supersetSize ?? SUPERSET.maxSize}`} exercises that sit next to each other in a day the same "superset" letter (A, B, ...). Pair muscles that do not compete, for example a push with a pull. A letter is used for one run of exercises only.`
       : 'Do not use the "superset" field.',
     'Reply with JSON only, no text before or after it, exactly in this shape:',
     SCHEMA,

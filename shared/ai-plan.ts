@@ -30,6 +30,7 @@ export interface PlanInput {
   avoid: readonly string[]; // exercise ids that must not appear
   candidates: Record<string, Candidate>; // dumbbell-compatible library exercises, by id
   supersets?: boolean; // the athlete asked for supersets; otherwise any superset letters are ignored
+  supersetSize?: 2 | 3; // the largest superset asked for; default SUPERSET.maxSize
   routine?: Record<string, string>; // stretches and pulse raisers the AI may pick for warm-ups and cool-downs, id → name
 }
 
@@ -168,7 +169,7 @@ export function validateAiPlan(raw: unknown, input: PlanInput): ValidationResult
     // Same exercise twice within one day is a violation.
     const dup = exOut.find((e, i) => exOut.findIndex((o) => o.exerciseId === e.exerciseId) !== i);
     if (dup) errors.push(`${at}: ${dup.exerciseId} appears twice in one day`);
-    const supersets = supersetRuns(exOut.map((e) => e.exerciseId), letters);
+    const supersets = supersetRuns(exOut.map((e) => e.exerciseId), letters, input.supersetSize);
     // Warm-up and cool-down picks: only ids from the routine list, no repeats, at most ROUTINE.aiMaxItems. Anything
     // else is dropped and the rules fill the gap (never an error).
     const routinePick = (v: unknown): string[] => {
@@ -192,14 +193,14 @@ export function validateAiPlan(raw: unknown, input: PlanInput): ValidationResult
 
 // Supersets from the AI's letters: each run of adjacent exercises with the same letter, SUPERSET.minSize to maxSize long, the first run of a
 // letter only. Anything else is dropped (a plan without supersets is still a good plan), never an error.
-export function supersetRuns(ids: readonly string[], letters: readonly (string | null)[]): string[][] {
+export function supersetRuns(ids: readonly string[], letters: readonly (string | null)[], maxSize: number = SUPERSET.maxSize): string[][] {
   const out: string[][] = [];
   const seen = new Set<string>();
   for (let i = 0; i < ids.length; ) {
     const l = letters[i];
     let j = i + 1;
     while (l !== null && j < ids.length && letters[j] === l) j++;
-    if (l !== null && !seen.has(l) && j - i >= SUPERSET.minSize && j - i <= SUPERSET.maxSize) out.push(ids.slice(i, j));
+    if (l !== null && !seen.has(l) && j - i >= SUPERSET.minSize && j - i <= Math.min(maxSize, SUPERSET.maxSize)) out.push(ids.slice(i, j));
     if (l !== null) seen.add(l);
     i = j;
   }

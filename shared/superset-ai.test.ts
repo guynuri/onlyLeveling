@@ -9,6 +9,7 @@ describe('supersetRuns (AI superset letters)', () => {
     expect(supersetRuns(ids, ['A', null, 'A', null, null, null, null])).toEqual([]); // not adjacent
     expect(supersetRuns(ids, ['A', 'A', 'A', 'A', null, null, null])).toEqual([]); // too long
     expect(supersetRuns(ids, ['A', 'A', null, 'A', 'A', null, null])).toEqual([['a', 'b']]); // letter reused
+    expect(supersetRuns(ids, ['A', 'A', null, 'B', 'B', 'B', null], 2)).toEqual([['a', 'b']]); // pairs only: the triple is dropped
   });
 });
 
@@ -17,6 +18,8 @@ describe('buildPrompt superset switch', () => {
   it('asks for supersets only when switched on', () => {
     expect(buildPrompt({ ...req, supersets: true })).toContain('Use supersets');
     expect(buildPrompt(req)).toContain('Do not use the "superset" field.');
+    expect(buildPrompt({ ...req, supersets: true, supersetSize: 2 })).toContain('exactly 2 exercises');
+    expect(buildPrompt({ ...req, supersets: true, supersetSize: 3 })).toContain('2 to 3 exercises');
   });
   it('lists warm-up and cool-down choices only when given', () => {
     expect(buildPrompt({ ...req, routine: { s1: 'Chest stretch' } })).toContain('s1 | Chest stretch');

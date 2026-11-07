@@ -15,16 +15,15 @@ import type { EquipmentChoice } from '../../domain/types';
 import { targetOf } from '../../domain/block';
 import { SLUG_LABEL } from '../../domain/muscle-map';
 import { swapCandidates } from '../coach/domain/swap';
-import { filterLibrary } from '../library/filter';
+import { LibraryBrowser } from '../library/LibraryBrowser';
 import { ExerciseName } from '../library/ExerciseSheet';
 import { ExThumb } from '../library/ExThumb';
 import { Button } from '../../ui/primitives';
 import { Sheet, Stepper } from '../../ui/controls';
 
-const SHOWN = 40; // the library has hundreds of exercises; search narrows the list
-
 type Picker = { mode: 'add' } | { mode: 'swap'; fromId: string } | null;
 
+// The whole library with its search and filters, in a sheet; Choose picks one (owner request 2026-11-07).
 function ExercisePicker(props: {
   open: boolean;
   title: string;
@@ -33,35 +32,9 @@ function ExercisePicker(props: {
   onPick: (ex: Exercise) => void;
   onClose: () => void;
 }) {
-  const [text, setText] = useState('');
-  const rows = filterLibrary(props.exercises, { text, kit: [], muscle: null }).slice(0, SHOWN);
   return (
     <Sheet open={props.open} onClose={props.onClose} title={props.title}>
-      <input
-        type="search"
-        placeholder="Search exercises"
-        aria-label="Search exercises"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-      />
-      <ul className="ui-list">
-        {rows.map((ex) => (
-          <li key={ex.id}>
-            <span className="pe-head">
-              <ExThumb ex={ex} className="pe-thumb" />
-              <span className="pe-text">
-                <span>{ex.name}</span>
-                {props.note(ex) && <span className="muted small">{props.note(ex)}</span>}
-              </span>
-            </span>
-            <Button size="sm" variant="secondary" onClick={() => props.onPick(ex)}>
-              Choose
-            </Button>
-          </li>
-        ))}
-        {rows.length === 0 && <li className="muted small">Nothing matches.</li>}
-      </ul>
-      {rows.length === SHOWN && <p className="muted small">Showing the first {SHOWN}. Search to narrow it down.</p>}
+      <LibraryBrowser exercises={props.exercises} onPick={props.onPick} note={props.note} sticky={false} />
     </Sheet>
   );
 }

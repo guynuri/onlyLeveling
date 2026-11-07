@@ -52,10 +52,10 @@
 .ui-tile-icon {
   flex: none; display: inline-flex; align-items: center; justify-content: center;
   width: 40px; height: 40px; border-radius: var(--r-md);
-  background: var(--tone, var(--tone-violet)); color: #fff;
-  box-shadow: 0 4px 14px rgb(0 0 0 / 35%), inset 0 1px 0 rgb(255 255 255 / 25%);
+  background: var(--surface-2); color: var(--tone-c, var(--tone-violet-c));
 }
-.ui-tile-icon svg { width: 22px; height: 22px; filter: drop-shadow(0 1px 1px rgb(0 0 0 / 30%)); }
+/* Duotone: the glyph is filled with its own colour, lighter inside, solid outline */
+.ui-tile-icon svg, .ui-choice-icon svg { width: 24px; height: 24px; fill: currentColor; fill-opacity: 0.25; }
 .ui-tile-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .ui-tile-label { font-weight: 600; }
 .ui-tile-value { color: var(--muted); font-size: var(--fs-sm); }
@@ -100,17 +100,15 @@
 .ui-choice-icon {
   flex: none; display: inline-flex; align-items: center; justify-content: center;
   width: 40px; height: 40px; border-radius: var(--r-md);
-  background: var(--tone, var(--tone-violet)); color: #fff;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 25%);
+  background: var(--surface-2); color: var(--tone-c, var(--tone-violet-c));
 }
-.ui-choice-icon svg { width: 22px; height: 22px; }
 /* Colourful icons, cycling through the tones down a list of choices (owner request 2026-11-07) */
-.ui-choice:nth-child(6n + 1) .ui-choice-icon { --tone: var(--tone-violet); }
-.ui-choice:nth-child(6n + 2) .ui-choice-icon { --tone: var(--tone-amber); }
-.ui-choice:nth-child(6n + 3) .ui-choice-icon { --tone: var(--tone-red); }
-.ui-choice:nth-child(6n + 4) .ui-choice-icon { --tone: var(--tone-cyan); }
-.ui-choice:nth-child(6n + 5) .ui-choice-icon { --tone: var(--tone-green); }
-.ui-choice:nth-child(6n + 6) .ui-choice-icon { --tone: var(--tone-pink); }
+.ui-choice:nth-child(6n + 1) .ui-choice-icon { --tone-c: var(--tone-violet-c); }
+.ui-choice:nth-child(6n + 2) .ui-choice-icon { --tone-c: var(--tone-amber-c); }
+.ui-choice:nth-child(6n + 3) .ui-choice-icon { --tone-c: var(--tone-red-c); }
+.ui-choice:nth-child(6n + 4) .ui-choice-icon { --tone-c: var(--tone-cyan-c); }
+.ui-choice:nth-child(6n + 5) .ui-choice-icon { --tone-c: var(--tone-green-c); }
+.ui-choice:nth-child(6n + 6) .ui-choice-icon { --tone-c: var(--tone-pink-c); }
 .ui-choice-text { display: flex; flex-direction: column; }
 .ui-choice-title { font-weight: 600; }
 .ui-choice-sub { color: var(--muted); font-size: var(--fs-sm); }
@@ -648,3 +646,20 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
 }
 .focus-box .ui-body--sm { height: 72px; gap: 2px; background: var(--body-bg); border-radius: var(--r-sm); padding: 2px; }
 .focus-box[aria-pressed='true'] { border-color: var(--hl); background: var(--sel); box-shadow: 0 0 0 1px var(--hl); }
+.lib-pick { display: flex; width: 100%; min-height: 64px; }
+.lib-pick .ui-ex-text { flex: 1; }
+
+/* AI plan loading screen */
+.ai-thinking { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: var(--s-4); background: rgb(3 4 9 / 82%); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.ai-thinking-card { width: 100%; max-width: 360px; display: flex; flex-direction: column; align-items: center; gap: var(--s-3); padding: var(--s-5); border-radius: var(--r-lg); background: var(--surface); box-shadow: var(--shadow); text-align: center; }
+.ai-thinking-icon { color: var(--accent); animation: ai-pulse 1.6s ease-in-out infinite; }
+.ai-thinking-icon svg { width: 36px; height: 36px; fill: currentColor; fill-opacity: 0.25; }
+.ai-thinking-title { margin: 0; font-size: var(--fs-lg); font-weight: var(--fw-bold); }
+.ai-thinking-bar { position: relative; width: 100%; height: 6px; border-radius: var(--r-pill); background: var(--surface-2); overflow: hidden; }
+.ai-thinking-bar span { position: absolute; top: 0; bottom: 0; width: 40%; border-radius: inherit; background: var(--accent); animation: ai-slide 1.4s ease-in-out infinite; }
+.ai-thinking-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-1); font-size: var(--fs-sm); color: var(--muted); }
+.ai-thinking-steps .done { color: var(--success); }
+.ai-thinking-steps .now { color: var(--fg); font-weight: 600; }
+@keyframes ai-slide { 0% { left: -40%; } 100% { left: 100%; } }
+@keyframes ai-pulse { 0%, 100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.12); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .ai-thinking-bar span { animation: none; left: 30%; } .ai-thinking-icon { animation: none; } }
