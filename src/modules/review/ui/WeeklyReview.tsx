@@ -23,18 +23,22 @@ function writeLastShown(week: string): void {
   }
 }
 
-export function WeeklyReview() {
+// `always`: the Coach screen shows the latest review every time; elsewhere it shows on the first open of the week.
+export function WeeklyReview({ always = false }: { always?: boolean }) {
   const [view, setView] = useState<ReviewView | null>(null);
 
   useEffect(() => {
     loadWeeklyReview()
       .then((v) => {
-        if (!v || !showReviewCard(readLastShown(), v.week)) return;
-        writeLastShown(v.week); // the first open of the week is the one that shows it
+        if (!v) return;
+        if (!always) {
+          if (!showReviewCard(readLastShown(), v.week)) return;
+          writeLastShown(v.week); // the first open of the week is the one that shows it
+        }
         setView(v);
       })
       .catch(() => setView(null));
-  }, []);
+  }, [always]);
 
   if (!view) return null;
 

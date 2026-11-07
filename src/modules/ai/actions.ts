@@ -13,7 +13,7 @@ import { readRanks } from '../progress/ranks-cache';
 
 export type Proposal =
   | { status: 'ai'; provider: string; plan: ValidPlan; corrections: Correction[] }
-  | { status: 'fallback'; reason: string };
+  | { status: 'fallback'; reason: string; detail?: string };
 
 // The newest bodyweight entry, for the AI summary. A read failure just leaves it out.
 export async function latestBodyweightKg(): Promise<number | null> {
@@ -39,12 +39,12 @@ export async function requestProposal(s: Settings, fetchImpl: typeof fetch = fet
   } catch {
     return { status: 'fallback', reason: 'unreachable' };
   }
-  if (!res.ok) return { status: 'fallback', reason: res.status === 401 ? 'signed-out' : 'unreachable' };
-  const data = (await res.json()) as { status: string; reason?: string; provider?: string; plan?: ValidPlan; corrections?: Correction[] };
+  if (!res.ok) return { status: 'fallback', reason: res.status === 401 ? 'signed-out' : 'unreachable', detail: `server answered ${res.status}` };
+  const data = (await res.json()) as { status: string; reason?: string; detail?: string; provider?: string; plan?: ValidPlan; corrections?: Correction[] };
   if (data.status === 'ai' && data.plan) {
     return { status: 'ai', provider: data.provider ?? 'unknown', plan: data.plan, corrections: data.corrections ?? [] };
   }
-  return { status: 'fallback', reason: data.reason ?? 'unreachable' };
+  return { status: 'fallback', reason: data.reason ?? 'unreachable', ...(typeof data.detail === 'string' ? { detail: data.detail.slice(0, 120) } : {}) };
 }
 
 export async function saveChosenPlan(plan: Plan): Promise<void> {

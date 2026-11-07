@@ -11,7 +11,7 @@ export type Check<T> = { ok: true; value: T } | { ok: false; errors: string[] };
 
 export type ChainOutcome<T> =
   | { status: 'ai'; provider: string; value: T; attempts: number }
-  | { status: 'fallback'; reason: 'invalid' | 'unreachable' | 'none'; attempts: number };
+  | { status: 'fallback'; reason: 'invalid' | 'unreachable' | 'none'; attempts: number; detail?: string };
 
 const TRIES = 2;
 
@@ -24,21 +24,24 @@ export async function runChain<T>(
   if (providers.length === 0) return { status: 'fallback', reason: 'none', attempts: 0 };
   let reason: 'invalid' | 'unreachable' = 'unreachable';
   let attempts = 0;
+  let detail: string | undefined; // the last failure, short, so the app can say what went wrong (owner report 2026-11-07)
   for (let i = 0; i < TRIES; i++) {
     const provider = providers[Math.min(i, providers.length - 1)];
     attempts++;
     let raw: string;
     try {
       raw = await withTimeout(provider.complete(prompt), timeoutMs);
-    } catch {
+    } catch (e) {
       reason = 'unreachable';
+      detail = (e instanceof Error ? e.message : 'no answer').slice(0, 120);
       continue;
     }
     const result = check(raw);
     if (result.ok) return { status: 'ai', provider: provider.name, value: result.value, attempts };
     reason = 'invalid';
+    detail = (result.errors[0] ?? 'the answer did not pass the checks').slice(0, 120);
   }
-  return { status: 'fallback', reason, attempts };
+  return { status: 'fallback', reason, attempts, ...(detail ? { detail } : {}) };
 }
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {

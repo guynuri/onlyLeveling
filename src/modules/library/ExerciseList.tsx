@@ -77,7 +77,7 @@ export default function ExerciseList() {
         {rows.slice(0, shown).map((ex) => (
           <li key={ex.id}>
             <a className="ui-list-link ui-ex-row" href={`#/library/${encodeURIComponent(ex.id)}`}>
-              <ExThumb ex={ex} />
+              <ExThumb ex={ex} locked={lock && ranks ? lockedUntil(ex, ranks) : null} />
               <span className="ui-ex-text">
                 <span>{ex.name}</span>
                 <span className="muted small">

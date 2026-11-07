@@ -1,67 +1,25 @@
-// Writes placeholder PNG icons (solid background, accent square) to public/icons.
-// Replace with real artwork later; this only exists so the install check has icons.
-import { deflateSync } from 'node:zlib';
-import { mkdirSync, writeFileSync } from 'node:fs';
+// Renders the app icons from public/icons/icon.svg (run: npm run icons). Uses sharp, which the toolchain already
+// installs; the PNGs are committed, so this only runs when the artwork changes.
+// - icon-192 / icon-512: rounded corners (the "any" purpose shows the icon as drawn)
+// - icon-512-maskable and apple-touch-icon: full bleed; the platform cuts its own shape
+import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import sharp from 'sharp';
 
-const here = dirname(fileURLToPath(import.meta.url));
-const outDir = join(here, '..', 'public', 'icons');
+const dir = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'icons');
+const full = readFileSync(join(dir, 'icon.svg'), 'utf8');
+const BG = '<rect width="512" height="512" fill="url(#bg)"/>';
+if (!full.includes(BG)) throw new Error('icon.svg: background rect not found');
+const rounded = full.replace(BG, '<rect width="512" height="512" rx="112" fill="url(#bg)"/>');
 
-const BG = [0x11, 0x14, 0x18];
-const FG = [0x5b, 0xd1, 0xa3];
-
-function crc32(buf) {
-  let c, crc = 0xffffffff;
-  for (let n = 0; n < buf.length; n++) {
-    c = (crc ^ buf[n]) & 0xff;
-    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    crc = (crc >>> 8) ^ c;
-  }
-  return (crc ^ 0xffffffff) >>> 0;
+const out = [
+  ['icon-192.png', rounded, 192],
+  ['icon-512.png', rounded, 512],
+  ['icon-512-maskable.png', full, 512],
+  ['apple-touch-icon.png', full, 180],
+];
+for (const [name, svg, size] of out) {
+  await sharp(Buffer.from(svg)).resize(size, size).png().toFile(join(dir, name));
+  console.log('wrote', name);
 }
-
-function chunk(type, data) {
-  const len = Buffer.alloc(4);
-  len.writeUInt32BE(data.length);
-  const td = Buffer.concat([Buffer.from(type, 'ascii'), data]);
-  const crc = Buffer.alloc(4);
-  crc.writeUInt32BE(crc32(td));
-  return Buffer.concat([len, td, crc]);
-}
-
-// size x size, accent square covering `inset` fraction on each side.
-function png(size, inset) {
-  const raw = Buffer.alloc((size * 3 + 1) * size);
-  const lo = Math.round(size * inset);
-  const hi = size - lo;
-  for (let y = 0; y < size; y++) {
-    const row = y * (size * 3 + 1);
-    raw[row] = 0;
-    for (let x = 0; x < size; x++) {
-      const on = x >= lo && x < hi && y >= lo && y < hi;
-      const px = on ? FG : BG;
-      raw[row + 1 + x * 3] = px[0];
-      raw[row + 2 + x * 3] = px[1];
-      raw[row + 3 + x * 3] = px[2];
-    }
-  }
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(size, 0);
-  ihdr.writeUInt32BE(size, 4);
-  ihdr[8] = 8; // bit depth
-  ihdr[9] = 2; // truecolor RGB
-  return Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    chunk('IHDR', ihdr),
-    chunk('IDAT', deflateSync(raw)),
-    chunk('IEND', Buffer.alloc(0)),
-  ]);
-}
-
-mkdirSync(outDir, { recursive: true });
-writeFileSync(join(outDir, 'icon-192.png'), png(192, 0.25));
-writeFileSync(join(outDir, 'icon-512.png'), png(512, 0.25));
-writeFileSync(join(outDir, 'icon-512-maskable.png'), png(512, 0.35));
-writeFileSync(join(outDir, 'apple-touch-icon.png'), png(180, 0.25));
-console.log('icons written to', outDir);

@@ -162,8 +162,9 @@ input, textarea, select {
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }
-.title { font-weight: var(--fw-bold); letter-spacing: 0.04em; }
-.synced { color: var(--muted); font-size: var(--fs-xs); }
+.title { display: inline-flex; align-items: center; gap: var(--s-2); font-weight: var(--fw-bold); letter-spacing: 0.02em; font-size: var(--fs-lg); color: var(--fg); text-decoration: none; }
+.title img { border-radius: 7px; }
+.title-only { color: var(--muted); font-weight: 400; }
 
 .content {
   flex: 1;

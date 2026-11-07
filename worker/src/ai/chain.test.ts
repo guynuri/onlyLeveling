@@ -25,13 +25,13 @@ describe('provider chain: retry once, then fall back', () => {
 
   it('invalid twice on one provider: fallback with reason invalid', async () => {
     const out = await runChain([bad('nope')], 'p', check, 1000);
-    expect(out).toEqual({ status: 'fallback', reason: 'invalid', attempts: 2 });
+    expect(out).toEqual({ status: 'fallback', reason: 'invalid', attempts: 2, detail: 'bad' });
   });
 
   it('unreachable counts the same as invalid', async () => {
     const out = await runChain([down, ok('good')], 'p', check, 1000);
     expect(out).toMatchObject({ status: 'ai', attempts: 2 });
-    expect(await runChain([down], 'p', check, 1000)).toEqual({ status: 'fallback', reason: 'unreachable', attempts: 2 });
+    expect(await runChain([down], 'p', check, 1000)).toEqual({ status: 'fallback', reason: 'unreachable', attempts: 2, detail: 'network' });
   });
 
   it('no provider configured: fallback with no attempts', async () => {
@@ -41,6 +41,7 @@ describe('provider chain: retry once, then fall back', () => {
   it('a provider that hangs past the timeout counts as unreachable', async () => {
     const slow: Provider = { name: 'slow', complete: () => new Promise(() => undefined) };
     const out = await runChain([slow], 'p', check, 10);
-    expect(out).toEqual({ status: 'fallback', reason: 'unreachable', attempts: 2 });
+    expect(out).toMatchObject({ status: 'fallback', reason: 'unreachable', attempts: 2 });
+    expect(out.status === 'fallback' && out.detail).toBeTruthy();
   });
 });

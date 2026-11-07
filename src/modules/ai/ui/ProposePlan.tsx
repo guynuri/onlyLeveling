@@ -24,6 +24,7 @@ interface Candidate {
   plan: Plan;
   title: string;
   reason?: string; // set when the AI did not answer and the rules plan stands in
+  detail?: string; // what went wrong, when the server said
   note?: string;
   corrections: Correction[];
 }
@@ -129,7 +130,10 @@ export function ProposePlan(props: { settings: Settings; onSaved: () => void }) 
     try {
       const p = await requestProposal(props.settings, fetch, supersets);
       if (p.status === 'ai') setCandidate(fromAi(p.plan, p.corrections, Date.now()));
-      else setCandidate(fromRules('auto', 'Rules plan', Date.now(), p.reason));
+      else {
+        const c = fromRules('auto', 'Rules plan', Date.now(), p.reason);
+        setCandidate(c && p.detail ? { ...c, detail: p.detail } : c);
+      }
     } catch {
       setCandidate(fromRules('auto', 'Rules plan', Date.now(), 'unreachable'));
     } finally {
@@ -200,6 +204,7 @@ export function ProposePlan(props: { settings: Settings; onSaved: () => void }) 
           {candidate.reason !== undefined && (
             <p className="label">
               Built by rules; AI unavailable. <span className="muted small">{REASON[candidate.reason] ?? ''}</span>
+              {candidate.detail && <span className="muted small"> ({candidate.detail})</span>}
             </p>
           )}
           <PlanDays plan={candidate.plan} />

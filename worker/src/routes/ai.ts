@@ -22,7 +22,7 @@ export interface AiDeps {
 
 export type ProposeResult =
   | { status: 'ai'; provider: string; plan: ValidPlan; corrections: Correction[] }
-  | { status: 'fallback'; reason: 'invalid' | 'unreachable' | 'none' | 'capped' };
+  | { status: 'fallback'; reason: 'invalid' | 'unreachable' | 'none' | 'capped'; detail?: string };
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const MAX_ROUTINE = 150;
@@ -104,7 +104,7 @@ export async function proposePlan(db: D1Database, userId: string, req: PlanReque
     return { status: 'ai', provider: out.provider, plan: out.value.plan, corrections: out.value.corrections };
   }
   await record(db, userId, hash, null, 'fallback', deps.now);
-  return { status: 'fallback', reason: out.reason };
+  return { status: 'fallback', reason: out.reason, ...(out.detail ? { detail: out.detail } : {}) };
 }
 
 // Counts this call for the day and returns the new total.

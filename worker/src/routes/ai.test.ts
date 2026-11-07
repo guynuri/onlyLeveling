@@ -67,7 +67,7 @@ describe('proposePlan', () => {
   it('an invalid answer falls back, and the attempt is audited with no provider', async () => {
     const f = fake('{"plan": "nope"}');
     const out = await proposePlan(db, U, req, deps([f.provider]));
-    expect(out).toEqual({ status: 'fallback', reason: 'invalid' });
+    expect(out).toEqual({ status: 'fallback', reason: 'invalid', detail: 'missing plan or note' });
     const row = await db.prepare('SELECT provider, status FROM plan_proposals WHERE user_id = ?').bind(U).first();
     expect(row).toEqual({ provider: null, status: 'fallback' });
   });

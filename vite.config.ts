@@ -22,13 +22,13 @@ export default defineConfig({
       // autoUpdate: a new build activates on its own. 'prompt' needs an update UI that does not exist yet,
       // and without it an installed iOS app keeps the old build until every copy is closed.
       registerType: 'autoUpdate',
-      includeAssets: ['icons/apple-touch-icon.png'],
+      includeAssets: ['icons/apple-touch-icon.png', 'icons/icon.svg'],
       manifest: {
         name: 'onlyLeveling',
         short_name: 'onlyLeveling',
         description: 'Home training coach for adjustable dumbbells',
-        theme_color: '#111418',
-        background_color: '#111418',
+        theme_color: '#030409',
+        background_color: '#030409',
         display: 'standalone',
         start_url: BASE,
         scope: BASE,
