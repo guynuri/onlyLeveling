@@ -57,7 +57,7 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 export function workersAiProvider(ai: unknown, model: string, maxTokens = 0): Provider {
   const binding = ai as { run(model: string, input: object): Promise<unknown> };
   return {
-    name: 'workers-ai',
+    name: model, // the audit rows show which model answered
     async complete(prompt) {
       const out = (await binding.run(model, { messages: [{ role: 'user', content: prompt }], ...(maxTokens > 0 ? { max_tokens: maxTokens } : {}) })) as {
         response?: unknown;
