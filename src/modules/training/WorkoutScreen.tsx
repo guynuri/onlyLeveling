@@ -20,6 +20,7 @@ import { afterSet, supersetLabel } from '../../domain/superset';
 import { RoutineList } from './RoutineList';
 import { RoutinePhase } from './RoutinePhase';
 import { ExerciseMedia } from '../../ui/ExerciseMedia';
+import { BodyMap } from '../../ui/body/BodyMap';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { unlockSound } from '../../ui/sound';
 import { GROUPS, type Group } from '../xp/domain/muscles';
@@ -124,15 +125,15 @@ export default function WorkoutScreen() {
       if (draft && today.kind !== 'cardio' && isRestorable(draft, today.index, at)) {
         setLive(draft.exercises);
         setStartedAt(draft.startedAt);
-        setStage('logging');
+        setStage(draft.stage ?? 'logging');
       }
     })().catch(() => setLoadError('Could not load today’s session. Reload the page to try again.'));
   }, [reloadKey]);
 
   // Keep the session in progress on the device after every change.
   useEffect(() => {
-    if (stage !== 'logging' || !loaded || !plan) return;
-    void getDb().then((db) => writeDraft(db, { dayIndex: loaded.dayIndex, startedAt, exercises: live }));
+    if ((stage !== 'logging' && stage !== 'warmup' && stage !== 'cooldown') || !loaded || !plan) return;
+    void getDb().then((db) => writeDraft(db, { dayIndex: loaded.dayIndex, startedAt, exercises: live, stage }));
   }, [live, stage, startedAt, loaded, plan]);
 
   // Tick once a second while a rest runs (wall-clock based, see rest-timer.ts).
@@ -162,6 +163,7 @@ export default function WorkoutScreen() {
       return;
     }
     setLive(items);
+    setPending({});
     setStartedAt(nowMs());
     setFocus(0);
     setEditing(false);
@@ -242,7 +244,8 @@ export default function WorkoutScreen() {
       setMoment(before && after ? momentOf(before, after) : null);
       // A finished workout ends any pending rest alert and the draft. A failed cancel must not block saving.
       cancelRestAlert().catch(() => undefined);
-      await clearDraft(await getDb());
+      // The workout is saved: a draft that will not clear must not report a failed save.
+      await clearDraft(await getDb()).catch(() => undefined);
       setSummary(
         summarize({
           workouts: loaded.workouts,
@@ -365,12 +368,14 @@ export default function WorkoutScreen() {
   }
 
   if (stage === 'warmup') {
-    return <RoutinePhase title={`Warm-up · ${title}`} items={day.warmup} doneLabel="Start lifting" onDone={() => setStage('logging')} />;
+    return (
+      <RoutinePhase title={`Warm-up · ${title}`} items={day.warmup} doneLabel="Start lifting" onDone={() => setStage('logging')} backLabel="Cancel" onBack={discard} />
+    );
   }
   if (stage === 'cooldown') {
     return (
       <>
-        <RoutinePhase title="Cool-down" items={day.cooldown} doneLabel="Finish workout" onDone={finish} />
+        <RoutinePhase title="Cool-down" items={day.cooldown} doneLabel="Finish workout" onDone={finish} backLabel="Back to exercises" onBack={() => setStage('logging')} />
         {status && <p className="error">{status}</p>}
       </>
     );
@@ -442,9 +447,10 @@ export default function WorkoutScreen() {
           <ExerciseName id={le.exerciseId} name={names[le.exerciseId] ?? le.exerciseId} />
           {supersetLabel(day, le.exerciseId) && <span className="pe-ss ui-live-ss">Superset {supersetLabel(day, le.exerciseId)}</span>}
         </h2>
-        {open && view === 'focus' && ex?.media && (
+        {open && view === 'focus' && ex && (
           <div className="ui-live-media">
-            <ExerciseMedia media={ex.media} name={ex.name} />
+            {/* No pictures: the muscles it works, so the card still shows something of the exercise. */}
+            {ex.media ? <ExerciseMedia media={ex.media} name={ex.name} /> : <BodyMap primary={ex.muscles.primary} secondary={ex.muscles.secondary} sex={settings.about?.sex} />}
           </div>
         )}
         <p className="muted">Target {target}</p>

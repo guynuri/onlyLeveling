@@ -7,13 +7,14 @@ import { routineAt, skipMs } from '../../domain/routine-clock';
 import { getExercise } from '../../data/exercises';
 import { ExerciseName } from '../library/ExerciseSheet';
 import { ExerciseMedia } from '../../ui/ExerciseMedia';
+import { BodyMap } from '../../ui/body/BodyMap';
 import { Button, Card } from '../../ui/primitives';
 import { duration } from './RoutineList';
 
 const clock = () => Date.now();
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-export function RoutinePhase(props: { title: string; items: readonly RoutineItem[]; doneLabel: string; onDone: () => void }) {
+export function RoutinePhase(props: { title: string; items: readonly RoutineItem[]; doneLabel: string; onDone: () => void; backLabel: string; onBack: () => void }) {
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [shift, setShift] = useState(0); // skipped time
   const [now, setNow] = useState(clock);
@@ -38,9 +39,9 @@ export function RoutinePhase(props: { title: string; items: readonly RoutineItem
             {at.index + 1} of {props.items.length}
           </p>
           <h2>{current.exerciseId ? <ExerciseName id={current.exerciseId} name={current.name} /> : current.name}</h2>
-          {ex?.media && (
+          {ex && (
             <div className="ui-live-media">
-              <ExerciseMedia media={ex.media} name={ex.name} />
+              {ex.media ? <ExerciseMedia media={ex.media} name={ex.name} /> : <BodyMap primary={ex.muscles.primary} secondary={ex.muscles.secondary} />}
             </div>
           )}
           <p className="rp-time" aria-live="polite">
@@ -55,7 +56,7 @@ export function RoutinePhase(props: { title: string; items: readonly RoutineItem
               Start timer
             </Button>
           ) : (
-            <Button variant="ghost" icon={<SkipForward />} onClick={() => setShift(shift + skipMs(props.items, elapsed))}>
+            <Button variant="ghost" icon={<SkipForward />} onClick={() => setShift(shift + skipMs(props.items, clock() - startedAt + shift))}>
               Next
             </Button>
           )}
@@ -72,6 +73,9 @@ export function RoutinePhase(props: { title: string; items: readonly RoutineItem
       </ol>
       <Button block className="ui-log" onClick={props.onDone}>
         {props.doneLabel}
+      </Button>
+      <Button variant="ghost" block onClick={props.onBack}>
+        {props.backLabel}
       </Button>
     </section>
   );
