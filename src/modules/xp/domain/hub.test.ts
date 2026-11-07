@@ -87,5 +87,7 @@ describe('rankNote', () => {
     expect(rankNote({ xp: 16000, rank: 'F', strength: 'F' }, 80)).toBe(
       'Volume says D, strength holds it at F. For E: reach an estimated max of 24 kg (both dumbbells) on the benchmark lift in 2 sessions.',
     );
+    expect(rankNote({ xp: 16000, rank: 'F', strength: 'F' }, 81.4)).toContain('25 kg'); // 0.3 × 81.4 = 24.42, rounded up
+    expect(rankNote({ xp: 1e9, rank: 'SSS', strength: 'SSS' }, 80)).toBeNull();
   });
 });
