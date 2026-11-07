@@ -73,7 +73,8 @@ export default function App() {
   // Onboarding is required: while it is unfinished the tab bar is hidden and other screens lead back to it.
   const [mustOnboard, setMustOnboard] = useState(false);
   // Signing in comes first (owner decision 2026-11-07): no session on this device, only the sign-in screen.
-  const [mustSignIn, setMustSignIn] = useState(false);
+  // null until the first check: nothing renders, so a signed-out phone never shows (or writes from) other screens.
+  const [mustSignIn, setMustSignIn] = useState<boolean | null>(null);
   const nextScroll = useRef(0);
 
   useEffect(() => {
@@ -84,11 +85,14 @@ export default function App() {
     };
     // True when there is no session: shows the sign-in screen and skips the onboarding check until there is one.
     const signInGate = async () => {
-      const out = !(await readSyncState()).config;
+      const st = await readSyncState();
+      const out = !st.config;
       setMustSignIn(out);
       if (out && parseRoute(window.location.hash).screen !== 'signin') window.location.hash = '#/signin';
       if (!out && parseRoute(window.location.hash).screen === 'signin') window.location.hash = '#/home';
-      return out;
+      // No onboarding decision before a first successful sync: local defaults would send a returning account through
+      // the questionnaire and push its answers over the server's (onboarding/gate.ts).
+      return out || st.lastSyncedAt === null;
     };
     // Re-checked on every navigation and pull: signing in, or finishing onboarding, releases the gates.
     const recheck = () =>
@@ -116,7 +120,12 @@ export default function App() {
     // Pull on open: the app shows local data at once, and the server's changes arrive a moment later. The onboarding
     // decision waits for that pull (onboarding/gate.ts explains why).
     signInGate()
-      .then((out) => (out ? undefined : needsOnboarding(runSync, readSettings).then(enforce)))
+      .then(async (out) => {
+        if ((await readSyncState()).config === null) return; // signed out: the sign-in screen only
+        if (out) await runSync(); // signed in, never synced: try now; SYNC_EVENT rechecks afterwards
+        const pending = await needsOnboarding(runSync, readSettings);
+        if ((await readSyncState()).lastSyncedAt !== null && (await readSyncState()).config) enforce(pending);
+      })
       .catch(() => undefined);
     return () => {
       window.removeEventListener('hashchange', onHash);
@@ -146,9 +155,9 @@ export default function App() {
       </header>
       <main className="content">
         {mustOnboard && route.screen === 'settings' && <a href="#/onboarding">← Back to setup</a>}
-        <Screen route={route} />
+        {mustSignIn !== null && <Screen route={route} />}
       </main>
-      <nav className="ui-tabbar" aria-label="Main" hidden={mustOnboard || mustSignIn}>
+      <nav className="ui-tabbar" aria-label="Main" hidden={mustOnboard || mustSignIn !== false}>
         {TABS.map((t) => (
           <a
             key={t.tab}

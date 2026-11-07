@@ -7,7 +7,7 @@ import { Button, Card, Chip } from '../../ui/primitives';
 import { SegmentedControl, Stepper, toast } from '../../ui/controls';
 import { applyTheme, readTheme, type ThemeChoice } from '../../ui/theme';
 import { setSoundOn, soundOn } from '../../ui/sound';
-import { readSyncState, runSync, signOut, createInvite, syncLabel } from '../sync/actions';
+import { readSyncState, runSync, signOutAndClear, createInvite, syncLabel } from '../sync/actions';
 import { AccountForm, messageOf } from '../sync/AccountForm';
 import { fetchExport, type SyncState } from '../../data/sync-engine';
 import { PushSettings } from '../push/ui/PushSettings';
@@ -72,10 +72,12 @@ export default function SettingsScreen() {
   }
 
   async function disconnect() {
-    await signOut();
-    setSync(await readSyncState());
+    setStatus('Signing out…');
+    if ((await signOutAndClear()) === 'unsynced') {
+      setStatus('Some changes have not reached your account yet. Connect, tap Sync now, then sign out.');
+      return;
+    }
     setNewInvite(null);
-    setStatus('Signed out on this device. Local data is kept.');
     window.location.hash = '#/signin'; // signing in is required, so the app goes back to the sign-in screen
   }
 
