@@ -143,11 +143,19 @@ export const GAME = {
   freezeEveryWeeks: 4, // one freeze per this many completed weeks
   freezeMax: 2, // freezes held at most
   questBonusXp: 500, // per completed quest
+  questsPerWeek: 3,
   questGroupTimes: 2, // "train <muscle> twice"
+  questCardioSessions: 2, // lose fat
+  questCardioMinutes: 60, // endurance, per week
+  questTimedSets: 6, // mobility: holds and stretches
+  questVarietyGroups: 6, // health: different muscle groups
   questRirSessions: 2, // sessions with RIR on every working set
   questLookbackDays: 28, // history used to pick the week's quests
   recapTopMuscles: 3,
 } as const;
+
+// Supersets (owner decision 2026-11-07): 2 to 3 exercises done in turn, rest after the round.
+export const SUPERSET = { minSize: 2, maxSize: 3 } as const;
 
 // Bodyweight chart: the trend line averages the entries in this many days up to each point.
 export const WEIGHT_TREND_DAYS = 7;

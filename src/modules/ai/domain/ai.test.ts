@@ -126,7 +126,7 @@ describe('what leaves the device (SPEC §5.3)', () => {
 
   it('the request carries the settings and candidates, nothing else', () => {
     const r = buildPlanRequest(settings, catalogue, 4);
-    expect(Object.keys(r).sort()).toEqual(['avoid', 'candidates', 'daysPerWeek', 'exercisesPerDay', 'owned', 'summary']);
+    expect(Object.keys(r).sort()).toEqual(['avoid', 'candidates', 'daysPerWeek', 'exercisesPerDay', 'owned', 'summary', 'supersets']);
     expect(r.exercisesPerDay).toBe(4);
   });
 });

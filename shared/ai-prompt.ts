@@ -9,9 +9,10 @@ export interface PlanRequest {
   exercisesPerDay: number;
   owned: number[];
   avoid: string[];
+  supersets?: boolean; // the athlete asked for supersets (a switch, not free text)
 }
 
-const SCHEMA = `{"plan":{"name":"string, max 60 chars","days":[{"label":"Day A","exercises":[{"exerciseId":"one id from the list","reason":"string, max 200 chars","w":number,"reps":integer,"sets":integer 1-5}]}]},"note":"string, max 400 chars, training guidance wording"}`;
+const SCHEMA = `{"plan":{"name":"string, max 60 chars","days":[{"label":"Day A","exercises":[{"exerciseId":"one id from the list","reason":"string, max 200 chars","w":number,"reps":integer,"sets":integer 1-5,"superset":"optional single letter A-Z"}]}]},"note":"string, max 400 chars, training guidance wording"}`;
 
 export function buildPrompt(req: PlanRequest): string {
   const loadText = (c: Candidate) => (c.loads === null ? ' | no weight (w 0)' : c.loads === undefined ? '' : ` | weights ${c.loads.join(', ')}`);
@@ -21,6 +22,9 @@ export function buildPrompt(req: PlanRequest): string {
     `Make exactly ${req.daysPerWeek} days. At most ${req.exercisesPerDay} exercises per day. No exercise may repeat within a day.`,
     `Weights w are in kg and must come from the exercise's own weights list; when it says no weight, use w 0. Otherwise use the owned list: ${req.owned.join(', ') || 'any'}.`,
     'Use only exerciseId values from the list below. Do not use exercises not on the list.',
+    req.supersets
+      ? 'Use supersets: give 2 or 3 exercises that sit next to each other in a day the same "superset" letter (A, B, ...). Pair muscles that do not compete, for example a push with a pull. A letter is used for one run of exercises only.'
+      : 'Do not use the "superset" field.',
     'Reply with JSON only, no text before or after it, exactly in this shape:',
     SCHEMA,
     'Plain text only in every string: no HTML, no Markdown, no links.',

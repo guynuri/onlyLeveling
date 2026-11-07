@@ -52,6 +52,7 @@ export function parsePlanRequest(body: unknown): PlanRequest | null {
     exercisesPerDay: body.exercisesPerDay as number,
     owned: body.owned as number[],
     avoid: body.avoid as string[],
+    supersets: body.supersets === true,
   };
 }
 

@@ -47,6 +47,7 @@ export function buildPlanRequest(
   catalogue: readonly Exercise[],
   exercisesPerDay: number,
   bodyweightKg: number | null = null,
+  supersets = false,
 ): PlanRequest {
   const avoid = s.avoid ?? [];
   return {
@@ -57,5 +58,6 @@ export function buildPlanRequest(
     exercisesPerDay,
     owned: [...s.owned],
     avoid,
+    supersets,
   };
 }

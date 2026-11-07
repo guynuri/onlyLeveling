@@ -61,7 +61,15 @@ export function replaceInDay(plan: Plan, dayIndex: number, fromId: string, toId:
   const targets = { ...day.targets };
   if (targets[fromId]) targets[toId] = targets[fromId];
   delete targets[fromId];
-  return withDay(plan, dayIndex, { ...day, exerciseIds: day.exerciseIds.map((id) => (id === fromId ? toId : id)), targets }, now);
+  const supersets = day.supersets?.map((g) => g.map((id) => (id === fromId ? toId : id)));
+  return withDay(plan, dayIndex, { ...day, exerciseIds: day.exerciseIds.map((id) => (id === fromId ? toId : id)), targets, ...(supersets ? { supersets } : {}) }, now);
+}
+
+// Superset edits (owner decision 2026-11-07). The same plan comes back when nothing changes.
+export function setSupersets(plan: Plan, dayIndex: number, supersets: string[][], now: number): Plan {
+  const day = plan.days[dayIndex];
+  if (!day || JSON.stringify(day.supersets ?? []) === JSON.stringify(supersets)) return plan;
+  return withDay(plan, dayIndex, { ...day, supersets }, now);
 }
 
 export function extendBlock(plan: Plan, weeks: number, now: number): Plan {

@@ -106,10 +106,7 @@ async function ensureQuests(repo: Repo, plan: Plan, settings: Settings, workouts
       if (g) planGroups.add(g);
     }
   }
-  const goals = goalsOf(settings);
-  const wantsCardio =
-    plan.days.some((d) => d.kind === 'cardio' || (d.postCardioMinutes ?? 0) > 0) || goals.includes('lose-fat') || goals.includes('endurance');
-  const quests = generateQuests({ daysPerWeek, planGroups: [...planGroups], wantsCardio, workouts, exerciseById: getExercise, now });
+  const quests = generateQuests({ daysPerWeek, planGroups: [...planGroups], goals: goalsOf(settings), workouts, exerciseById: getExercise, now });
   if (!store) return quests;
   await repo.putGame({ key, data: quests, at: now });
   return null;

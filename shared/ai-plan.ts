@@ -41,7 +41,7 @@ export interface ValidExercise {
 export interface ValidPlan {
   name: string;
   note: string;
-  days: { label: string; exercises: ValidExercise[] }[];
+  days: { label: string; exercises: ValidExercise[]; supersets?: string[][] }[];
 }
 
 export interface Correction {
@@ -105,6 +105,7 @@ export function validateAiPlan(raw: unknown, input: PlanInput): ValidationResult
       errors.push(`${at} has ${day.exercises.length} exercises, the session fits ${input.exercisesPerDay}`);
     }
     const exOut: ValidExercise[] = [];
+    const letters: (string | null)[] = []; // superset letter per kept exercise
     day.exercises.forEach((ex, ei) => {
       const p = `${at}.exercises[${ei}]`;
       if (!isObj(ex) || typeof ex.exerciseId !== 'string' || typeof ex.reason !== 'string') {
@@ -159,13 +160,31 @@ export function validateAiPlan(raw: unknown, input: PlanInput): ValidationResult
         corrections.push({ path: `${p}.reps`, from: rounded, to: reps, why: `kept inside ${cand.repMin} to ${cand.repMax}` });
       }
       exOut.push({ exerciseId: ex.exerciseId, reason: ex.reason, w, reps, sets: ex.sets });
+      letters.push(typeof ex.superset === 'string' && /^[A-Z]$/.test(ex.superset) ? ex.superset : null);
     });
     // Same exercise twice within one day is a violation.
     const dup = exOut.find((e, i) => exOut.findIndex((o) => o.exerciseId === e.exerciseId) !== i);
     if (dup) errors.push(`${at}: ${dup.exerciseId} appears twice in one day`);
-    outDays.push({ label: day.label, exercises: exOut });
+    const supersets = supersetRuns(exOut.map((e) => e.exerciseId), letters);
+    outDays.push({ label: day.label, exercises: exOut, ...(supersets.length > 0 ? { supersets } : {}) });
   });
 
   if (errors.length > 0) return { ok: false, errors };
   return { ok: true, plan: { name: plan.name as string, note: data.note, days: outDays }, corrections };
+}
+
+// Supersets from the AI's letters: each run of adjacent exercises with the same letter, 2 to 3 long, the first run of a
+// letter only. Anything else is dropped (a plan without supersets is still a good plan), never an error.
+export function supersetRuns(ids: readonly string[], letters: readonly (string | null)[]): string[][] {
+  const out: string[][] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < ids.length; ) {
+    const l = letters[i];
+    let j = i + 1;
+    while (l !== null && j < ids.length && letters[j] === l) j++;
+    if (l !== null && !seen.has(l) && j - i >= 2 && j - i <= 3) out.push(ids.slice(i, j));
+    if (l !== null) seen.add(l);
+    i = j;
+  }
+  return out;
 }

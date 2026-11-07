@@ -18,9 +18,15 @@ export function questLabel(q: Quest): string {
     case 'rir':
       return `Log how hard (RIR) on every set in ${q.need} sessions`;
     case 'cardio':
-      return 'Do one cardio session';
+      return q.need === 1 ? 'Do one cardio session' : `Do ${q.need} cardio sessions`;
     case 'pr':
       return 'Beat a personal record';
+    case 'cardioMinutes':
+      return `${q.need} minutes of cardio`;
+    case 'timed':
+      return `${q.need} holds or stretches`;
+    case 'variety':
+      return `Train ${q.need} different muscle groups`;
   }
 }
 
