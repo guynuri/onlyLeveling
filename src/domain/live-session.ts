@@ -47,14 +47,16 @@ export function setRir(le: LiveExercise, setIndex: number, rir: number | undefin
 export function rateSet(le: LiveExercise, setIndex: number, v: number | undefined): LiveExercise {
   const row = le.sets[setIndex];
   if (!row) return le;
-  if (v !== undefined && !(Number.isInteger(v) && v >= -WORKOUT.missMax && v <= 4)) return le;
+  if (v !== undefined && !(Number.isInteger(v) && v >= -WORKOUT.missMax && v <= WORKOUT.rirMax)) return le;
+  const full0 = row.r + (row.missed ?? 0);
+  if (v !== undefined && full0 + v < 1) return le; // a set keeps at least one rep: use Undo for a set not done
   const { rir: _rir, missed: _missed, ...rest } = row;
   const full = row.r + (row.missed ?? 0);
   let next: SetRow;
   if (v === undefined) next = { ...rest, r: full };
   else if (v >= 0) next = { ...rest, r: full, rir: v };
   else {
-    const r = Math.max(0, full + v);
+    const r = full + v;
     next = { ...rest, r, rir: 0, missed: full - r };
   }
   return { ...le, sets: le.sets.map((s, i) => (i === setIndex ? next : s)) };

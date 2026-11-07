@@ -40,6 +40,7 @@ export const E1RM = {
 // The workout screen (UX design §6.4, U5).
 export const WORKOUT = {
   missMax: 3, // the effort scale goes down to -3: "missed 3+ reps"
+  rirMax: 4, // and up to 4+ reps in reserve
   draftMaxHours: 12, // a session in progress is restored on reopen only if it was started this recently
   timedStepSec: 5, // seconds per tap on a timed set
   timedMaxSec: 600,

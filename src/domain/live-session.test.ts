@@ -122,5 +122,8 @@ describe('rateSet (effort scale -3 to 4+)', () => {
     expect(rateSet(le, 0, -4)).toBe(le);
     expect(rateSet(le, 0, 5)).toBe(le);
     expect(rateSet(le, 3, 1)).toBe(le);
+    const two = { ...le, sets: [{ ...le.sets[0], r: 2 }] };
+    expect(rateSet(two, 0, -2)).toBe(two); // would leave 0 reps
+    expect(rateSet(two, 0, -1).sets[0].r).toBe(1);
   });
 });

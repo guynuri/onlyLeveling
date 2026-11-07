@@ -601,4 +601,6 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
 .ui-effort--unset .ui-effort-range::-webkit-slider-thumb { opacity: 0.45; }
 .ui-effort-range:disabled { opacity: 0.35; }
 .ui-effort-ticks { display: flex; justify-content: space-between; padding: 0 6px; font-size: var(--fs-xs); color: var(--muted); font-variant-numeric: tabular-nums; }
+.ui-effort-ticks button { min-height: 32px; min-width: 28px; padding: 0; background: transparent; color: inherit; font: inherit; font-weight: 400; }
+.ui-effort-ticks button:disabled { opacity: 0.3; }
 .ui-effort-ticks .on { color: var(--fg); font-weight: var(--fw-bold); }

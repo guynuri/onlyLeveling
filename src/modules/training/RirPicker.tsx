@@ -3,7 +3,7 @@
 import { useId } from 'react';
 import { WORKOUT } from '../../config/thresholds';
 
-const MAX = 4;
+const MAX = WORKOUT.rirMax;
 
 export function effortLine(v: number): string {
   if (v <= -WORKOUT.missMax) return `Fell short by ${WORKOUT.missMax} or more reps.`;
@@ -15,7 +15,9 @@ export function effortLine(v: number): string {
 
 const label = (v: number) => (v === MAX ? '4+' : v <= -WORKOUT.missMax ? `−${WORKOUT.missMax}` : v < 0 ? `−${-v}` : String(v));
 
-export function RirPicker(props: { value?: number; onChange: (v: number | undefined) => void; disabled?: boolean }) {
+// `min`: the lowest rating this set allows (a set keeps at least one rep).
+export function RirPicker(props: { value?: number; onChange: (v: number | undefined) => void; disabled?: boolean; min?: number }) {
+  const lo = Math.max(-WORKOUT.missMax, props.min ?? -WORKOUT.missMax);
   const lineId = useId();
   const unset = props.value === undefined;
   const ticks = Array.from({ length: MAX + WORKOUT.missMax + 1 }, (_, i) => i - WORKOUT.missMax);
@@ -40,13 +42,23 @@ export function RirPicker(props: { value?: number; onChange: (v: number | undefi
         aria-label="Reps left, or reps short"
         aria-valuetext={unset ? 'Not rated' : effortLine(props.value!)}
         aria-describedby={lineId}
-        onChange={(e) => props.onChange(Number(e.target.value))}
+        // The scale keeps its full width so the labels line up; a value below `lo` stops at `lo`.
+        onChange={(e) => props.onChange(Math.max(lo, Number(e.target.value)))}
       />
-      <div className="ui-effort-ticks" aria-hidden="true">
+      {/* Tappable labels too: from unset, the thumb's resting spot (0) cannot be picked by tapping the slider. */}
+      <div className="ui-effort-ticks">
         {ticks.map((t) => (
-          <span key={t} className={t === props.value ? 'on' : undefined}>
+          <button
+            key={t}
+            type="button"
+            tabIndex={-1}
+            aria-hidden="true"
+            disabled={props.disabled || t < lo}
+            className={t === props.value ? 'on' : undefined}
+            onClick={() => props.onChange(t)}
+          >
             {label(t)}
-          </span>
+          </button>
         ))}
       </div>
       <p id={lineId} className="muted small ui-rir-line">

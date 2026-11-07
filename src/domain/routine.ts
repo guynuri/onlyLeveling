@@ -18,7 +18,8 @@ export function isStretch(e: Exercise): boolean {
 // The exercises the AI may pick for a warm-up or cool-down.
 export function routineCatalogue(catalogue: readonly Exercise[]): Exercise[] {
   const pulse = new Set<string>(ROUTINE.pulseIds);
-  return catalogue.filter((e) => isStretch(e) || pulse.has(e.id));
+  // Never RepDB records: their text does not go to an LLM (CLAUDE.md licence table).
+  return catalogue.filter((e) => e.source !== 'repdb' && e.textSource !== 'repdb' && (isStretch(e) || pulse.has(e.id)));
 }
 
 // Raw muscle names, most-worked first (primary counts 2, secondary 1); ties by name.

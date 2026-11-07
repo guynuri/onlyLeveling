@@ -26,6 +26,7 @@ export type ProposeResult =
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const MAX_ROUTINE = 150;
+const ROUTINE_ID = /^(fx|rp|og)_[A-Za-z0-9_.()'-]{1,90}$/;
 const intIn = (v: unknown, lo: number, hi: number) => typeof v === 'number' && Number.isInteger(v) && v >= lo && v <= hi;
 
 // Shape only: the validator checks the content of the AI's answer, not this request.
@@ -51,8 +52,9 @@ export function parsePlanRequest(body: unknown): PlanRequest | null {
   if (body.routine !== undefined) {
     if (!isObj(body.routine)) return null;
     const rs = Object.entries(body.routine);
-    if (rs.length > MAX_ROUTINE || !rs.every(([id, n]) => id.length <= 100 && typeof n === 'string' && n.length <= 100)) return null;
-    routine = Object.fromEntries(rs) as Record<string, string>;
+    if (rs.length > MAX_ROUTINE) return null;
+    // Library-shaped ids and short names only; anything else is dropped, so client text cannot pad the prompt.
+    routine = Object.fromEntries(rs.filter(([id, n]) => ROUTINE_ID.test(id) && typeof n === 'string' && n.length <= 60 && !/[\r\n]/.test(n))) as Record<string, string>;
   }
   return {
     summary: body.summary,

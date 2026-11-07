@@ -436,6 +436,7 @@ export default function WorkoutScreen() {
             <RirPicker
               disabled={!(lastSet && lastSet.exercise === i)}
               value={lastSet && lastSet.exercise === i ? ratingOf(le.sets[lastSet.set]) : undefined}
+              min={lastSet && lastSet.exercise === i ? 1 - ((le.sets[lastSet.set]?.r ?? 1) + (le.sets[lastSet.set]?.missed ?? 0)) : undefined}
               onChange={(v) => lastSet && setLive(live.map((x, k) => (k === i ? rateSet(x, lastSet.set, v) : x)))}
             />
           </>

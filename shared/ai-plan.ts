@@ -173,7 +173,7 @@ export function validateAiPlan(raw: unknown, input: PlanInput): ValidationResult
     // else is dropped and the rules fill the gap (never an error).
     const routinePick = (v: unknown): string[] => {
       if (!Array.isArray(v) || !input.routine) return [];
-      return [...new Set(v.filter((id): id is string => typeof id === 'string' && input.routine![id] !== undefined))].slice(0, ROUTINE.aiMaxItems);
+      return [...new Set(v.filter((id): id is string => typeof id === 'string' && Object.hasOwn(input.routine!, id)))].slice(0, ROUTINE.aiMaxItems);
     };
     const warmup = routinePick(day.warmup);
     const cooldown = routinePick(day.cooldown);
