@@ -19,7 +19,7 @@ export function pushState(f: PushFacts): PushState {
 
 // The on-screen words for each state. No internal terms (SPEC §4.2 applies here too).
 export const PUSH_COPY: Record<PushState, string> = {
-  'needs-install': 'Add onlyLeveling to your Home Screen to get rest alerts and reminders. Until then, they show only while the app is open.',
+  'needs-install': 'Add train-train-train to your Home Screen to get rest alerts and reminders. Until then, they show only while the app is open.',
   unsupported: 'This browser cannot send notifications. Rest alerts and reminders show only while the app is open.',
   denied: 'Notifications are blocked for this app. Rest alerts and reminders show only while the app is open. Turn notifications on in iPhone Settings to get them.',
   off: 'Notifications are off.',

@@ -146,10 +146,10 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         {/* Sync status lives in Settings (owner request 2026-11-07). */}
-        <a className="title" href="#/home" aria-label="onlyLeveling, home">
+        <a className="title" href="#/home" aria-label="train-train-train, home">
           <img src={`${import.meta.env.BASE_URL}icons/icon.svg`} alt="" width="26" height="26" />
           <span>
-            <span className="title-only">only</span>Leveling
+            train<span className="title-only">-</span>train<span className="title-only">-</span>train
           </span>
         </a>
       </header>

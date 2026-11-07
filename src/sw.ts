@@ -33,7 +33,7 @@ function readMessage(raw: unknown): Message {
   const kind = o.kind === 'rest' || o.kind === 'reminder' ? o.kind : 'reminder';
   return {
     kind,
-    title: typeof o.title === 'string' ? o.title.slice(0, 80) : 'onlyLeveling',
+    title: typeof o.title === 'string' ? o.title.slice(0, 80) : 'train-train-train',
     body: typeof o.body === 'string' ? o.body.slice(0, 160) : '',
   };
 }
