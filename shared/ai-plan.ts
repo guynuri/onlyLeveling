@@ -2,6 +2,7 @@
 // (copy-paste fallback). The AI is never trusted for numbers: every value is checked here, and out-of-range numbers are
 // corrected and reported, never silently passed on.
 import { ownedFloor } from '../src/domain/dumbbells';
+import { SUPERSET } from '../src/config/thresholds';
 
 export const AI_PLAN_LIMITS = {
   nameMax: 60,
@@ -28,6 +29,7 @@ export interface PlanInput {
   owned: readonly number[]; // owned dumbbell weights, kg; empty = no snapping
   avoid: readonly string[]; // exercise ids that must not appear
   candidates: Record<string, Candidate>; // dumbbell-compatible library exercises, by id
+  supersets?: boolean; // the athlete asked for supersets; otherwise any superset letters are ignored
 }
 
 export interface ValidExercise {
@@ -160,7 +162,7 @@ export function validateAiPlan(raw: unknown, input: PlanInput): ValidationResult
         corrections.push({ path: `${p}.reps`, from: rounded, to: reps, why: `kept inside ${cand.repMin} to ${cand.repMax}` });
       }
       exOut.push({ exerciseId: ex.exerciseId, reason: ex.reason, w, reps, sets: ex.sets });
-      letters.push(typeof ex.superset === 'string' && /^[A-Z]$/.test(ex.superset) ? ex.superset : null);
+      letters.push(input.supersets && typeof ex.superset === 'string' && /^[A-Z]$/.test(ex.superset) ? ex.superset : null);
     });
     // Same exercise twice within one day is a violation.
     const dup = exOut.find((e, i) => exOut.findIndex((o) => o.exerciseId === e.exerciseId) !== i);
@@ -173,7 +175,7 @@ export function validateAiPlan(raw: unknown, input: PlanInput): ValidationResult
   return { ok: true, plan: { name: plan.name as string, note: data.note, days: outDays }, corrections };
 }
 
-// Supersets from the AI's letters: each run of adjacent exercises with the same letter, 2 to 3 long, the first run of a
+// Supersets from the AI's letters: each run of adjacent exercises with the same letter, SUPERSET.minSize to maxSize long, the first run of a
 // letter only. Anything else is dropped (a plan without supersets is still a good plan), never an error.
 export function supersetRuns(ids: readonly string[], letters: readonly (string | null)[]): string[][] {
   const out: string[][] = [];
@@ -182,7 +184,7 @@ export function supersetRuns(ids: readonly string[], letters: readonly (string |
     const l = letters[i];
     let j = i + 1;
     while (l !== null && j < ids.length && letters[j] === l) j++;
-    if (l !== null && !seen.has(l) && j - i >= 2 && j - i <= 3) out.push(ids.slice(i, j));
+    if (l !== null && !seen.has(l) && j - i >= SUPERSET.minSize && j - i <= SUPERSET.maxSize) out.push(ids.slice(i, j));
     if (l !== null) seen.add(l);
     i = j;
   }

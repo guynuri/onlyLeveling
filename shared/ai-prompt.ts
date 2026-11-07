@@ -1,6 +1,7 @@
 // The prompt sent to a provider (SPEC §5.3, §5.4). Built from structured fields and library ids only: no free text from
 // the user, no dates of birth, no raw logs. Pure.
 import type { Candidate } from './ai-plan';
+import { SUPERSET } from '../src/config/thresholds';
 
 export interface PlanRequest {
   summary: Record<string, unknown>; // SPEC §5.3 fields, built on the device
@@ -23,7 +24,7 @@ export function buildPrompt(req: PlanRequest): string {
     `Weights w are in kg and must come from the exercise's own weights list; when it says no weight, use w 0. Otherwise use the owned list: ${req.owned.join(', ') || 'any'}.`,
     'Use only exerciseId values from the list below. Do not use exercises not on the list.',
     req.supersets
-      ? 'Use supersets: give 2 or 3 exercises that sit next to each other in a day the same "superset" letter (A, B, ...). Pair muscles that do not compete, for example a push with a pull. A letter is used for one run of exercises only.'
+      ? `Use supersets: give ${SUPERSET.minSize} to ${SUPERSET.maxSize} exercises that sit next to each other in a day the same "superset" letter (A, B, ...). Pair muscles that do not compete, for example a push with a pull. A letter is used for one run of exercises only.`
       : 'Do not use the "superset" field.',
     'Reply with JSON only, no text before or after it, exactly in this shape:',
     SCHEMA,

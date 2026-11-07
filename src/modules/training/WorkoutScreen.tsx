@@ -199,6 +199,7 @@ export default function WorkoutScreen() {
   const undo = () => {
     if (!lastSet) return;
     setLive(live.map((x, k) => (k === lastSet.exercise ? undoLastSet(x) : x)));
+    setFocus(lastSet.exercise); // a superset may have moved on: undo goes back to the set it takes back
     setRest(null);
     cancelRestAlert().catch(() => undefined);
   };

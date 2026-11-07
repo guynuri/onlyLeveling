@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addCardioDay, addExercise, extendBlock, moveExercise, removeExercise, replaceInDay, setDeload, setSchedule, setTarget, startBlock, removeDay, setCardioDay } from './plan-edit';
+import { addCardioDay, addExercise, extendBlock, moveExercise, removeExercise, replaceInDay, setDeload, setSchedule, setTarget, startBlock, removeDay, setCardioDay, setSupersets } from './plan-edit';
 import type { Plan } from './plan';
 
 const T = { sets: 3, repMin: 8, repMax: 12 };
@@ -166,3 +166,15 @@ describe('cardio days', () => {
   });
 });
 
+
+describe('supersets in plan edits', () => {
+  const withSs = () => setSupersets({ ...base(), days: [{ ...base().days[0], exerciseIds: ['a', 'b', 'c'] }, base().days[1]] }, 0, [['a', 'b']], NOW);
+  it('a moved-apart or removed member drops the stored group', () => {
+    expect(moveExercise(withSs(), 0, 'b', 1, NOW).days[0].supersets).toEqual([]);
+    expect(removeExercise(withSs(), 0, 'a', NOW).days[0].supersets).toEqual([]);
+    expect(moveExercise(withSs(), 0, 'c', -1, NOW).days[0].supersets).toEqual([]); // c lands between a and b
+  });
+  it('a swapped member stays in the group', () => {
+    expect(replaceInDay(withSs(), 0, 'b', 'z', NOW).days[0].supersets).toEqual([['a', 'z']]);
+  });
+});
