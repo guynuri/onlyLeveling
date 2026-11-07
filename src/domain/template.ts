@@ -34,6 +34,7 @@ export interface TemplateDay {
   cardio?: { type: CardioType; minutes: number }; // what a cardio day asks for
   postCardioMinutes?: number; // a cardio block after the lifting (U5 logs it)
   mobilityMinutes?: number;
+  mobility?: RoutineItem[]; // the mobility block's stretches, derived from mobilityMinutes (domain/routine.ts)
   warmup: RoutineItem[];
   exerciseIds: string[]; // catalogue ids only
   supersets?: string[][]; // groups of 2–3 adjacent exercise ids; read through domain/superset.ts supersetsOf

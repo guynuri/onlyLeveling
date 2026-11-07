@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Exercise } from './exercise';
 import type { Plan } from './plan';
-import { routineCatalogue, rulesRoutine, withRoutines } from './routine';
+import { mobilityRoutine, routineCatalogue, rulesRoutine, withRoutines } from './routine';
 
 const ex = (id: string, o: Partial<Exercise> = {}): Exercise =>
   ({ id, name: id, category: 'strength', equipment: 'dumbbell', requires: ['dumbbell'], level: 'beginner', primaryMuscles: [], secondaryMuscles: [], ...o }) as Exercise;
@@ -46,5 +46,26 @@ describe('withRoutines', () => {
     expect(withRoutines(plan(ai), cat).days[0].warmup).toEqual(ai);
     expect(withRoutines(plan([{ name: 'Light cardio', seconds: 300 }]), cat).days[0].warmup[0].exerciseId).toBe('fx_Fast_Skipping');
     expect(withRoutines(plan([]), cat).days[1].warmup).toEqual([]);
+  });
+});
+
+describe('mobilityRoutine', () => {
+  const mob = [stretch('m_ham', 'hamstrings'), stretch('m_glute', 'glutes'), stretch('m_back', 'lower back'), stretch('m_sh', 'shoulders')];
+  it('fills the minutes with stretches across the mobility muscles, skipping ones the day already uses', () => {
+    const r = mobilityRoutine(mob, 0, 3, new Set(['m_glute']));
+    expect(r.map((i) => i.exerciseId)).toEqual(['m_ham', 'm_back', 'm_sh']);
+    expect(r.every((i) => i.seconds === 60)).toBe(true);
+  });
+  it('withRoutines adds the block only to days with mobility minutes', () => {
+    const p = { days: [{ index: 0, exerciseIds: [], warmup: [], cooldown: [], mobilityMinutes: 2 }, { index: 1, exerciseIds: [], warmup: [], cooldown: [] }] } as unknown as Plan;
+    const out = withRoutines(p, mob);
+    expect(out.days[0].mobility?.length).toBe(2);
+    expect(out.days[1].mobility).toBeUndefined();
+  });
+  it('rotates by day and never keeps a stale saved block', () => {
+    const two = [...mob, stretch('m_ham2', 'hamstrings')];
+    expect(mobilityRoutine(two, 1, 1, new Set())[0].exerciseId).not.toBe(mobilityRoutine(two, 0, 1, new Set())[0].exerciseId);
+    const stale = { days: [{ index: 0, exerciseIds: [], warmup: [], cooldown: [], mobility: [{ name: 'old', seconds: 60 }] }] } as unknown as Plan;
+    expect(withRoutines(stale, mob).days[0].mobility).toBeUndefined(); // no mobility minutes: no block
   });
 });
