@@ -666,3 +666,8 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
 
 /* `hidden` must win over the tab bar's display:flex (sign-in and onboarding hide it) */
 .ui-tabbar[hidden] { display: none; }
+
+/* Plan: what each day works */
+.day-map { display: flex; justify-content: center; margin-bottom: var(--s-2); }
+.day-map .ui-body--sm { height: 150px; gap: var(--s-2); background: var(--body-bg); border-radius: var(--r-md); padding: var(--s-1) var(--s-3); }
+.swap-preview .ui-media, .swap-preview .ui-body { margin: 0 auto var(--s-2); max-width: 220px; }

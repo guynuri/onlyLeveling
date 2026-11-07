@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { listExercises } from '../../data/exercises';
+import { getExercise, listExercises } from '../../data/exercises';
+import { BodyMap } from '../../ui/body/BodyMap';
 import type { Plan } from '../../domain/plan';
 import { getRepo, getLocalRepo, defaultSettings, currentPlan } from './data';
 import { Button, Card, EmptyState } from '../../ui/primitives';
@@ -18,6 +19,19 @@ import { usePlanEditor } from './usePlanEditor';
 import { blockedFor } from '../progress/ranks-cache';
 
 const minutesOf = (items: readonly { seconds: number }[]) => Math.round(items.reduce((s, r) => s + r.seconds, 0) / 60);
+
+// Everything a day works, on one body figure: primary muscles strong, secondary light (owner request 2026-11-07).
+function DayMuscles({ ids, sex }: { ids: readonly string[]; sex?: 'male' | 'female' }) {
+  const exs = ids.map(getExercise).filter((e) => e !== undefined);
+  const primary = [...new Set(exs.flatMap((e) => e.muscles.primary))];
+  const secondary = [...new Set(exs.flatMap((e) => e.muscles.secondary))].filter((m) => !primary.includes(m));
+  if (primary.length === 0) return null;
+  return (
+    <div className="day-map">
+      <BodyMap primary={primary} secondary={secondary} sex={sex} size="sm" />
+    </div>
+  );
+}
 
 // The saved plan. Warm-up and cool-down are one folded line per day, never exercises.
 export default function PlanScreen() {
@@ -102,6 +116,7 @@ export default function PlanScreen() {
           title={day.label ?? `Day ${day.index + 1}`}
           action={<span className="muted small">{day.exerciseIds.length} exercises</span>}
         >
+          <DayMuscles ids={day.exerciseIds} sex={settings.about?.sex} />
           <details className="pe-routine">
             <summary className="muted small">
               Warm-up {minutesOf(day.warmup)} min · cool-down {minutesOf(day.cooldown)} min
