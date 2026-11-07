@@ -66,6 +66,24 @@ export function rulesRoutine(day: readonly Exercise[], catalogue: readonly Exerc
   };
 }
 
+// The mobility block (owner report 2026-11-07: '5 min' with nothing to do): stretches filling the minutes, working
+// through ROUTINE.mobilityMuscles so the week covers the whole body; never one already in the day's routine.
+export function mobilityRoutine(catalogue: readonly Exercise[], dayIndex: number, minutes: number, taken: ReadonlySet<string>): RoutineItem[] {
+  const n = Math.max(1, Math.round((minutes * 60) / ROUTINE.mobilityItemSeconds));
+  const stretches = catalogue.filter(isStretch).sort((a, b) => a.id.localeCompare(b.id));
+  const muscles = ROUTINE.mobilityMuscles;
+  const used = new Set(taken);
+  const out: RoutineItem[] = [];
+  for (let k = 0; out.length < n && k < muscles.length; k++) {
+    const m = muscles[(dayIndex * n + k) % muscles.length];
+    const pick = stretches.find((s) => s.primaryMuscles.includes(m) && !used.has(s.id));
+    if (!pick) continue;
+    used.add(pick.id);
+    out.push(item(pick, ROUTINE.mobilityItemSeconds));
+  }
+  return out;
+}
+
 const byAi = (items: readonly RoutineItem[]) => items.length > 0 && items.every((r) => r.by === 'ai');
 
 // Fills every lifting day's routine from the rules, except a part the AI picked.
@@ -78,7 +96,11 @@ export function withRoutines(plan: Plan, catalogue: readonly Exercise[]): Plan {
       catalogue,
       d.index,
     );
-    return { ...d, warmup: byAi(d.warmup) ? d.warmup : r.warmup, cooldown: byAi(d.cooldown) ? d.cooldown : r.cooldown };
+    const warmup = byAi(d.warmup) ? d.warmup : r.warmup;
+    const cooldown = byAi(d.cooldown) ? d.cooldown : r.cooldown;
+    const taken = new Set([...warmup, ...cooldown].map((x) => x.exerciseId).filter((x): x is string => !!x));
+    const mobility = d.mobilityMinutes ? mobilityRoutine(catalogue, d.index, d.mobilityMinutes, taken) : undefined;
+    return { ...d, warmup, cooldown, ...(mobility && mobility.length > 0 ? { mobility } : {}) };
   });
   return { ...plan, days };
 }

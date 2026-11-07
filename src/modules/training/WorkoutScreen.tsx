@@ -269,7 +269,7 @@ export default function WorkoutScreen() {
 
   // After the last exercise: the cool-down, or straight to Finish when the day has none.
   const toCooldown = () => {
-    if (day.cooldown.length === 0) {
+    if (day.cooldown.length === 0 && !day.mobility?.length) {
       void finish();
       return;
     }
@@ -375,7 +375,7 @@ export default function WorkoutScreen() {
   if (stage === 'cooldown') {
     return (
       <>
-        <RoutinePhase title="Cool-down" items={day.cooldown} doneLabel="Finish workout" onDone={finish} backLabel="Back to exercises" onBack={() => setStage('logging')} />
+        <RoutinePhase title={day.mobility ? 'Cool-down and mobility' : 'Cool-down'} items={[...day.cooldown, ...(day.mobility ?? [])]} doneLabel="Finish workout" onDone={finish} backLabel="Back to exercises" onBack={() => setStage('logging')} />
         {status && <p className="error">{status}</p>}
       </>
     );
@@ -417,10 +417,10 @@ export default function WorkoutScreen() {
           )}
           {saveError && <p className="error">{saveError}</p>}
         </Card>
-        {(day.postCardioMinutes || day.mobilityMinutes) && (
+        {(day.postCardioMinutes || (day.mobilityMinutes && !day.mobility)) && (
           <p className="muted">
             {day.postCardioMinutes ? `After lifting: ${day.postCardioMinutes} min of easy cardio. ` : ''}
-            {day.mobilityMinutes ? `Mobility: ${day.mobilityMinutes} min.` : ''}
+            {day.mobility ? '' : day.mobilityMinutes ? `Mobility: ${day.mobilityMinutes} min.` : ''}
           </p>
         )}
         {status && <p className="error">{status}</p>}
@@ -477,7 +477,7 @@ export default function WorkoutScreen() {
               onChange={(nv) => setPending({ ...pending, [le.exerciseId]: nv })}
               onLog={() => log(i)}
               onNext={done ? (i < live.length - 1 ? () => setFocus(i + 1) : toCooldown) : undefined}
-              nextLabel={i < live.length - 1 ? 'Next exercise' : day.cooldown.length > 0 ? 'Start cool-down' : 'Finish workout'}
+              nextLabel={i < live.length - 1 ? 'Next exercise' : day.cooldown.length > 0 || day.mobility?.length ? 'Start cool-down' : 'Finish workout'}
             />
             {/* Always rendered, so logging a set does not push the page down; it rates the last set of this exercise. */}
             <RirPicker
@@ -531,10 +531,10 @@ export default function WorkoutScreen() {
           </button>
         </nav>
       )}
-      {(day.postCardioMinutes || day.mobilityMinutes) && (
+      {(day.postCardioMinutes || (day.mobilityMinutes && !day.mobility)) && (
         <p className="muted">
           {day.postCardioMinutes ? `After lifting: ${day.postCardioMinutes} min of easy cardio. ` : ''}
-          {day.mobilityMinutes ? `Mobility: ${day.mobilityMinutes} min.` : ''}
+          {day.mobility ? '' : day.mobilityMinutes ? `Mobility: ${day.mobilityMinutes} min.` : ''}
         </p>
       )}
       {status && <p className="error">{status}</p>}

@@ -102,6 +102,9 @@ export const ROUTINE = {
   cooldownStretches: 3,
   cooldownStretchSeconds: 60,
   aiMaxItems: 4, // per warm-up or cool-down from the AI
+  // Mobility block (goal blend minutes): one stretch per this many seconds, from these muscles in turn, day by day.
+  mobilityItemSeconds: 60,
+  mobilityMuscles: ['hamstrings', 'glutes', 'lower back', 'shoulders', 'quadriceps', 'chest', 'adductors', 'calves', 'lats', 'abdominals'],
 } as const;
 
 // Coach rules (SPEC §4). These are the spec defaults; each Wave 2 module edits only its own section.

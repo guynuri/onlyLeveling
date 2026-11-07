@@ -125,6 +125,7 @@ export default function PlanScreen() {
             </summary>
             <RoutineList items={day.warmup} part="Warm-up" />
             <RoutineList items={day.cooldown} part="Cool-down" />
+            {day.mobility && <RoutineList items={day.mobility} part="Mobility" />}
           </details>
           <DayEditor plan={plan} day={day} equipment={equipment} blocked={avoid} onEdit={edit} />
           {removeButton(day.index)}
