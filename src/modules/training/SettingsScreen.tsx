@@ -7,40 +7,18 @@ import { Button, Card, Chip } from '../../ui/primitives';
 import { SegmentedControl, Stepper, toast } from '../../ui/controls';
 import { applyTheme, readTheme, type ThemeChoice } from '../../ui/theme';
 import { setSoundOn, soundOn } from '../../ui/sound';
-import {
-  readSyncState,
-  runSync,
-  signInWithPassword,
-  createAccountWithInvite,
-  recoverAccount,
-  signOut,
-  createInvite,
-  syncLabel,
-} from '../sync/actions';
+import { readSyncState, runSync, signOutAndClear, createInvite, syncLabel } from '../sync/actions';
+import { AccountForm, messageOf } from '../sync/AccountForm';
 import { fetchExport, type SyncState } from '../../data/sync-engine';
 import { PushSettings } from '../push/ui/PushSettings';
-import { AuthClientError } from '../../data/auth-client';
 import { DIFFICULTY_LOCK } from '../../config/thresholds';
 
-const DEFAULT_SERVER = 'https://onlyleveling-api.guynuri.workers.dev';
-type Mode = 'signin' | 'signup' | 'recover';
-
-const MODES = [
-  { value: 'signin', label: 'Sign in' },
-  { value: 'signup', label: 'New account' },
-  { value: 'recover', label: 'Forgot' },
-] as const;
 
 const THEMES = [
   { value: 'system', label: 'Phone' },
   { value: 'dark', label: 'Dark' },
   { value: 'light', label: 'Light' },
 ] as const;
-
-function messageOf(e: unknown): string {
-  if (e instanceof AuthClientError) return e.message;
-  return e instanceof Error ? e.message : 'Something went wrong. Try again.';
-}
 
 // Core settings per D5 (days, rest, owned dumbbells), plus the account, sync and export (SPEC §6.3).
 export default function SettingsScreen() {
@@ -54,12 +32,8 @@ export default function SettingsScreen() {
   const [loaded, setLoaded] = useState(false);
   const [status, setStatus] = useState('');
   const [sync, setSync] = useState<SyncState | null>(null);
+  const [unsynced, setUnsynced] = useState(false); // sign-out refused: offer to drop the queued changes
 
-  const [server, setServer] = useState(DEFAULT_SERVER);
-  const [mode, setMode] = useState<Mode>('signin');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [code, setCode] = useState('');
   const [newInvite, setNewInvite] = useState<string | null>(null);
 
   useEffect(() => {
@@ -72,7 +46,6 @@ export default function SettingsScreen() {
         setView(workoutViewOf(cur));
         setLock(!!cur.lockByRank);
         setSync(st);
-        if (st.config) setServer(st.config.baseUrl);
         setLoaded(true);
       })
       .catch(() => setStatus('Could not load settings. Reload the page to try again.'));
@@ -92,27 +65,6 @@ export default function SettingsScreen() {
     }
   }
 
-  // Sign-in, sign-up and recovery all end the same way: the session is stored, then the device syncs.
-  async function account() {
-    setStatus('Working…');
-    try {
-      let after: SyncState;
-      if (mode === 'signin') {
-        after = await signInWithPassword(server, username.trim(), password);
-      } else if (mode === 'signup') {
-        after = await createAccountWithInvite(server, { code: code.trim(), username: username.trim(), password });
-      } else {
-        after = await recoverAccount(server, { username: username.trim(), code: code.trim(), newPassword: password });
-      }
-      setSync(after);
-      setPassword('');
-      setCode('');
-      setStatus(after.lastError ? `Signed in, but sync failed: ${after.lastError}` : 'Signed in and synced.');
-    } catch (e) {
-      setStatus(messageOf(e));
-    }
-  }
-
   async function syncNowClick() {
     setStatus('Syncing…');
     const after = await runSync();
@@ -120,11 +72,16 @@ export default function SettingsScreen() {
     setStatus(after.lastError ? `Sync failed: ${after.lastError}` : 'Synced.');
   }
 
-  async function disconnect() {
-    await signOut();
-    setSync(await readSyncState());
+  async function disconnect(dropUnsynced = false) {
+    setStatus('Signing out…');
+    if ((await signOutAndClear(undefined, dropUnsynced)) === 'unsynced') {
+      setUnsynced(true);
+      setStatus('Some changes have not reached your account yet. Connect and tap Sync now, then sign out.');
+      return;
+    }
+    setUnsynced(false);
     setNewInvite(null);
-    setStatus('Signed out on this device. Local data is kept.');
+    window.location.hash = '#/signin'; // signing in is required, so the app goes back to the sign-in screen
   }
 
   async function makeInvite() {
@@ -247,9 +204,14 @@ export default function SettingsScreen() {
               <Button variant="secondary" onClick={makeInvite}>
                 Create invite code
               </Button>
-              <Button variant="danger" onClick={disconnect}>
+              <Button variant="danger" onClick={() => void disconnect()}>
                 Sign out here
               </Button>
+              {unsynced && (
+                <Button variant="danger" onClick={() => void disconnect(true)}>
+                  Sign out and drop unsynced changes
+                </Button>
+              )}
             </div>
             {newInvite && (
               <p>
@@ -258,35 +220,7 @@ export default function SettingsScreen() {
             )}
           </>
         ) : (
-          <div className="ui-stack">
-            <SegmentedControl label="Account action" options={MODES} value={mode} onChange={setMode} />
-            <label className="field">
-              Server address
-              <input value={server} onChange={(e) => setServer(e.target.value)} autoCapitalize="none" />
-            </label>
-            <label className="field">
-              Username
-              <input value={username} onChange={(e) => setUsername(e.target.value)} autoCapitalize="none" autoComplete="username" />
-            </label>
-            {mode !== 'signin' && (
-              <label className="field">
-                Invite code{mode === 'recover' ? ' (one you created)' : ''}
-                <input value={code} onChange={(e) => setCode(e.target.value)} autoCapitalize="characters" />
-              </label>
-            )}
-            <label className="field">
-              {mode === 'recover' ? 'New password (at least 10 characters)' : 'Password (at least 10 characters)'}
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-              />
-            </label>
-            <Button onClick={account}>
-              {mode === 'signin' ? 'Sign in and sync' : mode === 'signup' ? 'Create account' : 'Reset password'}
-            </Button>
-          </div>
+          <AccountForm onSignedIn={setSync} />
         )}
       </Card>
 

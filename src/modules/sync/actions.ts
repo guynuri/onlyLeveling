@@ -39,7 +39,7 @@ export async function runSync(fetchImpl: FetchFn = defaultFetch): Promise<SyncSt
   } catch (e) {
     after = { ...before, lastError: e instanceof Error ? e.message : 'sync failed' };
   }
-  const stored = withLatestConfig(after, await loadSyncState(db));
+  const stored = withLatestConfig(after, await loadSyncState(db), before);
   await saveSyncState(db, stored);
   announce();
   return stored;
@@ -100,6 +100,30 @@ export async function signOut(fetchImpl: FetchFn = defaultFetch): Promise<void> 
   }
   await saveSyncState(db, { ...state, config: null, lastError: null, pendingRevoke });
   announce();
+}
+
+// Signing out removes this phone's copy (owner decision 2026-11-07: an account is required, and the next account to
+// sign in here must not upload the previous one's data). Refuses while changes have not reached the server yet, so
+// nothing is lost: the caller says so and offers Sync now. The account keeps everything.
+// `dropUnsynced`: the user chose to lose what is still queued (e.g. a change the server keeps refusing).
+export async function signOutAndClear(fetchImpl: FetchFn = defaultFetch, dropUnsynced = false): Promise<'done' | 'unsynced'> {
+  await runSync(fetchImpl).catch(() => undefined);
+  if (!dropUnsynced && (await (await getOutbox()).count()) > 0) return 'unsynced';
+  await signOut(fetchImpl);
+  const db = await getDb();
+  for (const store of ['settings', 'plans', 'workouts', 'bodyweight', 'suggestions', 'badges', 'aiCache', 'cardio', 'game', 'outbox'] as const) {
+    await db.clear(store);
+  }
+  await db.delete('meta', 'liveSession'); // a workout in progress belonged to that account
+  const st = await loadSyncState(db);
+  await saveSyncState(db, { ...st, cursor: 0, lastSyncedAt: null, lastError: null }); // the next account pulls everything
+  try {
+    localStorage.removeItem('muscleRanks');
+  } catch {
+    // derived data: fine to keep
+  }
+  announce();
+  return 'done';
 }
 
 // A new invite code for this account. Shown once; the server keeps only its hash.

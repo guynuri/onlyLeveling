@@ -23,6 +23,10 @@ describe('parseRoute', () => {
     expect(tabFor({ screen: 'coach' })).toBe('home');
   });
 
+  it('the sign-in screen has its own route', () => {
+    expect(parseRoute('#/signin')).toEqual({ screen: 'signin' });
+  });
+
   it('maps tab hashes, with or without the leading slash', () => {
     expect(parseRoute('#/history')).toEqual({ screen: 'history' });
     expect(parseRoute('#history')).toEqual({ screen: 'history' });
