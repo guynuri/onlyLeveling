@@ -415,7 +415,20 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
 .ui-live { margin-bottom: var(--s-3); }
 .ui-live--current { border-color: var(--accent); box-shadow: var(--glow); }
 .ui-live--idle { opacity: 0.65; }
-.ui-set-chips { display: flex; flex-wrap: wrap; gap: var(--s-2); margin: var(--s-2) 0; }
+.ui-set-chips {
+  display: flex; flex-wrap: nowrap; gap: var(--s-2); margin: var(--s-2) 0;
+  overflow-x: auto; scrollbar-width: none; scroll-behavior: smooth; min-height: 30px;
+}
+.ui-set-chips::-webkit-scrollbar { display: none; }
+.ui-set-chip { flex: none; }
+.ui-set-steppers { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: var(--s-3); }
+.ui-set-steppers > div { display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; }
+.ui-set-steppers .ui-stepper { display: flex; width: 100%; }
+.ui-set-steppers .ui-stepper-btn { width: 52px; height: 56px; flex: none; font-size: var(--fs-xl); }
+.ui-set-steppers .ui-stepper-value { flex: 1; min-width: 0; font-size: var(--fs-xl); }
+.ui-rir-btn:disabled { opacity: 0.35; cursor: default; }
+.ui-live .ui-rir { margin-top: var(--s-3); }
+.ui-card .ui-segmented + .ui-segmented { margin-top: var(--s-3); }
 .ui-set-chip {
   padding: var(--s-1) var(--s-3); border-radius: var(--r-pill);
   background: var(--surface-2); color: var(--muted);

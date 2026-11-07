@@ -16,6 +16,7 @@ import { scheduleRestAlert, cancelRestAlert } from '../push/actions';
 import { WeeklyReview } from '../review/ui/WeeklyReview';
 import { isLivePr, summarize, type SessionSummary } from '../xp/domain/sessionSummary';
 import { loadProgress } from '../progress/load';
+import { unlockSound } from '../../ui/sound';
 import { levelOf } from '../xp/domain/hub';
 import { Button, Card } from '../../ui/primitives';
 import { SegmentedControl } from '../../ui/controls';
@@ -172,6 +173,7 @@ export default function WorkoutScreen() {
   };
 
   const finish = async () => {
+    unlockSound(); // inside the tap: iOS plays the level-up sound only from a context resumed here
     const ok = canFinish(live);
     if (!ok.ok) {
       setStatus(ok.error);
@@ -371,7 +373,7 @@ export default function WorkoutScreen() {
           <ExerciseName id={le.exerciseId} name={names[le.exerciseId] ?? le.exerciseId} />
         </h2>
         <p className="muted">Target {target}</p>
-        <div className="ui-set-chips">
+        <div className="ui-set-chips" ref={(el) => el?.scrollTo({ left: el.scrollWidth })}>
           {le.sets.map((s, k) => (
             <span key={`${s.at}-${k}`} className="ui-set-chip">
               {le.mode === 'time' ? `${s.r} s` : `${weighted ? `${s.w} × ` : ''}${s.r}`}
@@ -394,9 +396,12 @@ export default function WorkoutScreen() {
               onChange={(nv) => setPending({ ...pending, [le.exerciseId]: nv })}
               onLog={() => log(i)}
             />
-            {lastSet && lastSet.exercise === i && (
-              <RirPicker value={le.sets[lastSet.set]?.rir} onChange={(rir) => setLive(live.map((x, k) => (k === i ? setRir(x, lastSet.set, rir) : x)))} />
-            )}
+            {/* Always rendered, so logging a set does not push the page down; it rates the last set of this exercise. */}
+            <RirPicker
+              disabled={!(lastSet && lastSet.exercise === i)}
+              value={lastSet && lastSet.exercise === i ? le.sets[lastSet.set]?.rir : undefined}
+              onChange={(rir) => lastSet && setLive(live.map((x, k) => (k === i ? setRir(x, lastSet.set, rir) : x)))}
+            />
           </>
         )}
       </article>

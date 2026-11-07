@@ -8,7 +8,7 @@ const LEVELS = [
   { value: 4, label: '4+', line: 'Plenty left: 4 or more reps.' },
 ] as const;
 
-export function RirPicker(props: { value?: number; onChange: (v: number | undefined) => void }) {
+export function RirPicker(props: { value?: number; onChange: (v: number | undefined) => void; disabled?: boolean }) {
   const picked = LEVELS.find((l) => l.value === props.value);
   return (
     <div className="ui-rir">
@@ -19,6 +19,7 @@ export function RirPicker(props: { value?: number; onChange: (v: number | undefi
             type="button"
             role="radio"
             aria-checked={props.value === l.value}
+            disabled={props.disabled}
             className={`ui-rir-btn ui-rir-btn--${l.value}`}
             onClick={() => props.onChange(props.value === l.value ? undefined : l.value)}
           >
@@ -26,7 +27,7 @@ export function RirPicker(props: { value?: number; onChange: (v: number | undefi
           </button>
         ))}
       </div>
-      <p className="muted small ui-rir-line">{picked ? picked.line : 'How many reps were left? Optional.'}</p>
+      <p className="muted small ui-rir-line">{props.disabled ? 'After a set: how many reps were left? Optional.' : picked ? picked.line : 'How many reps were left? Optional.'}</p>
     </div>
   );
 }
