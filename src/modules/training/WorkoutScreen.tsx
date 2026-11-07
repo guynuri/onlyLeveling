@@ -18,6 +18,7 @@ import { isLivePr, summarize, type SessionSummary } from '../xp/domain/sessionSu
 import { loadProgress } from '../progress/load';
 import { afterSet, supersetLabel } from '../../domain/superset';
 import { RoutineList } from './RoutineList';
+import { RoutinePhase } from './RoutinePhase';
 import { ExerciseMedia } from '../../ui/ExerciseMedia';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { unlockSound } from '../../ui/sound';
@@ -39,7 +40,7 @@ import { SetControls } from './SetControls';
 import { CardioLog } from './CardioLog';
 import { usePlanEditor } from './usePlanEditor';
 
-type Stage = 'preview' | 'logging' | 'summary';
+type Stage = 'preview' | 'warmup' | 'logging' | 'cooldown' | 'summary';
 type Values = { w: number; r: number };
 
 interface Loaded {
@@ -164,7 +165,8 @@ export default function WorkoutScreen() {
     setFocus(0);
     setEditing(false);
     setStatus('');
-    setStage('logging');
+    // The warm-up is part of the session (its time counts); a day without one starts lifting at once.
+    setStage(day.warmup.length > 0 ? 'warmup' : 'logging');
   };
 
   const valuesFor = (le: LiveExercise): Values => pending[le.exerciseId] ?? nextSetDefaults(le);
@@ -261,6 +263,17 @@ export default function WorkoutScreen() {
     }
   };
 
+  // After the last exercise: the cool-down, or straight to Finish when the day has none.
+  const toCooldown = () => {
+    if (day.cooldown.length === 0) {
+      void finish();
+      return;
+    }
+    setRest(null);
+    cancelRestAlert().catch(() => undefined);
+    setStage('cooldown');
+  };
+
   const discard = async () => {
     await clearDraft(await getDb());
     cancelRestAlert().catch(() => undefined);
@@ -347,6 +360,18 @@ export default function WorkoutScreen() {
           )}
         </Card>
       </section>
+    );
+  }
+
+  if (stage === 'warmup') {
+    return <RoutinePhase title={`Warm-up · ${title}`} items={day.warmup} doneLabel="Start lifting" onDone={() => setStage('logging')} />;
+  }
+  if (stage === 'cooldown') {
+    return (
+      <>
+        <RoutinePhase title="Cool-down" items={day.cooldown} doneLabel="Finish workout" onDone={finish} />
+        {status && <p className="error">{status}</p>}
+      </>
     );
   }
 
@@ -444,7 +469,8 @@ export default function WorkoutScreen() {
               setsTotal={le.prescription.sets}
               onChange={(nv) => setPending({ ...pending, [le.exerciseId]: nv })}
               onLog={() => log(i)}
-              onNext={done && i < live.length - 1 ? () => setFocus(i + 1) : undefined}
+              onNext={done ? (i < live.length - 1 ? () => setFocus(i + 1) : toCooldown) : undefined}
+              nextLabel={i < live.length - 1 ? 'Next exercise' : day.cooldown.length > 0 ? 'Start cool-down' : 'Finish workout'}
             />
             {/* Always rendered, so logging a set does not push the page down; it rates the last set of this exercise. */}
             <RirPicker

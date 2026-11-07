@@ -14,6 +14,7 @@ export function SetControls(props: {
   onChange: (v: { w: number; r: number }) => void;
   onLog: () => void;
   onNext?: () => void; // all sets done: the main button moves on, logging an extra set becomes the small one
+  nextLabel?: string;
   setNumber: number; // 1-based, for the button label
   setsTotal: number;
 }) {
@@ -54,7 +55,7 @@ export function SetControls(props: {
             + Extra set
           </Button>
           <Button className="ui-log ui-next" onClick={props.onNext} icon={<ArrowRight />}>
-            Next exercise
+            {props.nextLabel ?? 'Next exercise'}
           </Button>
         </div>
       ) : (
