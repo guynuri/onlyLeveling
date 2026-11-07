@@ -8,6 +8,7 @@ export interface Draft {
   dayIndex: number; // which plan day the session was started for
   startedAt: number;
   exercises: LiveExercise[];
+  stage?: 'warmup' | 'logging' | 'cooldown'; // where the session was; older drafts are 'logging'
 }
 
 const KEY = 'liveSession';
