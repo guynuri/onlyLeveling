@@ -62,4 +62,10 @@ describe('mobilityRoutine', () => {
     expect(out.days[0].mobility?.length).toBe(2);
     expect(out.days[1].mobility).toBeUndefined();
   });
+  it('rotates by day and never keeps a stale saved block', () => {
+    const two = [...mob, stretch('m_ham2', 'hamstrings')];
+    expect(mobilityRoutine(two, 1, 1, new Set())[0].exerciseId).not.toBe(mobilityRoutine(two, 0, 1, new Set())[0].exerciseId);
+    const stale = { days: [{ index: 0, exerciseIds: [], warmup: [], cooldown: [], mobility: [{ name: 'old', seconds: 60 }] }] } as unknown as Plan;
+    expect(withRoutines(stale, mob).days[0].mobility).toBeUndefined(); // no mobility minutes: no block
+  });
 });

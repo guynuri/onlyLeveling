@@ -372,7 +372,8 @@ export default function WorkoutScreen() {
       <RoutinePhase title={`Warm-up · ${title}`} items={day.warmup} doneLabel="Start lifting" onDone={() => setStage('logging')} backLabel="Cancel" onBack={discard} />
     );
   }
-  if (stage === 'cooldown') {
+  // A restored cool-down with nothing left to run (the plan changed) falls back to the lifting view.
+  if (stage === 'cooldown' && day.cooldown.length + (day.mobility?.length ?? 0) > 0) {
     return (
       <>
         <RoutinePhase title={day.mobility ? 'Cool-down and mobility' : 'Cool-down'} items={[...day.cooldown, ...(day.mobility ?? [])]} doneLabel="Finish workout" onDone={finish} backLabel="Back to exercises" onBack={() => setStage('logging')} />
@@ -417,12 +418,7 @@ export default function WorkoutScreen() {
           )}
           {saveError && <p className="error">{saveError}</p>}
         </Card>
-        {(day.postCardioMinutes || (day.mobilityMinutes && !day.mobility)) && (
-          <p className="muted">
-            {day.postCardioMinutes ? `After lifting: ${day.postCardioMinutes} min of easy cardio. ` : ''}
-            {day.mobility ? '' : day.mobilityMinutes ? `Mobility: ${day.mobilityMinutes} min.` : ''}
-          </p>
-        )}
+        {day.postCardioMinutes ? <p className="muted">After lifting: {day.postCardioMinutes} min of easy cardio.</p> : null}
         {status && <p className="error">{status}</p>}
         <Button block onClick={start}>
           Start workout
@@ -531,12 +527,7 @@ export default function WorkoutScreen() {
           </button>
         </nav>
       )}
-      {(day.postCardioMinutes || (day.mobilityMinutes && !day.mobility)) && (
-        <p className="muted">
-          {day.postCardioMinutes ? `After lifting: ${day.postCardioMinutes} min of easy cardio. ` : ''}
-          {day.mobility ? '' : day.mobilityMinutes ? `Mobility: ${day.mobilityMinutes} min.` : ''}
-        </p>
-      )}
+      {day.postCardioMinutes ? <p className="muted">After lifting: {day.postCardioMinutes} min of easy cardio.</p> : null}
       {status && <p className="error">{status}</p>}
       <div className="ui-row">
         <Button variant="secondary" disabled={!lastSet} onClick={undo}>

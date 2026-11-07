@@ -74,9 +74,12 @@ export function mobilityRoutine(catalogue: readonly Exercise[], dayIndex: number
   const muscles = ROUTINE.mobilityMuscles;
   const used = new Set(taken);
   const out: RoutineItem[] = [];
+  // Start 3 muscles further on each day (3 is coprime with the 10 muscles, so the week reaches all of them), and take
+  // a different stretch for a muscle on different days.
   for (let k = 0; out.length < n && k < muscles.length; k++) {
-    const m = muscles[(dayIndex * n + k) % muscles.length];
-    const pick = stretches.find((s) => s.primaryMuscles.includes(m) && !used.has(s.id));
+    const m = muscles[(dayIndex * 3 + k) % muscles.length];
+    const fits = stretches.filter((s) => s.primaryMuscles.includes(m) && !used.has(s.id));
+    const pick = fits[dayIndex % Math.max(1, fits.length)];
     if (!pick) continue;
     used.add(pick.id);
     out.push(item(pick, ROUTINE.mobilityItemSeconds));
@@ -100,7 +103,8 @@ export function withRoutines(plan: Plan, catalogue: readonly Exercise[]): Plan {
     const cooldown = byAi(d.cooldown) ? d.cooldown : r.cooldown;
     const taken = new Set([...warmup, ...cooldown].map((x) => x.exerciseId).filter((x): x is string => !!x));
     const mobility = d.mobilityMinutes ? mobilityRoutine(catalogue, d.index, d.mobilityMinutes, taken) : undefined;
-    return { ...d, warmup, cooldown, ...(mobility && mobility.length > 0 ? { mobility } : {}) };
+    const { mobility: _stale, ...rest } = d; // a saved copy is never trusted: the block is derived here every time
+    return { ...rest, warmup, cooldown, ...(mobility && mobility.length > 0 ? { mobility } : {}) };
   });
   return { ...plan, days };
 }
