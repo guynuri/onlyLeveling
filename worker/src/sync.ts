@@ -69,7 +69,7 @@ export function parseOps(body: unknown): Op[] {
       // boundary, and a bad start, effort or plan day would reach the streak, the rotation and the XP.
       const d = raw.data;
       const bad =
-        d.minutes > 600 ||
+        (d.minutes as number) > 600 ||
         !isNum(d.start) ||
         (d.effort !== undefined && !(Number.isInteger(d.effort) && (d.effort as number) >= 1 && (d.effort as number) <= 10)) ||
         (d.distanceKm !== undefined && !(isNum(d.distanceKm) && d.distanceKm > 0 && d.distanceKm <= 500)) ||
