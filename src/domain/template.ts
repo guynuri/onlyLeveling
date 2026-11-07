@@ -34,6 +34,7 @@ export interface TemplateDay {
   mobilityMinutes?: number;
   warmup: RoutineItem[];
   exerciseIds: string[]; // catalogue ids only
+  supersets?: string[][]; // groups of 2–3 adjacent exercise ids; read through domain/superset.ts supersetsOf
   cooldown: RoutineItem[];
 }
 

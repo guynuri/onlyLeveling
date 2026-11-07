@@ -37,7 +37,7 @@ export function parsePlanRequest(body: unknown): PlanRequest | null {
   if (entries.length === 0 || entries.length > MAX_CANDIDATES) return null;
   const candidates: Record<string, Candidate> = {};
   for (const [id, c] of entries) {
-    if (!isObj(c) || typeof c.name !== 'string' || !intIn(c.repMin, 1, 50) || !intIn(c.repMax, 1, 50)) return null;
+    if (!isObj(c) || typeof c.name !== 'string' || c.name.length > 100 || !intIn(c.repMin, 1, 50) || !intIn(c.repMax, 1, 50)) return null;
     // `loads` is optional (older apps omit it): null = no weight, a list = snap to it.
     let loads: Candidate['loads'];
     if (c.loads === null) loads = null;
@@ -52,6 +52,7 @@ export function parsePlanRequest(body: unknown): PlanRequest | null {
     exercisesPerDay: body.exercisesPerDay as number,
     owned: body.owned as number[],
     avoid: body.avoid as string[],
+    supersets: body.supersets === true,
   };
 }
 
@@ -70,6 +71,7 @@ export async function proposePlan(db: D1Database, userId: string, req: PlanReque
     owned: req.owned,
     avoid: req.avoid,
     candidates: req.candidates,
+    supersets: req.supersets === true,
   };
   const out = await runChain(
     deps.providers,

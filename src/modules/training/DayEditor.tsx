@@ -3,10 +3,11 @@
 // swap, remove. Swap suggests similar exercises first (coach swap rules); the whole library is one tap further.
 // Every change goes out through `onEdit` as a pure plan edit; the screen saves it.
 import { useState } from 'react';
-import { ArrowDown, ArrowUp, ChevronDown, Repeat, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, Link2, Repeat, Trash2, Unlink2 } from 'lucide-react';
+import { groupOf, linkNext, supersetLabel, unlink } from '../../domain/superset';
 import { getExercise, listExercises } from '../../data/exercises';
 import { usableWith, type Exercise } from '../../domain/exercise';
-import { addExercise, moveExercise, removeExercise, replaceInDay, setTarget } from '../../domain/plan-edit';
+import { addExercise, moveExercise, removeExercise, replaceInDay, setSupersets, setTarget } from '../../domain/plan-edit';
 import type { Plan } from '../../domain/plan';
 import { repRangeFor } from '../../domain/reps';
 import type { Target, TemplateDay } from '../../domain/template';
@@ -114,13 +115,17 @@ export function DayEditor(props: {
           const open = openId === id;
           const reps = t.repMin === t.repMax ? `${t.repMin}` : `${t.repMin}–${t.repMax}`;
           const name = ex?.name ?? id;
+          const ss = supersetLabel(day, id);
+          const grouped = groupOf(day, id);
+          const canLink = i < day.exerciseIds.length - 1 && linkNext(day, id).some((g) => g.includes(id) && g.length > (grouped?.length ?? 1));
           return (
-            <li key={id} className={open ? 'pe-row pe-row--open' : 'pe-row'}>
+            <li key={id} className={`pe-row${open ? ' pe-row--open' : ''}${ss ? ' pe-row--ss' : ''}`}>
               <div className="pe-head">
                 {ex && <ExThumb ex={ex} className="pe-thumb" />}
                 <span className="pe-text">
                   <ExerciseName id={id} name={name} />
                   <span className="muted small">
+                    {ss && <span className="pe-ss">Superset {ss}</span>}
                     {t.sets} × {reps}
                     {ex?.mode === 'time' ? ' s' : ''}
                   </span>
@@ -152,6 +157,16 @@ export function DayEditor(props: {
                     <Button size="sm" variant="ghost" icon={<ArrowDown />} disabled={i === day.exerciseIds.length - 1} aria-label={`Move ${name} down`} onClick={() => props.onEdit((p, now) => moveExercise(p, di, id, 1, now))}>
                       Down
                     </Button>
+                    {grouped ? (
+                      <Button size="sm" variant="ghost" icon={<Unlink2 />} onClick={() => props.onEdit((p, now) => setSupersets(p, di, unlink(day, id), now))}>
+                        Unlink
+                      </Button>
+                    ) : null}
+                    {canLink && (
+                      <Button size="sm" variant="ghost" icon={<Link2 />} onClick={() => props.onEdit((p, now) => setSupersets(p, di, linkNext(day, id), now))}>
+                        Superset with next
+                      </Button>
+                    )}
                     <Button size="sm" variant="secondary" icon={<Repeat />} onClick={() => setPicker({ mode: 'swap', fromId: id })}>
                       Swap
                     </Button>

@@ -6,6 +6,7 @@ import { blockOf } from './block';
 import { parseCardio, type CardioType } from './cardio';
 import type { Plan } from './plan';
 import type { Target, TemplateDay } from './template';
+import { supersetsOf } from './superset';
 
 const validTarget = (t: Target) =>
   Number.isInteger(t.sets) &&
@@ -16,6 +17,11 @@ const validTarget = (t: Target) =>
   t.repMin >= 1 &&
   t.repMax <= AI_PLAN_LIMITS.repsMax &&
   t.repMin <= t.repMax;
+
+// Stale superset groups are not kept in storage, so moving an exercise back does not revive an old group.
+function cleanSupersets(day: TemplateDay, exerciseIds: string[]): Pick<TemplateDay, 'supersets'> | Record<string, never> {
+  return day.supersets ? { supersets: supersetsOf({ exerciseIds, supersets: day.supersets }) } : {};
+}
 
 // Replaces one day and drops the weight adjustment of any exercise that no day uses any more.
 function withDay(plan: Plan, dayIndex: number, day: TemplateDay, now: number): Plan {
@@ -35,7 +41,8 @@ export function removeExercise(plan: Plan, dayIndex: number, exerciseId: string,
   if (!day || !day.exerciseIds.includes(exerciseId) || day.exerciseIds.length <= 1) return plan;
   const targets = { ...day.targets };
   delete targets[exerciseId];
-  return withDay(plan, dayIndex, { ...day, exerciseIds: day.exerciseIds.filter((id) => id !== exerciseId), targets }, now);
+  const exerciseIds = day.exerciseIds.filter((id) => id !== exerciseId);
+  return withDay(plan, dayIndex, { ...day, exerciseIds, targets, ...cleanSupersets(day, exerciseIds) }, now);
 }
 
 export function moveExercise(plan: Plan, dayIndex: number, exerciseId: string, delta: -1 | 1, now: number): Plan {
@@ -45,7 +52,7 @@ export function moveExercise(plan: Plan, dayIndex: number, exerciseId: string, d
   if (!day || from === -1 || to < 0 || to >= day.exerciseIds.length) return plan;
   const ids = [...day.exerciseIds];
   [ids[from], ids[to]] = [ids[to], ids[from]];
-  return withDay(plan, dayIndex, { ...day, exerciseIds: ids }, now);
+  return withDay(plan, dayIndex, { ...day, exerciseIds: ids, ...cleanSupersets(day, ids) }, now);
 }
 
 export function setTarget(plan: Plan, dayIndex: number, exerciseId: string, target: Target, now: number): Plan {
@@ -61,7 +68,15 @@ export function replaceInDay(plan: Plan, dayIndex: number, fromId: string, toId:
   const targets = { ...day.targets };
   if (targets[fromId]) targets[toId] = targets[fromId];
   delete targets[fromId];
-  return withDay(plan, dayIndex, { ...day, exerciseIds: day.exerciseIds.map((id) => (id === fromId ? toId : id)), targets }, now);
+  const supersets = day.supersets?.map((g) => g.map((id) => (id === fromId ? toId : id)));
+  return withDay(plan, dayIndex, { ...day, exerciseIds: day.exerciseIds.map((id) => (id === fromId ? toId : id)), targets, ...(supersets ? { supersets } : {}) }, now);
+}
+
+// Superset edits (owner decision 2026-11-07). The same plan comes back when nothing changes.
+export function setSupersets(plan: Plan, dayIndex: number, supersets: string[][], now: number): Plan {
+  const day = plan.days[dayIndex];
+  if (!day || JSON.stringify(day.supersets ?? []) === JSON.stringify(supersets)) return plan;
+  return withDay(plan, dayIndex, { ...day, supersets }, now);
 }
 
 export function extendBlock(plan: Plan, weeks: number, now: number): Plan {

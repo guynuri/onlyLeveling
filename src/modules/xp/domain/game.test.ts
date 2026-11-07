@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Exercise } from '../../../domain/exercise';
-import type { Workout } from '../../../domain/types';
+import type { Goal, Workout } from '../../../domain/types';
+import type { Group } from './muscles';
 import type { CardioSession } from '../../../domain/cardio';
 import { generateQuests, monthBounds, monthKey, monthlyRecap, questHave, weekKey } from './game';
 import { streakWithFreezes } from './streak';
@@ -53,7 +54,7 @@ describe('streakWithFreezes (1 session a week)', () => {
 });
 
 describe('generateQuests', () => {
-  const base = { daysPerWeek: 3, planGroups: ['chest', 'back'] as const, wantsCardio: false, exerciseById: byId };
+  const base = { daysPerWeek: 3, planGroups: ['chest', 'back'] as const, goals: ['build-muscle'] as Goal[], exerciseById: byId };
   it('is deterministic and picks the least-trained plan group', () => {
     const ws = [workout(wk(2), ['bench']), workout(wk(2, 2), ['bench', 'row']), workout(wk(3), ['bench'])];
     const a = generateQuests({ ...base, planGroups: [...base.planGroups], workouts: ws, now: wk(4, 3) });
@@ -66,13 +67,25 @@ describe('generateQuests', () => {
     const ws = [workout(wk(4), ['row']), workout(wk(4), ['row']), workout(wk(0), ['row'])];
     expect(generateQuests({ ...base, planGroups: [...base.planGroups], workouts: ws, now: wk(4, 2) })[1]).toEqual({ kind: 'group', group: 'chest', need: 2 });
   });
-  it('cardio when wanted, else a record once RIR is always logged', () => {
-    const ws = [workout(wk(3), ['bench'], 10, 2)];
-    expect(generateQuests({ ...base, planGroups: [], wantsCardio: true, workouts: ws, now: wk(4) })).toEqual([
+  it('follows the goals in order, then fills up to 3', () => {
+    const ws = [workout(wk(3), ['bench'], 10, 2)]; // RIR always logged: no RIR filler
+    const q = (goals: Goal[], planGroups: Group[] = []) => generateQuests({ ...base, goals, planGroups, workouts: ws, now: wk(4) });
+    expect(q(['lose-fat', 'endurance'])).toEqual([
       { kind: 'sessions', need: 3 },
-      { kind: 'cardio', need: 1 },
+      { kind: 'cardio', need: 2 },
+      { kind: 'cardioMinutes', need: 60 },
     ]);
-    expect(generateQuests({ ...base, planGroups: [], workouts: ws, now: wk(4) })[1]).toEqual({ kind: 'pr', need: 1 });
+    expect(q(['strength'])).toEqual([
+      { kind: 'sessions', need: 3 },
+      { kind: 'pr', need: 1 },
+    ]);
+    expect(q(['mobility', 'health'], ['chest', 'back'])).toEqual([
+      { kind: 'sessions', need: 3 },
+      { kind: 'timed', need: 6 },
+      { kind: 'variety', need: 2 }, // capped at the groups the plan trains
+    ]);
+    expect(q(['strength'], ['chest'])[1]).toEqual({ kind: 'pr', need: 1 });
+    expect(q(['strength'], ['chest'])[2]).toEqual({ kind: 'group', group: 'chest', need: 2 }); // filler
   });
 });
 
@@ -87,6 +100,12 @@ describe('questHave', () => {
     expect(questHave({ kind: 'cardio', need: 1 }, h)).toBe(1);
     expect(questHave({ kind: 'rir', need: 2 }, h)).toBe(1); // timed plank needs no RIR
     expect(questHave({ kind: 'pr', need: 1 }, h)).toBe(1); // bench 12 > 10
+  });
+  it('counts cardio minutes, holds and muscle variety in the week', () => {
+    const withMin = { ...h, cardio: [{ start: wk(4, 1), minutes: 25 } as CardioSession, { start: wk(4, 3), minutes: 20 } as CardioSession] };
+    expect(questHave({ kind: 'cardioMinutes', need: 60 }, withMin)).toBe(45);
+    expect(questHave({ kind: 'timed', need: 6 }, h)).toBe(1); // one plank set
+    expect(questHave({ kind: 'variety', need: 6 }, h)).toBe(3); // chest, core, back
   });
 });
 

@@ -15,7 +15,7 @@ import { planFromProposal } from '../domain/apply';
 import { getRepo } from '../../training/data';
 import { latestBodyweightKg, requestProposal, saveChosenPlan } from '../actions';
 import { CopyPasteFallback } from './CopyPasteFallback';
-import { Button, Card, ChoiceCard } from '../../../ui/primitives';
+import { Button, Card, Chip, ChoiceCard } from '../../../ui/primitives';
 import { SegmentedControl } from '../../../ui/controls';
 import { ExerciseName } from '../../library/ExerciseSheet';
 
@@ -85,6 +85,7 @@ function PlanDays({ plan }: { plan: Plan }) {
 
 export function ProposePlan(props: { settings: Settings; onSaved: () => void }) {
   const [weeks, setWeeks] = useState<number>(BLOCK.defaultWeeks);
+  const [supersets, setSupersets] = useState(false);
   const [candidate, setCandidate] = useState<Candidate | null>(null);
   const [current, setCurrent] = useState<Plan | null>(null);
   const [busy, setBusy] = useState(false);
@@ -103,7 +104,7 @@ export function ProposePlan(props: { settings: Settings; onSaved: () => void }) 
     };
   }, []);
   // The copy-paste prompt carries the same summary the Worker gets, body stats included.
-  const request = buildPlanRequest(props.settings, listExercises(), TEMPLATE.exercisesPerDay, bodyweight);
+  const request = buildPlanRequest(props.settings, listExercises(), TEMPLATE.exercisesPerDay, bodyweight, supersets);
 
   const fromAi = (v: ValidPlan, corrections: Correction[], now: number): Candidate => ({
     plan: planFromProposal(v, props.settings, weeks, repRange, now),
@@ -125,7 +126,7 @@ export function ProposePlan(props: { settings: Settings; onSaved: () => void }) 
     setBusy(true);
     setError(null);
     try {
-      const p = await requestProposal(props.settings);
+      const p = await requestProposal(props.settings, fetch, supersets);
       if (p.status === 'ai') setCandidate(fromAi(p.plan, p.corrections, Date.now()));
       else setCandidate(fromRules('auto', 'Rules plan', Date.now(), p.reason));
     } catch {
@@ -173,6 +174,10 @@ export function ProposePlan(props: { settings: Settings; onSaved: () => void }) 
           </Card>
           <Card title="Let the AI propose a plan">
             <p className="muted">The AI proposes a plan from your answers. The rules check it before you see it.</p>
+            <Chip selected={supersets} onToggle={() => setSupersets(!supersets)}>
+              Use supersets
+            </Chip>
+            <p className="muted small">Supersets pair 2 to 3 exercises done back to back, resting after the round.</p>
             <Button onClick={generate} disabled={busy}>
               Generate with AI
             </Button>

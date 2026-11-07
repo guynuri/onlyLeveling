@@ -566,3 +566,5 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
 .ph-settings > summary { cursor: pointer; min-height: var(--tap); display: flex; align-items: center; }
 .ph-settings[open] > summary { margin-bottom: var(--s-2); }
 .ph-settings > .ui-chip { margin-top: var(--s-2); }
+.pe-row--ss { box-shadow: inset 3px 0 0 var(--accent); padding-left: var(--s-2); }
+.pe-ss { display: inline-block; margin-right: var(--s-2); padding: 0 var(--s-2); border-radius: var(--r-pill); background: var(--accent-glow); color: var(--accent); font-weight: 600; }

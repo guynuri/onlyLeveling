@@ -3,7 +3,7 @@
 import { GAME } from '../../../config/thresholds';
 import type { CardioSession } from '../../../domain/cardio';
 import type { Exercise } from '../../../domain/exercise';
-import type { Workout } from '../../../domain/types';
+import type { Goal, Workout } from '../../../domain/types';
 import { GROUPS, groupOf, type Group } from './muscles';
 import { computeProgress, type ProgressInput } from './progress';
 import { RANKS, type Rank } from './rank';
@@ -32,7 +32,10 @@ export type Quest =
   | { kind: 'group'; group: Group; need: number }
   | { kind: 'rir'; need: number }
   | { kind: 'cardio'; need: number }
-  | { kind: 'pr'; need: number };
+  | { kind: 'pr'; need: number }
+  | { kind: 'cardioMinutes'; need: number }
+  | { kind: 'timed'; need: number } // holds and stretches: done sets of time-based exercises
+  | { kind: 'variety'; need: number }; // different muscle groups trained
 
 const workSets = (w: Workout, byId: ById) =>
   w.entries.flatMap((e) => (byId(e.exerciseId)?.mode === 'time' ? [] : e.sets.filter((s) => s.done && s.phase === 'work')));
@@ -59,28 +62,42 @@ function prWorkouts(among: readonly Workout[], all: readonly Workout[]): number 
   ).length;
 }
 
-// The week's quests, from the plan and the lookback before the week. Same inputs, same quests.
+// The week's quests: finish the week's sessions, then one per goal (in the order picked), then fillers, up to
+// GAME.questsPerWeek. Goal quests: build muscle = train the least-trained plan muscle; strength = beat a record;
+// lose fat = cardio sessions; endurance = cardio minutes; mobility = holds and stretches; health = train many muscles.
+// Same inputs, same quests.
 export function generateQuests(input: {
   daysPerWeek: number; // the plan's sessions, cardio days included
   planGroups: readonly Group[]; // groups the plan's exercises train
-  wantsCardio: boolean; // plan has cardio, or goals include lose fat / endurance
+  goals: readonly Goal[];
   workouts: readonly Workout[];
   exerciseById: ById;
   now: number;
 }): Quest[] {
   const from = weekStart(input.now);
   const recent = input.workouts.filter((w) => w.start < from && w.start >= from - GAME.questLookbackDays * DAY);
-  const quests: Quest[] = [];
-  if (input.daysPerWeek > 0) quests.push({ kind: 'sessions', need: input.daysPerWeek });
   const groups = GROUPS.filter((g) => input.planGroups.includes(g));
-  if (groups.length > 0) {
-    const times = (g: Group) => recent.filter((w) => trains(w, g, input.exerciseById)).length;
-    const group = groups.reduce((a, b) => (times(b) < times(a) ? b : a));
-    quests.push({ kind: 'group', group, need: GAME.questGroupTimes });
-  }
-  if (input.wantsCardio) quests.push({ kind: 'cardio', need: 1 });
-  else if (recent.length === 0 || !recent.every((w) => fullRir(w, input.exerciseById))) quests.push({ kind: 'rir', need: GAME.questRirSessions });
-  else quests.push({ kind: 'pr', need: 1 });
+  const times = (g: Group) => recent.filter((w) => trains(w, g, input.exerciseById)).length;
+  const groupQuest = (): Quest | null =>
+    groups.length > 0 ? { kind: 'group', group: groups.reduce((a, b) => (times(b) < times(a) ? b : a)), need: GAME.questGroupTimes } : null;
+  const byGoal: Record<Goal, () => Quest | null> = {
+    'build-muscle': groupQuest,
+    strength: () => ({ kind: 'pr', need: 1 }),
+    'lose-fat': () => ({ kind: 'cardio', need: GAME.questCardioSessions }),
+    endurance: () => ({ kind: 'cardioMinutes', need: GAME.questCardioMinutes }),
+    mobility: () => ({ kind: 'timed', need: GAME.questTimedSets }),
+    health: () => ({ kind: 'variety', need: Math.min(GAME.questVarietyGroups, Math.max(1, groups.length)) }),
+  };
+  const rirLogged = recent.length > 0 && recent.every((w) => fullRir(w, input.exerciseById));
+  const fillers: (() => Quest | null)[] = [groupQuest, () => (rirLogged ? null : { kind: 'rir', need: GAME.questRirSessions }), () => ({ kind: 'pr', need: 1 })];
+
+  const quests: Quest[] = [];
+  const add = (q: Quest | null) => {
+    if (q && quests.length < GAME.questsPerWeek && !quests.some((x) => x.kind === q.kind)) quests.push(q);
+  };
+  if (input.daysPerWeek > 0) add({ kind: 'sessions', need: input.daysPerWeek });
+  for (const g of input.goals) add(byGoal[g]());
+  for (const f of fillers) add(f());
   return quests;
 }
 
@@ -102,7 +119,13 @@ export function questHave(
           ? ws.filter((w) => fullRir(w, h.exerciseById)).length
           : q.kind === 'cardio'
             ? h.cardio.filter((c) => inWeek(c.start)).length
-            : prWorkouts(ws, h.workouts);
+            : q.kind === 'cardioMinutes'
+              ? h.cardio.filter((c) => inWeek(c.start)).reduce((sum, c) => sum + c.minutes, 0)
+              : q.kind === 'timed'
+                ? ws.flatMap((w) => w.entries.filter((e) => h.exerciseById(e.exerciseId)?.mode === 'time').flatMap((e) => e.sets.filter((s) => s.done))).length
+                : q.kind === 'variety'
+                  ? GROUPS.filter((g) => ws.some((w) => trains(w, g, h.exerciseById))).length
+                  : prWorkouts(ws, h.workouts);
   return Math.min(have, q.need);
 }
 

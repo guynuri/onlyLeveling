@@ -22,6 +22,7 @@ export function planFromProposal(
     label: d.label,
     warmup: ROUTINE.warmup.map((r) => ({ ...r })),
     exerciseIds: d.exercises.map((e) => e.exerciseId),
+    ...(d.supersets ? { supersets: d.supersets } : {}),
     targets: Object.fromEntries(
       d.exercises.map((e) => {
         const r = repRange(e.exerciseId);

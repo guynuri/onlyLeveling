@@ -16,6 +16,7 @@ import { scheduleRestAlert, cancelRestAlert } from '../push/actions';
 import { WeeklyReview } from '../review/ui/WeeklyReview';
 import { isLivePr, summarize, type SessionSummary } from '../xp/domain/sessionSummary';
 import { loadProgress } from '../progress/load';
+import { afterSet, supersetLabel } from '../../domain/superset';
 import { unlockSound } from '../../ui/sound';
 import { levelOf } from '../xp/domain/hub';
 import { Button, Card } from '../../ui/primitives';
@@ -156,9 +157,24 @@ export default function WorkoutScreen() {
   const log = (i: number) => {
     const le = live[i];
     const at = nowMs();
-    setLive(live.map((x, k) => (k === i ? logSet(x, valuesFor(x), at) : x)));
+    const next = live.map((x, k) => (k === i ? logSet(x, valuesFor(x), at) : x));
+    setLive(next);
     setPending(({ [le.exerciseId]: _used, ...others }) => others);
     setConfirmDiscard(false);
+    // Supersets: go straight to the next exercise of the round; rest only after the round's last set.
+    const step = afterSet(day, le.exerciseId, (id) => {
+      const x = next.find((e) => e.exerciseId === id);
+      return x ? Math.max(0, x.prescription.sets - x.sets.length) : 0;
+    });
+    if (step.next) {
+      const to = next.findIndex((e) => e.exerciseId === step.next);
+      if (to !== -1) setFocus(to);
+    }
+    if (!step.rest) {
+      setRest(null);
+      cancelRestAlert().catch(() => undefined);
+      return;
+    }
     const timer = startRest(at, settings.restSec);
     setRest(timer);
     setTick(at);
@@ -183,6 +199,7 @@ export default function WorkoutScreen() {
   const undo = () => {
     if (!lastSet) return;
     setLive(live.map((x, k) => (k === lastSet.exercise ? undoLastSet(x) : x)));
+    setFocus(lastSet.exercise); // a superset may have moved on: undo goes back to the set it takes back
     setRest(null);
     cancelRestAlert().catch(() => undefined);
   };
@@ -386,6 +403,7 @@ export default function WorkoutScreen() {
       <article key={le.exerciseId} className={`ui-card ui-live${isCurrent ? ' ui-live--current' : ''}${done && !open ? ' ui-live--idle' : ''}`}>
         <h2 onClick={() => setFocus(i)}>
           <ExerciseName id={le.exerciseId} name={names[le.exerciseId] ?? le.exerciseId} />
+          {supersetLabel(day, le.exerciseId) && <span className="pe-ss ui-live-ss">Superset {supersetLabel(day, le.exerciseId)}</span>}
         </h2>
         <p className="muted">Target {target}</p>
         <SetChips count={le.sets.length}>
