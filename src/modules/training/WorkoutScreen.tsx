@@ -39,6 +39,7 @@ import { RirPicker } from './RirPicker';
 import { SetControls } from './SetControls';
 import { CardioLog } from './CardioLog';
 import { usePlanEditor } from './usePlanEditor';
+import { blockedFor } from '../progress/ranks-cache';
 
 type Stage = 'preview' | 'warmup' | 'logging' | 'cooldown' | 'summary';
 type Values = { w: number; r: number };
@@ -395,7 +396,7 @@ export default function WorkoutScreen() {
           }
         >
           {editing ? (
-            <DayEditor plan={plan} day={day} equipment={equipmentOf(settings)} blocked={[...blockedIds(settings, listExercises())]} onEdit={edit} />
+            <DayEditor plan={plan} day={day} equipment={equipmentOf(settings)} blocked={[...blockedFor(settings, listExercises())]} onEdit={edit} />
           ) : (
             <ol className="ui-list ui-list--numbered">
               {items.map(({ exercise, prescription }, i) => (

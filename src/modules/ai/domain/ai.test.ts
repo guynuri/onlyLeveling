@@ -61,6 +61,7 @@ describe('what leaves the device (SPEC §5.3)', () => {
         'daysPerWeek',
         'equipment',
         'experience',
+        'focus',
         'goals',
         'limits',
         'limitsNote',

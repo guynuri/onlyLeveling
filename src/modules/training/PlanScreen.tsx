@@ -15,6 +15,7 @@ import { PlanHeader } from './PlanHeader';
 import { DayEditor } from './DayEditor';
 import { RoutineList } from './RoutineList';
 import { usePlanEditor } from './usePlanEditor';
+import { blockedFor } from '../progress/ranks-cache';
 
 const minutesOf = (items: readonly { seconds: number }[]) => Math.round(items.reduce((s, r) => s + r.seconds, 0) / 60);
 
@@ -36,7 +37,7 @@ export default function PlanScreen() {
         const repo = await getRepo();
         const s = (await repo.getSettings()) ?? defaultSettings();
         setSettings(s);
-        setAvoid([...blockedIds(s, listExercises())]);
+        setAvoid([...blockedFor(s, listExercises())]);
         setEquipment(equipmentOf(s));
         setPlan(await currentPlan(repo, await getLocalRepo(), s));
       })().catch(() => setError('Could not load your plan. Reload to try again.'));

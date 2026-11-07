@@ -7,6 +7,7 @@ import type { Settings, Workout } from '../../domain/types';
 import { blockedIds, equipmentOf } from '../../domain/profile';
 import { materializeBlock } from '../../domain/block';
 import type { EquipmentChoice } from '../../domain/types';
+import { blockedFor } from '../progress/ranks-cache';
 
 export interface SheetContext {
   plan: Plan | null; // null: nothing saved yet, so no Swap
@@ -30,7 +31,7 @@ export async function readSheetContext(
   return {
     plan: plan ? materializeBlock(plan) : null,
     workouts,
-    blocked: s ? [...blockedIds(s, catalogue)] : [],
+    blocked: s ? [...blockedFor(s, catalogue)] : [],
     equipment: s ? equipmentOf(s) : [],
     sex: s?.about?.sex ?? 'male',
     now,

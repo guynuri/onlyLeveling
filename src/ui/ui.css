@@ -614,3 +614,5 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
 .rp-time { font-size: var(--fs-xxl); font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; margin: var(--s-2) 0; }
 .rp-done { opacity: 0.5; text-decoration: line-through; }
 .rp-now { font-weight: 600; }
+
+.lib-lock { color: var(--warn); }

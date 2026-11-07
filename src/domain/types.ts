@@ -27,6 +27,8 @@ export interface Settings {
   avoid?: string[]; // exercise ids that never appear in plans or swaps
   onboardedAt?: number; // set when the interview is finished
   reminder?: { enabled: boolean; time: string }; // workout reminder, HH:MM local time (SPEC §6.4)
+  lockByRank?: boolean; // harder exercises unlock with muscle ranks (owner decision 2026-11-07: off by default)
+  focusMuscles?: string[]; // up to FOCUS.max XP groups to give extra volume
 }
 
 export interface Entry {

@@ -11,6 +11,7 @@ import type { Settings, Workout } from '../../domain/types';
 import { planFromTemplate, type Plan } from '../../domain/plan';
 import { buildRulesPlan } from '../../domain/plan-builder';
 import { withRoutines } from '../../domain/routine';
+import { readRanks } from '../progress/ranks-cache';
 import { materializeBlock } from '../../domain/block';
 import { listExercises } from '../../data/exercises';
 
@@ -64,7 +65,7 @@ export async function getRepo(): Promise<Repo> {
 export async function currentPlan(repo: Repo, local: Repo, s: Settings, now = Date.now()): Promise<Plan> {
   const saved = await repo.getPlan();
   if (saved) return withRoutines(materializeBlock(saved), listExercises());
-  const built = buildRulesPlan({ settings: s, catalogue: listExercises(), kind: 'auto', weeks: BLOCK.defaultWeeks, now });
+  const built = buildRulesPlan({ settings: s, catalogue: listExercises(), kind: 'auto', weeks: BLOCK.defaultWeeks, now, ranks: readRanks() });
   if (!built.ok) return planFromTemplate([], s.daysPerWeek, now);
   await local.savePlan(built.plan);
   return withRoutines(built.plan, listExercises());

@@ -31,6 +31,9 @@ export function buildPrompt(req: PlanRequest): string {
     SCHEMA,
     'Plain text only in every string: no HTML, no Markdown, no links.',
     `Athlete summary (JSON): ${JSON.stringify(req.summary)}`,
+    ...(Array.isArray(req.summary.focus) && req.summary.focus.length > 0
+      ? ['The "focus" muscles in the summary are priorities: give each of them more exercises and sets than the other muscles.']
+      : []),
     'Exercise list (id | name | rep range | weights):',
     ...lines,
     ...(req.routine && Object.keys(req.routine).length > 0

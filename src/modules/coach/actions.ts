@@ -5,6 +5,7 @@ import { notNowUntil, candidates, reconcile } from './domain/suggest';
 import type { Suggestion } from '../../domain/suggestion';
 import { blockedIds, equipmentOf } from '../../domain/profile';
 import { getRepo, getLocalRepo, defaultSettings, currentPlan, repRangeFor } from '../training/data';
+import { blockedFor } from '../progress/ranks-cache';
 
 // Cards to show now. Saves any new or changed suggestion records, so they sync like other data.
 export async function loadCoachCards(now = Date.now()): Promise<Suggestion[]> {
@@ -22,7 +23,7 @@ export async function loadCoachCards(now = Date.now()): Promise<Suggestion[]> {
     catalogue,
     workouts,
     stored,
-    blocked: blockedIds(s, catalogue),
+    blocked: blockedFor(s, catalogue),
     repMaxFor: (id) => {
       const ex = getExercise(id);
       return ex ? repRangeFor(ex).max : 0;

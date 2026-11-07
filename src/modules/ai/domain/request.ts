@@ -8,6 +8,9 @@ import { blockedIds, equipmentOf, goalsOf } from '../../../domain/profile';
 import { AI_REQUEST, PROFILE, ROUTINE } from '../../../config/thresholds';
 import type { Candidate } from '../../../../shared/ai-plan';
 import type { PlanRequest } from '../../../../shared/ai-prompt';
+import type { Group } from '../../xp/domain/muscles';
+import type { Rank } from '../../xp/domain/rank';
+import { focusOf } from '../../../domain/plan-builder';
 
 // Body stats (sex, age, height, latest bodyweight) are sent so the AI can fit the plan (owner decision 2026-11-06,
 // replacing SPEC §5.3's "no bodyweight"). The limits note is the one free-text field (UX design §4), capped.
@@ -24,6 +27,7 @@ export function summaryOf(s: Settings, bodyweightKg: number | null = null): Reco
     avoid: s.avoid ?? [],
     limits: s.limits?.parts ?? [],
     limitsNote: (s.limits?.note ?? '').slice(0, PROFILE.limitsNoteMax),
+    focus: focusOf(s), // muscles the athlete wants to prioritise (owner decision 2026-11-07)
     trends: [], // first plan: no history yet (SPEC §5.3 per-exercise trends come with later proposals)
   };
 }
@@ -82,13 +86,14 @@ export function buildPlanRequest(
   exercisesPerDay: number,
   bodyweightKg: number | null = null,
   supersets = false,
+  ranks: Partial<Record<Group, Rank>> = {}, // for the difficulty lock
 ): PlanRequest {
   const avoid = s.avoid ?? [];
   const owned = [...s.owned].sort((a, b) => a - b);
   return {
     summary: summaryOf(s, bodyweightKg),
     // Limits remove candidates here too: the AI never sees an exercise the rules would refuse.
-    candidates: candidatesOf(catalogue, [...blockedIds(s, catalogue)], s),
+    candidates: candidatesOf(catalogue, [...blockedIds(s, catalogue, ranks)], s),
     daysPerWeek: s.daysPerWeek,
     exercisesPerDay,
     owned,
