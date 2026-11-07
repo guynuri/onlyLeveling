@@ -17,6 +17,19 @@ export const GROUPS = [
 ] as const;
 export type Group = (typeof GROUPS)[number];
 
+export const GROUP_LABEL: Record<Group, string> = {
+  chest: 'Chest',
+  back: 'Back',
+  shoulders: 'Shoulders',
+  biceps: 'Biceps',
+  triceps: 'Triceps',
+  quads: 'Quads',
+  hamstrings: 'Hamstrings',
+  glutes: 'Glutes',
+  calves: 'Calves',
+  core: 'Core',
+};
+
 const RAW_TO_GROUP: Record<string, Group> = {
   chest: 'chest',
   'middle back': 'back',

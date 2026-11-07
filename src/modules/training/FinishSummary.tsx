@@ -3,22 +3,13 @@ import type { ReactNode } from 'react';
 import { Button, Card, RankBadge } from '../../ui/primitives';
 import { BodyMap } from '../../ui/body/BodyMap';
 import type { SessionSummary } from '../xp/domain/sessionSummary';
+import { GROUP_LABEL } from '../xp/domain/muscles';
+import { Celebration } from '../progress/GameCards';
 
-const GROUP_LABEL: Record<string, string> = {
-  chest: 'Chest',
-  back: 'Back',
-  shoulders: 'Shoulders',
-  biceps: 'Biceps',
-  triceps: 'Triceps',
-  quads: 'Quads',
-  hamstrings: 'Hamstrings',
-  glutes: 'Glutes',
-  calves: 'Calves',
-  core: 'Core',
-};
 
 export function FinishSummary(props: {
   summary: SessionSummary;
+  levelUp?: { from: number; to: number }; // shows the celebration with any rank-ups (U7)
   names: Record<string, string>; // exercise id → name
   sex: 'male' | 'female';
   onDone: () => void;
@@ -27,6 +18,7 @@ export function FinishSummary(props: {
   const s = props.summary;
   return (
     <section className="ui-stack">
+      {(props.levelUp || s.rankUps.length > 0) && <Celebration level={props.levelUp} rankUps={s.rankUps} onClose={() => undefined} />}
       <h1>Session done</h1>
       <Card title="This session">
         <ul className="ui-list">
@@ -61,7 +53,7 @@ export function FinishSummary(props: {
           <ul className="ui-list">
             {s.rankUps.map((r) => (
               <li key={r.group}>
-                <span>{GROUP_LABEL[r.group] ?? r.group}</span>
+                <span>{GROUP_LABEL[r.group]}</span>
                 <span>
                   <RankBadge rank={r.from} /> → <RankBadge rank={r.to} />
                 </span>

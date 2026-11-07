@@ -8,7 +8,7 @@ import { e1rm } from '../../../domain/onerm';
 import { BENCHMARK, GROUPS, bellsFor, type Group } from './muscles';
 import { emptyGroupXp, sessionXp, type GroupXp, type SessionEntry } from './sessionXp';
 import { muscleRank, strengthRank, type Rank, RANKS } from './rank';
-import { streakWeeks } from './streak';
+import { streakWithFreezes } from './streak';
 import { earnedBadges } from './badges';
 
 const DAY = 86_400_000;
@@ -36,6 +36,7 @@ export interface ProgressState {
   cardioXp: number; // never added to a muscle
   cardioSessions: number;
   streak: number;
+  freezes: number; // streak freezes held (U7)
   badges: string[];
   flaggedSets: number;
   usedDefaultBodyweight: boolean; // some bodyweight set was scored with the default bodyweight
@@ -161,12 +162,14 @@ export function computeProgress(input: ProgressInput): ProgressState {
   const cardio = input.cardio ?? [];
   // A lifting session fills a slot, and so does a finished planned cardio day; an extra or post-lift one does not.
   const slotStarts = [...sorted.map((w) => w.start), ...cardio.filter(countsForStreak).map((c) => c.start)];
+  const streak = streakWithFreezes(slotStarts, input.daysPerWeek, input.now);
   return {
     muscles,
     sessions,
     cardioXp: cardio.reduce((sum, c) => sum + cardioXp(c), 0),
     cardioSessions: cardio.length,
-    streak: streakWeeks(slotStarts, input.daysPerWeek, input.now),
+    streak: streak.streak,
+    freezes: streak.freezes,
     badges: earnedBadges({ sessions, firstPr, rankUp, maxRank }),
     flaggedSets,
     usedDefaultBodyweight,

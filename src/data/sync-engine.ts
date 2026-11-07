@@ -1,7 +1,7 @@
 // Sync engine (PLAN Phase 4): push the outbox, then pull what changed on the server since the last pull.
 // The server's clock is the cursor (server_at), never the phone's. A failure never clears what was last synced.
 import type { Db } from '../db/idb';
-import type { Repo } from './repo';
+import type { GameRecord, Repo } from './repo';
 import type { Outbox } from './outbox';
 import { pushDue } from './sync-client';
 import { signOutRequest } from './auth-client';
@@ -59,6 +59,7 @@ interface PullBody {
   suggestions?: Suggestion[];
   badges?: { badgeKey: string; earnedAt: number }[];
   cardio?: CardioSession[]; // absent from a Worker that does not know cardio yet
+  game?: GameRecord[]; // absent from a Worker before U7
   serverTime: number;
 }
 
@@ -117,6 +118,7 @@ export async function syncNow(args: {
     if (!pending.has(s.id)) await local.saveSuggestion(s);
   }
   for (const b of body.badges ?? []) await local.awardBadge(b.badgeKey, b.earnedAt);
+  for (const g of body.game ?? []) await local.putGame(g);
 
   return { ...state, cursor: body.serverTime, lastSyncedAt: now(), lastError: null };
 }

@@ -4,7 +4,7 @@ import type { BodyweightEntry, Settings, Workout } from '../domain/types';
 import type { Plan } from '../domain/plan';
 import type { Suggestion } from '../domain/suggestion';
 import type { CardioSession } from '../domain/cardio';
-import type { Repo } from './repo';
+import type { GameRecord, Repo } from './repo';
 
 const SETTINGS_KEY = 'settings';
 const PLAN_KEY = 'plan';
@@ -57,6 +57,14 @@ export function createRepo(db: Db): Repo {
       const had = await db.get('badges', badgeKey);
       if (had) return false;
       await db.put('badges', { badgeKey, earnedAt }, badgeKey);
+      return true;
+    },
+    async listGame() {
+      return (await db.getAll('game')) as GameRecord[];
+    },
+    async putGame(r) {
+      if (await db.get('game', r.key)) return false;
+      await db.put('game', r, r.key);
       return true;
     },
   };

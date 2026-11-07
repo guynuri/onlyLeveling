@@ -5,7 +5,7 @@ import { getExercise } from '../../data/exercises';
 import type { BodySlug } from '../../domain/muscle-map';
 import { RECOVERY, XP } from '../../config/thresholds';
 import { badgeLabel } from '../xp/domain/badges';
-import { GROUPS, BENCHMARK, type Group } from '../xp/domain/muscles';
+import { GROUPS, GROUP_LABEL, BENCHMARK, type Group } from '../xp/domain/muscles';
 import { GROUP_SLUGS, exercisesFor, groupOfSlug, recoveryOf, xpToNextRank, type Recovery } from '../xp/domain/hub';
 import { ExerciseName } from '../library/ExerciseSheet';
 import { BodyMap } from '../../ui/body/BodyMap';
@@ -13,19 +13,9 @@ import { SegmentedControl } from '../../ui/controls';
 import { Card, RankBadge } from '../../ui/primitives';
 import { loadProgress, type Loaded } from './load';
 import { BodyweightCard } from './BodyweightCard';
+import { QuestsCard } from './GameCards';
 
-const LABEL: Record<Group, string> = {
-  chest: 'Chest',
-  back: 'Back',
-  shoulders: 'Shoulders',
-  biceps: 'Biceps',
-  triceps: 'Triceps',
-  quads: 'Quads',
-  hamstrings: 'Hamstrings',
-  glutes: 'Glutes',
-  calves: 'Calves',
-  core: 'Core',
-};
+const LABEL = GROUP_LABEL;
 
 const RECOVERY_COLOR: Record<Recovery, string> = {
   recovering: 'var(--warn)',
@@ -74,7 +64,8 @@ export default function ProgressScreen() {
     <section className="ui-stack">
       <h1>Progress</h1>
       <p>
-        {state.streak > 0 ? `${state.streak} ${state.streak === 1 ? 'week' : 'weeks'} in a row` : 'No streak yet'} · {state.sessions}{' '}
+        {state.streak > 0 ? `${state.streak} ${state.streak === 1 ? 'week' : 'weeks'} in a row` : 'No streak yet'}
+        {state.freezes > 0 && ` · ${state.freezes} streak ${state.freezes === 1 ? 'freeze' : 'freezes'} (a missed week uses one)`} · {state.sessions}{' '}
         {state.sessions === 1 ? 'session' : 'sessions'}
         {state.cardioSessions > 0 && ` · ${state.cardioSessions} cardio (${Math.round(state.cardioXp).toLocaleString()} XP)`}
       </p>
@@ -153,6 +144,8 @@ export default function ProgressScreen() {
           </p>
         )}
       </Card>
+
+      <QuestsCard quests={loaded.quests} />
 
       <BodyweightCard entries={loaded.bodyweight} onChange={() => {
           const at = Date.now();

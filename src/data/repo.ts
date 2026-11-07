@@ -20,4 +20,14 @@ export interface Repo {
   listBadges(): Promise<{ badgeKey: string; earnedAt: number }[]>;
   // Stores a badge the first time only. true = newly earned; an earned badge is never revoked (SPEC §4b).
   awardBadge(badgeKey: string, earnedAt: number): Promise<boolean>;
+  // Game records (U7): a week's quests (quests:YYYY-MM-DD) and a seen monthly recap (recap:YYYY-MM).
+  listGame(): Promise<GameRecord[]>;
+  // Stores a record the first time only, like badges: a week's quests never change once picked. true = stored.
+  putGame(r: GameRecord): Promise<boolean>;
+}
+
+export interface GameRecord {
+  key: string;
+  data: unknown;
+  at: number; // client clock, ms
 }

@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { streakWeeks, weekStart } from './streak';
+import { streakWithFreezes, weekStart } from './streak';
+
+const streakWeeks = (s: number[], d: number, now: number) => streakWithFreezes(s, d, now).streak;
 
 // Wednesday 11 Nov 2026, evening. Its week starts Monday 9 Nov, local time.
 const NOW = new Date(2026, 10, 11, 20).getTime();
