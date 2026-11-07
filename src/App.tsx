@@ -4,10 +4,10 @@ import { allowedWhileOnboarding, parseRoute, tabFor, type Route, type Tab } from
 import { onboardingDone } from './domain/profile';
 import MoreScreen from './app/MoreScreen';
 import HomeScreen from './app/HomeScreen';
+import CoachScreen from './app/CoachScreen';
 import { ToastHost } from './ui/controls';
 import ExerciseSheet from './modules/library/ExerciseSheet';
-import { readSyncState, runSync, syncLabel, SYNC_EVENT } from './modules/sync/actions';
-import type { SyncState } from './data/sync-engine';
+import { runSync, SYNC_EVENT } from './modules/sync/actions';
 import ExerciseDetail from './modules/library/ExerciseDetail';
 import ExerciseList from './modules/library/ExerciseList';
 import CreditsScreen from './modules/library/CreditsScreen';
@@ -56,6 +56,8 @@ function Screen({ route }: { route: Route }) {
       return <CreditsScreen />;
     case 'cardio':
       return <CardioScreen />;
+    case 'coach':
+      return <CoachScreen />;
     case 'progress':
       return <ProgressScreen />;
     case 'onboarding':
@@ -65,7 +67,6 @@ function Screen({ route }: { route: Route }) {
 
 export default function App() {
   const [route, setRoute] = useState<Route>(() => parseRoute(window.location.hash));
-  const [sync, setSync] = useState<SyncState | null>(null);
   // Onboarding is required: while it is unfinished the tab bar is hidden and other screens lead back to it.
   const [mustOnboard, setMustOnboard] = useState(false);
   const nextScroll = useRef(0);
@@ -87,9 +88,7 @@ export default function App() {
       setRoute(parseRoute(window.location.hash));
       void recheck();
     };
-    const refresh = () => readSyncState().then(setSync).catch(() => undefined);
     const onSync = () => {
-      void refresh();
       void recheck();
     };
     const onOnline = () => {
@@ -98,7 +97,6 @@ export default function App() {
     window.addEventListener('hashchange', onHash);
     window.addEventListener(SYNC_EVENT, onSync);
     window.addEventListener('online', onOnline);
-    void refresh();
     // Pull on open: the app shows local data at once, and the server's changes arrive a moment later. The onboarding
     // decision waits for that pull (onboarding/gate.ts explains why).
     needsOnboarding(runSync, readSettings)
@@ -122,8 +120,13 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <span className="title">onlyLeveling</span>
-        <span className="synced">{sync ? syncLabel(sync) : ''}</span>
+        {/* Sync status lives in Settings (owner request 2026-11-07). */}
+        <a className="title" href="#/home" aria-label="onlyLeveling, home">
+          <img src={`${import.meta.env.BASE_URL}icons/icon.svg`} alt="" width="26" height="26" />
+          <span>
+            <span className="title-only">only</span>Leveling
+          </span>
+        </a>
       </header>
       <main className="content">
         {mustOnboard && route.screen === 'settings' && <a href="#/onboarding">← Back to setup</a>}

@@ -18,6 +18,11 @@ describe('parseRoute', () => {
     expect(parseRoute('#/more')).toEqual({ screen: 'more' });
   });
 
+  it('the coach screen sits under Home', () => {
+    expect(parseRoute('#/coach')).toEqual({ screen: 'coach' });
+    expect(tabFor({ screen: 'coach' })).toBe('home');
+  });
+
   it('maps tab hashes, with or without the leading slash', () => {
     expect(parseRoute('#/history')).toEqual({ screen: 'history' });
     expect(parseRoute('#history')).toEqual({ screen: 'history' });

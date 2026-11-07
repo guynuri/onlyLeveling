@@ -11,6 +11,7 @@ export type Route =
   | { screen: 'settings' }
   | { screen: 'credits' }
   | { screen: 'cardio' } // an extra cardio session (U5b)
+  | { screen: 'coach' } // suggestions and the weekly review, reachable without starting a workout
   | { screen: 'onboarding' }; // first run; reached by the gate in App, not a tab (PLAN Phase 7)
 
 export type Tab = 'home' | 'plan' | 'workout' | 'progress' | 'more';
@@ -27,6 +28,7 @@ const SIMPLE = [
   'settings',
   'credits',
   'cardio',
+  'coach',
   'onboarding',
 ] as const satisfies readonly Exclude<Route['screen'], 'exercise'>[];
 
@@ -68,6 +70,7 @@ export function tabFor(route: Route): Tab {
     case 'cardio':
       return 'more';
     case 'onboarding':
+    case 'coach':
       return 'home';
     default:
       return route.screen;

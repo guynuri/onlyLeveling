@@ -86,7 +86,7 @@ export default function HomeScreen() {
         value={`${loaded.quests.filter((q) => q.have >= q.quest.need).length} of ${loaded.quests.length} done`}
       />
       <Tile
-        href="#/workout"
+        href="#/coach"
         icon={<MessageCircle />}
         tone="green"
         label="Coach"
