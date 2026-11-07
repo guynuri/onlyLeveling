@@ -126,7 +126,7 @@ export default function App() {
         const pending = await needsOnboarding(runSync, readSettings);
         if ((await readSyncState()).lastSyncedAt !== null && (await readSyncState()).config) enforce(pending);
       })
-      .catch(() => undefined);
+      .catch(() => setMustSignIn((v) => v ?? true)); // storage failed: the sign-in screen, not a blank app
     return () => {
       window.removeEventListener('hashchange', onHash);
       window.removeEventListener(SYNC_EVENT, onSync);

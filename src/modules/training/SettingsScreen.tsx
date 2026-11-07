@@ -32,6 +32,7 @@ export default function SettingsScreen() {
   const [loaded, setLoaded] = useState(false);
   const [status, setStatus] = useState('');
   const [sync, setSync] = useState<SyncState | null>(null);
+  const [unsynced, setUnsynced] = useState(false); // sign-out refused: offer to drop the queued changes
 
   const [newInvite, setNewInvite] = useState<string | null>(null);
 
@@ -71,12 +72,14 @@ export default function SettingsScreen() {
     setStatus(after.lastError ? `Sync failed: ${after.lastError}` : 'Synced.');
   }
 
-  async function disconnect() {
+  async function disconnect(dropUnsynced = false) {
     setStatus('Signing out…');
-    if ((await signOutAndClear()) === 'unsynced') {
-      setStatus('Some changes have not reached your account yet. Connect, tap Sync now, then sign out.');
+    if ((await signOutAndClear(undefined, dropUnsynced)) === 'unsynced') {
+      setUnsynced(true);
+      setStatus('Some changes have not reached your account yet. Connect and tap Sync now, then sign out.');
       return;
     }
+    setUnsynced(false);
     setNewInvite(null);
     window.location.hash = '#/signin'; // signing in is required, so the app goes back to the sign-in screen
   }
@@ -201,9 +204,14 @@ export default function SettingsScreen() {
               <Button variant="secondary" onClick={makeInvite}>
                 Create invite code
               </Button>
-              <Button variant="danger" onClick={disconnect}>
+              <Button variant="danger" onClick={() => void disconnect()}>
                 Sign out here
               </Button>
+              {unsynced && (
+                <Button variant="danger" onClick={() => void disconnect(true)}>
+                  Sign out and drop unsynced changes
+                </Button>
+              )}
             </div>
             {newInvite && (
               <p>

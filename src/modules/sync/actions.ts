@@ -105,9 +105,10 @@ export async function signOut(fetchImpl: FetchFn = defaultFetch): Promise<void> 
 // Signing out removes this phone's copy (owner decision 2026-11-07: an account is required, and the next account to
 // sign in here must not upload the previous one's data). Refuses while changes have not reached the server yet, so
 // nothing is lost: the caller says so and offers Sync now. The account keeps everything.
-export async function signOutAndClear(fetchImpl: FetchFn = defaultFetch): Promise<'done' | 'unsynced'> {
+// `dropUnsynced`: the user chose to lose what is still queued (e.g. a change the server keeps refusing).
+export async function signOutAndClear(fetchImpl: FetchFn = defaultFetch, dropUnsynced = false): Promise<'done' | 'unsynced'> {
   await runSync(fetchImpl).catch(() => undefined);
-  if ((await (await getOutbox()).pendingKeys()).size > 0) return 'unsynced';
+  if (!dropUnsynced && (await (await getOutbox()).count()) > 0) return 'unsynced';
   await signOut(fetchImpl);
   const db = await getDb();
   for (const store of ['settings', 'plans', 'workouts', 'bodyweight', 'suggestions', 'badges', 'aiCache', 'cardio', 'game', 'outbox'] as const) {
