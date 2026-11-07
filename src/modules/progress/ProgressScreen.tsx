@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react';
 import { getExercise } from '../../data/exercises';
 import type { BodySlug } from '../../domain/muscle-map';
 import { RECOVERY, XP } from '../../config/thresholds';
-import { badgeLabel } from '../xp/domain/badges';
+import { BadgeGrid } from './BadgeGrid';
+import { volumeRank } from '../xp/domain/rank';
 import { GROUPS, GROUP_LABEL, BENCHMARK, type Group } from '../xp/domain/muscles';
-import { GROUP_SLUGS, exercisesFor, groupOfSlug, recoveryOf, xpToNextRank, type Recovery } from '../xp/domain/hub';
+import { GROUP_SLUGS, rankNote, exercisesFor, groupOfSlug, recoveryOf, xpToNextRank, type Recovery } from '../xp/domain/hub';
 import { ExerciseName } from '../library/ExerciseSheet';
 import { BodyMap } from '../../ui/body/BodyMap';
 import { SegmentedControl } from '../../ui/controls';
@@ -51,7 +52,11 @@ export default function ProgressScreen() {
   const recovery = recoveryOf(loaded.workouts, getExercise, now);
   const fills: Partial<Record<BodySlug, string>> = {};
   for (const g of GROUPS) {
-    const color = mode === 'ranks' ? `var(--rank-${state.muscles[g].rank})` : RECOVERY_COLOR[recovery[g]];
+    const m = state.muscles[g];
+    const vol = volumeRank(m.xp);
+    // A rank held back by strength shows a blend toward its volume rank, so XP gains are visible on the map.
+    const rankColor = vol === m.rank ? `var(--rank-${m.rank})` : `color-mix(in srgb, var(--rank-${m.rank}) 55%, var(--rank-${vol}))`;
+    const color = mode === 'ranks' ? rankColor : RECOVERY_COLOR[recovery[g]];
     for (const s of GROUP_SLUGS[g]) fills[s] = color;
   }
 
@@ -59,6 +64,7 @@ export default function ProgressScreen() {
   const next = xpToNextRank(picked.xp);
   const bench = BENCHMARK[selected];
   const trained = exercisesFor(selected, loaded.workouts, getExercise);
+  const note = rankNote(picked, loaded.bodyweight[0]?.kg ?? null); // listBodyweight is newest first
 
   return (
     <section className="ui-stack">
@@ -117,6 +123,7 @@ export default function ProgressScreen() {
           {Math.round(picked.xp).toLocaleString()} XP
           {next ? ` · ${Math.round(next.need).toLocaleString()} XP to ${next.next}` : ' · top rank'}. Best so far: {picked.maxRank}.
         </p>
+        {note && <p className="prog-note">{note}</p>}
         <p className="muted small">{RECOVERY_LABEL[recovery[selected]]}.</p>
         <p className="muted small">
           {bench ? (
@@ -137,7 +144,6 @@ export default function ProgressScreen() {
             ))}
           </ul>
         )}
-        {loaded.bodyweight.length === 0 && <p className="muted small">Log your bodyweight below to allow rank-ups.</p>}
         {state.flaggedSets > 0 && (
           <p className="muted small">
             {state.flaggedSets} {state.flaggedSets === 1 ? 'set' : 'sets'} above {XP.overRepsCap} reps earned no XP.
@@ -152,17 +158,7 @@ export default function ProgressScreen() {
           return loadProgress(at).then((l) => setData({ now: at, loaded: l }));
         }} />
 
-      <Card title="Badges">
-        {state.badges.length === 0 ? (
-          <p className="muted">No badges yet. The first session earns one.</p>
-        ) : (
-          <ul className="ui-list">
-            {state.badges.map((b) => (
-              <li key={b}>{badgeLabel(b)}</li>
-            ))}
-          </ul>
-        )}
-      </Card>
+      <BadgeGrid earned={state.badges} />
     </section>
   );
 }

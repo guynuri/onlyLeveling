@@ -151,6 +151,8 @@ export const GAME = {
 
 // Bodyweight chart: the trend line averages the entries in this many days up to each point.
 export const WEIGHT_TREND_DAYS = 7;
+// Weigh-in stepper: start before any entry, limits and step (kg).
+export const BODYWEIGHT = { firstGuessKg: 70, minKg: 20, maxKg: 300, stepKg: 0.1 } as const;
 
 // Cardio (UX design §6.5, U5b). XP = minutes × effort × xpPerEffortMinute ÷ 10; it never counts toward muscle ranks.
 export const CARDIO = {

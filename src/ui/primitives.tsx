@@ -35,10 +35,17 @@ export function Card(props: { title?: string; action?: ReactNode; children: Reac
   );
 }
 
-export function Tile(props: { href: string; icon?: ReactNode; label: string; value?: ReactNode; badge?: number }) {
+export type Tone = 'violet' | 'amber' | 'cyan' | 'pink' | 'green' | 'red';
+export const toneVar = (t: Tone) => ({ ['--tone' as string]: `var(--tone-${t})` });
+
+export function Tile(props: { href: string; icon?: ReactNode; label: string; value?: ReactNode; badge?: number; tone?: Tone }) {
   return (
     <a className="ui-tile" href={props.href}>
-      {props.icon && <span className="ui-tile-icon">{props.icon}</span>}
+      {props.icon && (
+        <span className="ui-tile-icon" style={props.tone ? toneVar(props.tone) : undefined}>
+          {props.icon}
+        </span>
+      )}
       <span className="ui-tile-text">
         <span className="ui-tile-label">{props.label}</span>
         {props.value !== undefined && <span className="ui-tile-value">{props.value}</span>}

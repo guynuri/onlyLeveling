@@ -2,10 +2,10 @@
    Screens use these tokens and the components in src/ui/ only, so the later restyle (U8) changes this file and
    src/ui/ui.css, not the screens. */
 :root {
-  --bg: #07090f;
-  --surface: #10141f;
-  --surface-2: #181e2d;
-  --border: #252d42;
+  --bg: #030409;
+  --surface: #0c1019;
+  --surface-2: #151b2a;
+  --border: #222a3e;
   --fg: #eef1f8;
   --muted: #8b93a8;
   --accent: #8b5cf6;
@@ -14,6 +14,21 @@
   --danger: #ff5c6c;
   --success: #3ddc97;
   --warn: #ffb547;
+
+  /* Body map: the figure sits on --body-bg so the silhouette and untrained muscles always stand out. */
+  --body-bg: #1d2436;
+  --body-sil: #56607a;
+  --body-muscle: #353f58;
+
+  /* Icon tones: two-colour gradients for icon chips (tiles, badges). */
+  --tone-violet: linear-gradient(135deg, #a78bfa, #6d28d9);
+  --tone-amber: linear-gradient(135deg, #f97316, #b45309);
+  --tone-cyan: linear-gradient(135deg, #0ea5e9, #1e40af);
+  --tone-pink: linear-gradient(135deg, #f9a8d4, #db2777);
+  --tone-green: linear-gradient(135deg, #10b981, #065f46);
+  --medal-shine: rgb(255 255 255 / 55%);
+  --tone-red: linear-gradient(135deg, #fca5a5, #dc2626);
+  --bg-glow: radial-gradient(120% 60% at 50% -10%, rgb(139 92 246 / 18%), transparent 60%);
 
   --rank-F: #6b7280;
   --rank-E: #8a9a5b;
@@ -67,6 +82,10 @@
     --accent-glow: rgb(124 58 237 / 18%);
     --on-accent: #ffffff;
     --shadow: 0 4px 16px rgb(13 18 32 / 10%);
+    --body-bg: #e3e8f4;
+    --body-sil: #9aa4bd;
+    --body-muscle: #c5cddf;
+    --bg-glow: radial-gradient(120% 60% at 50% -10%, rgb(124 58 237 / 10%), transparent 60%);
     color-scheme: light;
   }
 }
@@ -82,6 +101,10 @@
   --accent-glow: rgb(124 58 237 / 18%);
   --on-accent: #ffffff;
   --shadow: 0 4px 16px rgb(13 18 32 / 10%);
+  --body-bg: #e3e8f4;
+  --body-sil: #9aa4bd;
+  --body-muscle: #c5cddf;
+  --bg-glow: radial-gradient(120% 60% at 50% -10%, rgb(124 58 237 / 10%), transparent 60%);
   color-scheme: light;
 }
 
@@ -90,7 +113,7 @@
 
 html, body {
   margin: 0;
-  background: var(--bg);
+  background: var(--bg-glow) no-repeat, var(--bg);
   color: var(--fg);
   font-family: var(--font);
   font-size: var(--fs-md);
@@ -100,7 +123,10 @@ html, body {
 }
 
 h1, h2, h3 { line-height: 1.2; margin: 0 0 var(--s-3); }
-h1 { font-size: var(--fs-xl); font-weight: var(--fw-bold); letter-spacing: -0.01em; }
+h1 {
+  font-size: var(--fs-xl); font-weight: var(--fw-bold); letter-spacing: -0.01em;
+  background: linear-gradient(90deg, var(--fg) 40%, var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
 h2 { font-size: var(--fs-lg); }
 h3 { font-size: var(--fs-md); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
 p { margin: 0 0 var(--s-3); }
@@ -127,7 +153,8 @@ input, textarea, select {
   display: flex; justify-content: space-between; align-items: center;
   padding: var(--s-3) var(--s-4);
   padding-top: calc(var(--s-3) + env(safe-area-inset-top));
-  background: var(--bg);
+  background: rgb(3 4 9 / 70%);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }
 .title { font-weight: var(--fw-bold); letter-spacing: 0.04em; }
@@ -144,6 +171,7 @@ input, textarea, select {
 
 /* Text helpers */
 .muted { color: var(--muted); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .small { font-size: var(--fs-sm); }
 .error { color: var(--danger); }
 .label { color: var(--muted); font-size: var(--fs-sm); }

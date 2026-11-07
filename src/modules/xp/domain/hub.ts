@@ -5,7 +5,8 @@ import type { BodySlug } from '../../../domain/muscle-map';
 import type { Exercise } from '../../../domain/exercise';
 import type { BodyweightEntry, Workout } from '../../../domain/types';
 import { GROUPS, groupOf, type Group } from './muscles';
-import { RANKS, type Rank } from './rank';
+import { RANKS, volumeRank, type Rank } from './rank';
+import type { MuscleProgress } from './progress';
 
 const DAY = 86_400_000;
 
@@ -103,4 +104,17 @@ export function weightTrend(entries: readonly BodyweightEntry[]): { date: string
     while (days[i] - days[lo] >= WEIGHT_TREND_DAYS) sum -= sorted[lo++].kg;
     return { date: e.date, kg: e.kg, avg: sum / (i - lo + 1) };
   });
+}
+
+// Why a muscle's rank is below its volume rank, and what unlocks the next one. Null when nothing holds it back.
+// A rank is the lower of volume (XP) and strength (benchmark lift ÷ bodyweight), and F without any bodyweight.
+export function rankNote(m: Pick<MuscleProgress, 'xp' | 'rank' | 'strength'>, bodyweightKg: number | null): string | null {
+  const v = volumeRank(m.xp);
+  if (v === m.rank) return null;
+  if (bodyweightKg === null) return `Volume says ${v}. Log your bodyweight to unlock ranks.`;
+  if (m.strength === null) return null;
+  const next = RANKS[RANKS.indexOf(m.strength) + 1];
+  if (!next) return null;
+  const kg = Math.ceil(XP.rankStrength[next] * bodyweightKg); // up: a rounded-down target would fall short
+  return `Volume says ${v}, strength holds it at ${m.strength}. For ${next}: reach an estimated max of ${kg} kg (both dumbbells) on the benchmark lift in ${XP.rankUpSessions} sessions.`;
 }
