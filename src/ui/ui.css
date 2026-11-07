@@ -508,7 +508,8 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
 @keyframes celebrate-pop { 0% { transform: scale(0.4); opacity: 0; } 70% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); } }
 @keyframes celebrate-pulse { 0%, 100% { transform: scale(0.85); opacity: 0.6; } 50% { transform: scale(1.1); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
-  .celebrate, .celebrate-burst, }
+  .celebrate, .celebrate-burst { animation: none; }
+}
 
 /* Body map panels get their own lighter backdrop so the figure reads on the dark page. */
 .ui-body--md { background: var(--body-bg); border-radius: var(--r-lg); padding: var(--s-2); }
