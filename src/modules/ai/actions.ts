@@ -9,6 +9,7 @@ import type { Correction, ValidPlan } from '../../../shared/ai-plan';
 import { buildPlanRequest } from './domain/request';
 import { getRepo, defaultSettings } from '../training/data';
 import { readRanks } from '../progress/ranks-cache';
+import { AI_REQUEST } from '../../config/thresholds';
 
 
 export type Proposal =
@@ -34,10 +35,12 @@ export async function requestProposal(s: Settings, fetchImpl: typeof fetch = fet
     res = await fetchImpl(`${cfg.baseUrl}/api/ai/plan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.token}` },
+      // The Worker gives up after two tries of AI.timeoutMs; past that the rules plan stands in.
+      signal: AbortSignal.timeout(AI_REQUEST.clientTimeoutMs),
       body: JSON.stringify(buildPlanRequest(s, listExercises(), TEMPLATE.exercisesPerDay, latest, supersets, readRanks(), supersetSize)),
     });
   } catch {
-    return { status: 'fallback', reason: 'unreachable' };
+    return { status: 'fallback', reason: 'unreachable', detail: 'no answer in time' };
   }
   if (!res.ok) return { status: 'fallback', reason: res.status === 401 ? 'signed-out' : 'unreachable', detail: `server answered ${res.status}` };
   const data = (await res.json()) as { status: string; reason?: string; detail?: string; provider?: string; plan?: ValidPlan; corrections?: Correction[] };

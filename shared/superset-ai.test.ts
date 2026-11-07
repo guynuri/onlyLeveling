@@ -9,6 +9,7 @@ describe('supersetRuns (AI superset letters)', () => {
     expect(supersetRuns(ids, ['A', null, 'A', null, null, null, null])).toEqual([]); // not adjacent
     expect(supersetRuns(ids, ['A', 'A', 'A', 'A', null, null, null])).toEqual([]); // too long
     expect(supersetRuns(ids, ['A', 'A', null, 'A', 'A', null, null])).toEqual([['a', 'b']]); // letter reused
+    expect(supersetRuns(ids, ['A', 'A', 'A', 'A', null, 'A', 'A'])).toEqual([['f', 'g']]); // a dropped run does not use up the letter
     expect(supersetRuns(ids, ['A', 'A', null, 'B', 'B', 'B', null], 2)).toEqual([['a', 'b']]); // pairs only: the triple is dropped
   });
 });

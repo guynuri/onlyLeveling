@@ -99,6 +99,12 @@
     --bg-glow: radial-gradient(120% 60% at 50% -10%, rgb(100 116 139 / 8%), transparent 60%);
     --sel: #dfe5f0;
     --hl: #64748b;
+    --tone-violet-c: #6d28d9;
+    --tone-amber-c: #b45309;
+    --tone-cyan-c: #0369a1;
+    --tone-pink-c: #be185d;
+    --tone-green-c: #047857;
+    --tone-red-c: #b91c1c;
     color-scheme: light;
   }
 }
@@ -120,6 +126,12 @@
   --bg-glow: radial-gradient(120% 60% at 50% -10%, rgb(100 116 139 / 8%), transparent 60%);
   --sel: #dfe5f0;
   --hl: #64748b;
+  --tone-violet-c: #6d28d9;
+  --tone-amber-c: #b45309;
+  --tone-cyan-c: #0369a1;
+  --tone-pink-c: #be185d;
+  --tone-green-c: #047857;
+  --tone-red-c: #b91c1c;
   color-scheme: light;
 }
 

@@ -200,8 +200,10 @@ export function supersetRuns(ids: readonly string[], letters: readonly (string |
     const l = letters[i];
     let j = i + 1;
     while (l !== null && j < ids.length && letters[j] === l) j++;
-    if (l !== null && !seen.has(l) && j - i >= SUPERSET.minSize && j - i <= Math.min(maxSize, SUPERSET.maxSize)) out.push(ids.slice(i, j));
-    if (l !== null) seen.add(l);
+    if (l !== null && !seen.has(l) && j - i >= SUPERSET.minSize && j - i <= Math.min(maxSize, SUPERSET.maxSize)) {
+      out.push(ids.slice(i, j));
+      seen.add(l); // only a kept run uses up its letter
+    }
     i = j;
   }
   return out;
