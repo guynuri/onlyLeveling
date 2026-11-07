@@ -2,7 +2,9 @@
 // AI (SPEC §5.2, §5.7, PLAN Phase 7). Provider order is the chain in ai/chain.ts. Model names change over time:
 // check the Workers AI catalogue before deploy.
 export const AI = {
-  model: '@cf/meta/llama-3.1-8b-instruct',
+  // First model for the first try, the next for the retry. '@cf/meta/llama-3.1-8b-instruct' was retired from the
+  // catalogue (owner report 2026-11-07: every call failed); check `npx wrangler ai models` before changing these.
+  models: ['@cf/meta/llama-3.3-70b-instruct-fp8-fast', '@cf/meta/llama-3.1-8b-instruct-fp8'],
   dailyCap: 5, // plan proposals per user per UTC day, counting failed calls
   timeoutMs: 25_000,
   // Workers AI answers stop at 256 tokens by default, which cuts a plan's JSON short; a 5-day plan needs ~1,500.

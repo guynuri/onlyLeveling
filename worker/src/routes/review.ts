@@ -120,7 +120,7 @@ export const reviewSlot = async (req: Request, env: Env, principal: Principal): 
     const facts = parseFacts(body);
     if (!facts) return send({ error: 'bad request' }, 400);
     const out = await generateReview(env.DB, principal.userId, facts, {
-      providers: [workersAiProvider(env.AI, AI.model, AI.maxTokens)],
+      providers: AI.models.map((m) => workersAiProvider(env.AI, m, AI.maxTokens)),
       dailyCap: AI.dailyCap,
       timeoutMs: AI.timeoutMs,
       now,

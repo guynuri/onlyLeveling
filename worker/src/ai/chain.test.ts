@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { runChain, type Provider } from './chain';
+import { runChain, workersAiProvider, type Provider } from './chain';
 
 const ok = (text: string): Provider => ({ name: 'p-ok', complete: async () => text });
 const bad = (text: string): Provider => ({ name: 'p-bad', complete: async () => text });
@@ -43,5 +43,17 @@ describe('provider chain: retry once, then fall back', () => {
     const out = await runChain([slow], 'p', check, 10);
     expect(out).toMatchObject({ status: 'fallback', reason: 'unreachable', attempts: 2 });
     expect(out.status === 'fallback' && out.detail).toBeTruthy();
+  });
+});
+
+describe('workersAiProvider answer shapes', () => {
+  const binding = (out: unknown, seen: unknown[] = []) => ({ run: async (_m: string, input: object) => (seen.push(input), out) });
+  it('reads text, a parsed object, or an OpenAI-style answer, and passes max_tokens', async () => {
+    const seen: unknown[] = [];
+    expect(await workersAiProvider(binding({ response: 'hi' }, seen), 'm', 2048).complete('p')).toBe('hi');
+    expect(seen[0]).toMatchObject({ max_tokens: 2048 });
+    expect(await workersAiProvider(binding({ response: { a: 1 } }), 'm').complete('p')).toBe('{"a":1}');
+    expect(await workersAiProvider(binding({ choices: [{ message: { content: 'x' } }] }), 'm').complete('p')).toBe('x');
+    await expect(workersAiProvider(binding({}), 'm').complete('p')).rejects.toThrow('no text in response');
   });
 });
