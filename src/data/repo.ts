@@ -23,7 +23,8 @@ export interface Repo {
   // Game records (U7): a week's quests (quests:YYYY-MM-DD) and a seen monthly recap (recap:YYYY-MM).
   listGame(): Promise<GameRecord[]>;
   // Stores a record the first time only, like badges: a week's quests never change once picked. true = stored.
-  putGame(r: GameRecord): Promise<boolean>;
+  // `overwrite` is for applying the server's copy on pull: the server holds the first write across devices.
+  putGame(r: GameRecord, overwrite?: boolean): Promise<boolean>;
 }
 
 export interface GameRecord {

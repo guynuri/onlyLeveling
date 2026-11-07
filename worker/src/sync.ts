@@ -20,7 +20,8 @@ const BADGE_KEY =
   /^(session:(1|10|100)|pr:first|rankup:first|muscle:(chest|back|shoulders|biceps|triceps|quads|hamstrings|glutes|calves|core):(C|B|A|S|SS|SSS))$/;
 
 // Game record keys (U7, src/modules/progress/game.ts): a week's quests, a seen monthly recap.
-const GAME_KEY = /^(quests:\d{4}-\d{2}-\d{2}|recap:\d{4}-\d{2})$/;
+const GAME_KEY = /^(quests:20[2-9]\d-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])|recap:20[2-9]\d-(0[1-9]|1[0-2]))$/;
+const GAME_MAX_ROWS = 2000; // per user: ~60 a year, so decades of use
 const GAME_MAX_BYTES = 2000;
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -177,13 +178,16 @@ async function upsert(db: D1Database, userId: string, op: Op, serverAt: number):
       .bind(userId, op.data.id, JSON.stringify(op.data), op.updatedAt, serverAt)
       .run();
   } else if (op.kind === 'game') {
-    // First write wins, like badges: a week's quests never change once picked.
+    // First write wins, like badges: a week's quests never change once picked. A losing write bumps server_at so the
+    // device that sent it pulls the winner. New rows stop at GAME_MAX_ROWS per user.
     await db
       .prepare(
-        `INSERT INTO game_records (user_id, key, data, at, server_at) VALUES (?, ?, ?, ?, ?)
-         ON CONFLICT (user_id, key) DO NOTHING`,
+        `INSERT INTO game_records (user_id, key, data, at, server_at)
+         SELECT ?, ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM game_records WHERE user_id = ?) < ?
+            OR EXISTS (SELECT 1 FROM game_records WHERE user_id = ? AND key = ?)
+         ON CONFLICT (user_id, key) DO UPDATE SET server_at = excluded.server_at`,
       )
-      .bind(userId, op.data.key, JSON.stringify(op.data.data), op.data.at, serverAt)
+      .bind(userId, op.data.key, JSON.stringify(op.data.data), op.data.at, serverAt, userId, GAME_MAX_ROWS, userId, op.data.key)
       .run();
   } else if (op.kind === 'badge') {
     // First award wins and is never revoked: a second write for the same badge does nothing.

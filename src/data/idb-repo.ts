@@ -62,10 +62,13 @@ export function createRepo(db: Db): Repo {
     async listGame() {
       return (await db.getAll('game')) as GameRecord[];
     },
-    async putGame(r) {
-      if (await db.get('game', r.key)) return false;
-      await db.put('game', r, r.key);
-      return true;
+    async putGame(r, overwrite = false) {
+      // One transaction, so two loads at once cannot both store a week's quests.
+      const tx = db.transaction('game', 'readwrite');
+      const had = !overwrite && (await tx.store.get(r.key)) !== undefined;
+      if (!had) await tx.store.put(r, r.key);
+      await tx.done;
+      return !had;
     },
   };
 }

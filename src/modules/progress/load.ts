@@ -8,6 +8,7 @@ import { goalsOf } from '../../domain/profile';
 import type { BodyweightEntry, Settings, Workout } from '../../domain/types';
 import { GAME } from '../../config/thresholds';
 import type { Repo } from '../../data/repo';
+import { readSyncState } from '../sync/actions';
 import { getLocalRepo, getRepo, defaultSettings, repRangeFor, currentPlan } from '../training/data';
 import { computeProgress, type ProgressInput, type ProgressState } from '../xp/domain/progress';
 import { GROUPS, groupOf, type Group } from '../xp/domain/muscles';
@@ -33,6 +34,14 @@ const dayOf = (key: string) => {
   const [y, m, d] = key.split('-').map(Number);
   return new Date(y, m - 1, d, 12).getTime();
 };
+
+// When this app copy started. Quests are stored only after a pull that finished since then (or with no account), so a
+// device that is behind cannot store a week's quests from partial history and win the server's first write.
+const OPENED_AT = Date.now();
+async function syncedThisOpen(): Promise<boolean> {
+  const s = await readSyncState().catch(() => null);
+  return !!s && (!s.config || (s.lastSyncedAt !== null && s.lastSyncedAt >= OPENED_AT));
+}
 
 export async function loadProgress(now = Date.now()): Promise<Loaded> {
   const repo = await getRepo();
@@ -60,7 +69,8 @@ export async function loadProgress(now = Date.now()): Promise<Loaded> {
   const state = { ...p, badges: [...new Set([...stored, ...p.badges])] };
   const slotStarts = sessionStarts(workouts, cardio);
 
-  await ensureQuests(repo, plan, settings, workouts, input.daysPerWeek, now);
+  // Not synced yet this open: show this week's quests without storing them (no bonus until they are stored).
+  const draft = await ensureQuests(repo, plan, settings, workouts, input.daysPerWeek, now, await syncedThisOpen());
   const records = await repo.listGame();
   const history = { workouts, cardio, slotStarts, exerciseById: getExercise };
   let bonusXp = 0;
@@ -72,6 +82,7 @@ export async function loadProgress(now = Date.now()): Promise<Loaded> {
     bonusXp += rows.filter((x) => x.have >= x.quest.need).length * GAME.questBonusXp;
     if (r.key === `quests:${weekKey(now)}`) quests = rows;
   }
+  if (quests.length === 0 && draft) quests = draft.map((quest) => ({ quest, have: questHave(quest, { ...history, weekOf: now }) }));
 
   // Last month's recap shows from the first open of a new month until dismissed, if anything happened in it.
   const last = monthBounds(now).from - 1;
@@ -84,9 +95,10 @@ export async function loadProgress(now = Date.now()): Promise<Loaded> {
   return { settings, plan, workouts, bodyweight, state, totalXp, slotStarts, quests, recap };
 }
 
-async function ensureQuests(repo: Repo, plan: Plan, settings: Settings, workouts: Workout[], daysPerWeek: number, now: number) {
+// Returns the generated quests when they were not stored (not synced yet), else null.
+async function ensureQuests(repo: Repo, plan: Plan, settings: Settings, workouts: Workout[], daysPerWeek: number, now: number, store: boolean): Promise<Quest[] | null> {
   const key = `quests:${weekKey(now)}`;
-  if ((await repo.listGame()).some((r) => r.key === key)) return;
+  if ((await repo.listGame()).some((r) => r.key === key)) return null;
   const planGroups = new Set<Group>();
   for (const d of plan.days) {
     for (const id of d.exerciseIds) for (const m of getExercise(id)?.primaryMuscles ?? []) {
@@ -98,7 +110,9 @@ async function ensureQuests(repo: Repo, plan: Plan, settings: Settings, workouts
   const wantsCardio =
     plan.days.some((d) => d.kind === 'cardio' || (d.postCardioMinutes ?? 0) > 0) || goals.includes('lose-fat') || goals.includes('endurance');
   const quests = generateQuests({ daysPerWeek, planGroups: [...planGroups], wantsCardio, workouts, exerciseById: getExercise, now });
+  if (!store) return quests;
   await repo.putGame({ key, data: quests, at: now });
+  return null;
 }
 
 export async function dismissRecap(key: string): Promise<void> {

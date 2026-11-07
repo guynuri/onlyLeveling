@@ -1,5 +1,5 @@
 // Game layer UI (UX design §6.7): weekly quests, the monthly recap card, and the rank-up / level-up celebration.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { GAME } from '../../config/thresholds';
 import { blockWeek } from '../../domain/block';
 import type { Plan } from '../../domain/plan';
@@ -95,10 +95,22 @@ export function RecapCard(props: { recap: { key: string; month: number; recap: M
 // still (ui.css).
 export function Celebration(props: { level?: { from: number; to: number }; rankUps: { group: Group; to: string }[]; onClose: () => void }) {
   const [open, setOpen] = useState(true);
+  const { onClose } = props;
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
   if (!open) return null;
   const close = () => {
     setOpen(false);
-    props.onClose();
+    onClose();
   };
   return (
     <div className="celebrate" role="dialog" aria-modal="true" aria-label={props.level ? `Level ${props.level.to}` : 'Rank up'} onClick={close}>
@@ -115,7 +127,9 @@ export function Celebration(props: { level?: { from: number; to: number }; rankU
             {GROUP_LABEL[r.group]} <RankBadge rank={r.to} />
           </p>
         ))}
-        <Button onClick={close}>Continue</Button>
+        <Button onClick={close} autoFocus>
+          Continue
+        </Button>
       </div>
     </div>
   );

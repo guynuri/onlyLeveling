@@ -118,7 +118,9 @@ export async function syncNow(args: {
     if (!pending.has(s.id)) await local.saveSuggestion(s);
   }
   for (const b of body.badges ?? []) await local.awardBadge(b.badgeKey, b.earnedAt);
-  for (const g of body.game ?? []) await local.putGame(g);
+  for (const g of body.game ?? []) {
+    if (!pending.has(`game:${g.key}`)) await local.putGame(g, true);
+  }
 
   return { ...state, cursor: body.serverTime, lastSyncedAt: now(), lastError: null };
 }

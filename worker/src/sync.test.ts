@@ -307,5 +307,19 @@ describe('game records (U7): first write wins, known keys only', () => {
     expect(() => parseOps(op('recap:2026-11'))).not.toThrow();
     for (const k of ['x', 'quests:2026-1-2', 'recap:2026-11-01']) expect(() => parseOps(op(k))).toThrow();
     expect(() => parseOps(op('recap:2026-11', 'x'.repeat(3000)))).toThrow();
+    for (const k of ['quests:9999-99-99', 'recap:0000-00', 'recap:2026-13', 'quests:2026-02-32']) expect(() => parseOps(op(k))).toThrow();
+  });
+
+  it('a losing write leaves the data and makes the winner pull again', async () => {
+    await applyPush(db, A, [game('g3', 'recap:2026-10', 'first', 100)], 1000);
+    await applyPush(db, A, [game('g4', 'recap:2026-10', 'second', 200)], 2000);
+    expect((await pull(db, A, 1500)).game).toEqual([{ key: 'recap:2026-10', data: 'first', at: 100 }]);
+  });
+
+  it('stops new rows at the per-user cap', async () => {
+    const stmt = db.prepare('INSERT INTO game_records (user_id, key, data, at, server_at) VALUES (?, ?, ?, 0, 0)');
+    await db.batch(Array.from({ length: 2000 }, (_, i) => stmt.bind(A, `x${i}`, 'null')));
+    await applyPush(db, A, [game('g5', 'recap:2026-09', null, 1)], 1000);
+    expect((await pull(db, A, 500)).game).toEqual([]);
   });
 });
