@@ -161,7 +161,7 @@ export const GAME = {
 } as const;
 
 // What a plan request sends to the AI (owner report 2026-11-07: the full library overflowed the 8B model's context).
-export const AI_REQUEST = { maxCandidates: 90, maxRoutine: 30 } as const;
+export const AI_REQUEST = { maxCandidates: 90, maxRoutine: 30, clientTimeoutMs: 70_000 } as const;
 
 // Difficulty lock (owner decision 2026-11-07, off by default): the muscle rank an exercise's level needs. Beginner and
 // unknown levels are always open.

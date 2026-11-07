@@ -32,6 +32,13 @@
   --tone-green: linear-gradient(135deg, #10b981, #065f46);
   --medal-shine: rgb(255 255 255 / 55%);
   --tone-red: linear-gradient(135deg, #fca5a5, #dc2626);
+  /* Solid tones: icons drawn in colour (owner request 2026-11-07) */
+  --tone-violet-c: #a78bfa;
+  --tone-amber-c: #fbbf24;
+  --tone-cyan-c: #38bdf8;
+  --tone-pink-c: #f472b6;
+  --tone-green-c: #34d399;
+  --tone-red-c: #f87171;
   --bg-glow: radial-gradient(120% 60% at 50% -10%, rgb(148 163 184 / 9%), transparent 60%);
 
   --rank-F: #6b7280;
@@ -92,6 +99,12 @@
     --bg-glow: radial-gradient(120% 60% at 50% -10%, rgb(100 116 139 / 8%), transparent 60%);
     --sel: #dfe5f0;
     --hl: #64748b;
+    --tone-violet-c: #6d28d9;
+    --tone-amber-c: #b45309;
+    --tone-cyan-c: #0369a1;
+    --tone-pink-c: #be185d;
+    --tone-green-c: #047857;
+    --tone-red-c: #b91c1c;
     color-scheme: light;
   }
 }
@@ -113,6 +126,12 @@
   --bg-glow: radial-gradient(120% 60% at 50% -10%, rgb(100 116 139 / 8%), transparent 60%);
   --sel: #dfe5f0;
   --hl: #64748b;
+  --tone-violet-c: #6d28d9;
+  --tone-amber-c: #b45309;
+  --tone-cyan-c: #0369a1;
+  --tone-pink-c: #be185d;
+  --tone-green-c: #047857;
+  --tone-red-c: #b91c1c;
   color-scheme: light;
 }
 

@@ -87,6 +87,7 @@ export function buildPlanRequest(
   bodyweightKg: number | null = null,
   supersets = false,
   ranks: Partial<Record<Group, Rank>> | null = null, // for the difficulty lock; null: not known yet
+  supersetSize?: 2 | 3, // largest superset the athlete wants
 ): PlanRequest {
   const avoid = s.avoid ?? [];
   const owned = [...s.owned].sort((a, b) => a - b);
@@ -99,6 +100,7 @@ export function buildPlanRequest(
     owned,
     avoid,
     supersets,
+    ...(supersets && supersetSize ? { supersetSize } : {}),
     routine: routineChoices(catalogue),
   };
 }

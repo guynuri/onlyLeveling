@@ -1,99 +1,13 @@
 // Library (UX design §3, §6): search, equipment and muscle filters, pictures first. Equipment chips start at what the
 // user owns (no equipment + dumbbells until settings load).
-import { useEffect, useMemo, useState } from 'react';
-import { getRepo } from '../training/data';
-import { equipmentOf, lockedUntil } from '../../domain/profile';
-import { readRanks } from '../progress/ranks-cache';
 import { listExercises } from '../../data/exercises';
-import { BODY_SLUGS, SLUG_LABEL, type BodySlug } from '../../domain/muscle-map';
-import { Button, Chip, ChipGroup, EmptyState } from '../../ui/primitives';
-import { ExThumb } from './ExThumb';
-import { filterLibrary, type KitChoice } from './filter';
-import { kitLabel } from './labels';
-
-const KIT_OPTIONS: readonly { value: KitChoice; label: string }[] = [
-  { value: 'none', label: 'No equipment' },
-  { value: 'dumbbell', label: 'Dumbbells' },
-  { value: 'kettlebell', label: 'Kettlebell' },
-  { value: 'bench', label: 'Bench' },
-  { value: 'pullup_bar', label: 'Pull-up bar' },
-  { value: 'band', label: 'Bands' },
-];
-
-const PAGE = 60;
+import { LibraryBrowser } from './LibraryBrowser';
 
 export default function ExerciseList() {
-  const [text, setText] = useState('');
-  const [kit, setKit] = useState<KitChoice[]>(['none', 'dumbbell']);
-  const [muscle, setMuscle] = useState<BodySlug | null>(null);
-  const [shown, setShown] = useState(PAGE);
-  const [lock, setLock] = useState(false); // difficulty lock on: locked rows say which rank opens them
-  // Default the equipment chips to what the user owns (UX design §3.3), once, when settings load.
-  useEffect(() => {
-    let alive = true;
-    getRepo()
-      .then((r) => r.getSettings())
-      .then((s) => {
-        if (!alive || !s) return;
-        setKit(['none', ...equipmentOf(s)]);
-        setLock(!!s.lockByRank);
-      })
-      .catch(() => undefined);
-    return () => {
-      alive = false;
-    };
-  }, []);
-  const ranks = useMemo(() => readRanks(), []);
-  const rows = useMemo(() => filterLibrary(listExercises(), { text, kit, muscle }), [text, kit, muscle]);
-
   return (
     <section>
       <h1>Library</h1>
-      <div className="ui-sticky">
-        <input
-          type="search"
-          placeholder="Search exercises"
-          value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            setShown(PAGE);
-          }}
-          aria-label="Search exercises"
-        />
-        <ChipGroup label="Equipment" options={KIT_OPTIONS} value={kit} onChange={(k) => (setKit(k), setShown(PAGE))} />
-        <div className="ui-chips ui-scroll-x" role="group" aria-label="Muscle">
-          {BODY_SLUGS.map((s) => (
-            <Chip key={s} selected={muscle === s} onToggle={() => (setMuscle(muscle === s ? null : s), setShown(PAGE))}>
-              {SLUG_LABEL[s]}
-            </Chip>
-          ))}
-        </div>
-        <span className="muted small">{rows.length} exercises</span>
-      </div>
-
-      {rows.length === 0 && <EmptyState title="No exercises match" body="Try fewer filters or another word." />}
-
-      <ul className="ui-list ui-list--rows">
-        {rows.slice(0, shown).map((ex) => (
-          <li key={ex.id}>
-            <a className="ui-list-link ui-ex-row" href={`#/library/${encodeURIComponent(ex.id)}`}>
-              <ExThumb ex={ex} locked={lock && ranks ? lockedUntil(ex, ranks) : null} />
-              <span className="ui-ex-text">
-                <span>{ex.name}</span>
-                <span className="muted small">
-                  {kitLabel(ex)} · {ex.muscles.primary.map((s) => SLUG_LABEL[s]).join(', ') || 'Muscles unknown'}
-                  {lock && ranks && lockedUntil(ex, ranks) && <span className="lib-lock"> · Locked until rank {lockedUntil(ex, ranks)}</span>}
-                </span>
-              </span>
-            </a>
-          </li>
-        ))}
-      </ul>
-      {rows.length > shown && (
-        <Button variant="secondary" block onClick={() => setShown(shown + PAGE)}>
-          Show more
-        </Button>
-      )}
+      <LibraryBrowser exercises={listExercises()} />
     </section>
   );
 }
