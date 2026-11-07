@@ -608,3 +608,9 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
 .celebrate-badge .badge-medal { filter: none; width: 72px; height: 72px; box-shadow: 0 0 24px rgb(252 211 77 / 45%); }
 .celebrate-badge-label { font-weight: 600; }
 @media (prefers-reduced-motion: reduce) { .celebrate-badge { animation: none; } }
+
+/* Warm-up and cool-down phases */
+.rp-current { text-align: center; }
+.rp-time { font-size: var(--fs-xxl); font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; margin: var(--s-2) 0; }
+.rp-done { opacity: 0.5; text-decoration: line-through; }
+.rp-now { font-weight: 600; }
