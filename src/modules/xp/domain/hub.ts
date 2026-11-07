@@ -114,6 +114,7 @@ export function rankNote(m: Pick<MuscleProgress, 'xp' | 'rank' | 'strength'>, bo
   if (bodyweightKg === null) return `Volume says ${v}. Log your bodyweight to unlock ranks.`;
   if (m.strength === null) return null;
   const next = RANKS[RANKS.indexOf(m.strength) + 1];
-  const kg = Math.round(XP.rankStrength[next] * bodyweightKg);
+  if (!next) return null;
+  const kg = Math.ceil(XP.rankStrength[next] * bodyweightKg); // up: a rounded-down target would fall short
   return `Volume says ${v}, strength holds it at ${m.strength}. For ${next}: reach an estimated max of ${kg} kg (both dumbbells) on the benchmark lift in ${XP.rankUpSessions} sessions.`;
 }

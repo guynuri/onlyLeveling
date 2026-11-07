@@ -17,7 +17,7 @@ const TONE: Record<Exclude<BadgeView['kind'], 'muscle'>, string> = {
 };
 
 function bg(b: BadgeView): string {
-  return b.kind === 'muscle' ? `radial-gradient(circle at 30% 25%, #fff8, var(--rank-${b.rank}) 55%)` : TONE[b.kind];
+  return b.kind === 'muscle' ? `radial-gradient(circle at 30% 25%, var(--medal-shine), var(--rank-${b.rank}) 55%)` : TONE[b.kind];
 }
 
 export function BadgeGrid({ earned }: { earned: readonly string[] }) {
@@ -27,7 +27,7 @@ export function BadgeGrid({ earned }: { earned: readonly string[] }) {
     <Card title="Badges" action={<span className="muted small">{count} of {all.length}</span>}>
       <ul className="badge-grid">
         {all.map((b) => (
-          <li key={b.key} className={b.earned ? 'badge badge--earned' : 'badge'} aria-label={b.earned ? `${b.label}, earned` : `${b.label}, locked: ${b.hint}`}>
+          <li key={b.key} className={b.earned ? 'badge badge--earned' : 'badge'}>
             <span className="badge-medal" style={{ ['--medal' as string]: bg(b) } as CSSProperties} aria-hidden="true">
               {ICON[b.kind]}
               {b.kind === 'muscle' && <span className="badge-rank">{b.rank}</span>}
@@ -37,7 +37,10 @@ export function BadgeGrid({ earned }: { earned: readonly string[] }) {
                 </span>
               )}
             </span>
-            <span className="badge-label">{b.label}</span>
+            <span className="badge-label">
+              {b.label}
+              <span className="sr-only">{b.earned ? ', earned' : ', locked'}</span>
+            </span>
             {!b.earned && <span className="badge-hint">{b.hint}</span>}
           </li>
         ))}

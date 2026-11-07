@@ -24,7 +24,7 @@ export function unlockSound(): void {
   if (!soundOn()) return;
   try {
     ctx ??= new AudioContext();
-    void ctx.resume();
+    ctx.resume().catch(() => undefined);
   } catch {
     ctx = null; // no Web Audio: stay silent
   }
@@ -33,6 +33,7 @@ export function unlockSound(): void {
 // A rising four-note arpeggio with a bright top note: the level-up / rank-up moment.
 export function playLevelUp(): void {
   if (!soundOn() || !ctx) return;
+  ctx.resume().catch(() => undefined); // iOS suspends it after the app was in the background
   const t0 = ctx.currentTime + 0.05;
   const notes = [523.25, 659.25, 783.99, 1046.5]; // C5 E5 G5 C6
   notes.forEach((f, i) => {

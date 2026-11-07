@@ -212,6 +212,7 @@ export default function SettingsScreen() {
             setSoundOn(v === 'on');
           }}
         />
+        <p className="muted small">On iPhone the silent switch mutes these sounds.</p>
       </Card>
 
       <PushSettings />

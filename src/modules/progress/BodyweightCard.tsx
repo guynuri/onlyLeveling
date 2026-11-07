@@ -5,12 +5,11 @@ import type { BodyweightEntry } from '../../domain/types';
 import { getRepo } from '../training/data';
 import { isIsoDate } from '../training/validate';
 import { weightTrend } from '../xp/domain/hub';
-import { WEIGHT_TREND_DAYS } from '../../config/thresholds';
+import { BODYWEIGHT, WEIGHT_TREND_DAYS } from '../../config/thresholds';
 import { Button, Card } from '../../ui/primitives';
 import { Stepper } from '../../ui/controls';
 
 const SHOWN = 30; // last entries drawn
-const FIRST_GUESS_KG = 70; // stepper start before any weigh-in
 
 function Chart({ trend }: { trend: ReturnType<typeof weightTrend> }) {
   const t = trend.slice(-SHOWN);
@@ -25,8 +24,8 @@ function Chart({ trend }: { trend: ReturnType<typeof weightTrend> }) {
     <svg className="bw-chart" viewBox="-2 -2 104 44" preserveAspectRatio="none" role="img" aria-label={`Bodyweight from ${t[0].date} to ${t[t.length - 1].date}`}>
       <defs>
         <linearGradient id="bw-fill" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stopColor="var(--accent)" stopOpacity="0.35" />
-          <stop offset="1" stopColor="var(--accent)" stopOpacity="0" />
+          <stop offset="0" style={{ stopColor: 'var(--accent)', stopOpacity: 0.35 }} />
+          <stop offset="1" style={{ stopColor: 'var(--accent)', stopOpacity: 0 }} />
         </linearGradient>
       </defs>
       <polygon className="bw-area" points={`0,42 ${line} 100,42`} fill="url(#bw-fill)" />
@@ -54,8 +53,8 @@ export function BodyweightCard(props: { entries: BodyweightEntry[]; onChange: ()
   const trend = weightTrend(props.entries);
   const last = trend[trend.length - 1];
   // The average a week before the latest weigh-in: the last entry on or before that day.
-  const weekAgo = last ? trend.filter((p) => p.date <= isoMinusDays(last.date, 7)).pop() : undefined;
-  const [kg, setKg] = useState(last?.kg ?? FIRST_GUESS_KG);
+  const weekAgo = last ? trend.filter((p) => p.date <= isoMinusDays(last.date, WEIGHT_TREND_DAYS)).pop() : undefined;
+  const [kg, setKg] = useState(last?.kg ?? BODYWEIGHT.firstGuessKg);
   const [date, setDate] = useState(todayLocal);
   const [otherDay, setOtherDay] = useState(false);
   const [status, setStatus] = useState('');
@@ -96,7 +95,7 @@ export function BodyweightCard(props: { entries: BodyweightEntry[]; onChange: ()
       )}
       <Chart trend={trend} />
       <div className="bw-log">
-        <Stepper label="Weight" unit="kg" value={kg} step={0.1} min={20} max={300} onChange={(v) => setKg(Math.round(v * 10) / 10)} />
+        <Stepper label="Weight" unit="kg" value={kg} step={BODYWEIGHT.stepKg} min={BODYWEIGHT.minKg} max={BODYWEIGHT.maxKg} onChange={(v) => setKg(Math.round(v * 10) / 10)} />
         <Button onClick={add}>{otherDay ? 'Log' : 'Log today'}</Button>
       </div>
       {otherDay ? (
