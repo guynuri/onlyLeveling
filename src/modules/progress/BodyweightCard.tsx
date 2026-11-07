@@ -34,8 +34,14 @@ function Chart({ entries }: { entries: readonly BodyweightEntry[] }) {
   );
 }
 
-export function BodyweightCard(props: { entries: BodyweightEntry[]; onChange: (e: BodyweightEntry[]) => void }) {
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+// Local calendar date: toISOString is UTC and gives yesterday just after midnight east of Greenwich.
+function todayLocal(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export function BodyweightCard(props: { entries: BodyweightEntry[]; onChange: () => Promise<void> }) {
+  const [date, setDate] = useState(todayLocal);
   const [kg, setKg] = useState('');
   const [status, setStatus] = useState('');
 
@@ -44,14 +50,13 @@ export function BodyweightCard(props: { entries: BodyweightEntry[]; onChange: (e
     if (!isIsoDate(date)) return setStatus('Enter a date.');
     if (!(value > 0)) return setStatus('Enter a weight in kg.');
     try {
-      const repo = await getRepo();
-      await repo.addBodyweight(date, value);
-      props.onChange(await repo.listBodyweight());
-      setKg('');
-      setStatus('Saved.');
+      await (await getRepo()).addBodyweight(date, value);
     } catch {
-      setStatus('Could not save. Try again.');
+      return setStatus('Could not save. Try again.');
     }
+    setKg('');
+    setStatus('Saved.');
+    await props.onChange().catch(() => setStatus('Saved. Reload to see it in the chart.'));
   }
 
   const latest = [...props.entries].sort((a, b) => b.date.localeCompare(a.date))[0];

@@ -64,6 +64,7 @@ export default function HomeScreen() {
             </div>
           </div>
         )}
+        {exercises.slice(0, 4).some((e) => e.media) && <p className="muted small">Pictures: Exercise data by RepDB (repdb.co)</p>}
         <a className="ui-btn ui-btn--primary ui-btn--md ui-btn--block" href={day ? '#/workout' : '#/plan'}>
           {day ? 'Start' : 'Build a plan'}
         </a>
@@ -91,7 +92,7 @@ export default function HomeScreen() {
         href="#/workout"
         icon={<MessageCircle />}
         label="Coach"
-        value={coach === null ? 'Suggestions and weekly review' : coach === 0 ? 'Nothing new' : `${coach} ${coach === 1 ? 'suggestion' : 'suggestions'}`}
+        value={`${coach === null || coach === 0 ? 'No suggestions' : `${coach} ${coach === 1 ? 'suggestion' : 'suggestions'}`} · weekly review`}
         badge={coach ?? undefined}
       />
     </section>

@@ -65,7 +65,7 @@ export function BodyMap(props: {
   const selected = props.selected;
   const label =
     props.label ??
-    props.primary.length > 0 ? `Works ${props.primary.map((s) => SLUG_LABEL[s]).join(', ')}` : 'Body figure, no muscles marked';
+    (props.primary.length > 0 ? `Works ${props.primary.map((s) => SLUG_LABEL[s]).join(', ')}` : 'Body figure, no muscles marked');
   const body = g?.[props.sex ?? 'male'];
   return (
     <div className={`ui-body ui-body--${props.size ?? 'md'}`} role="img" aria-label={label}>

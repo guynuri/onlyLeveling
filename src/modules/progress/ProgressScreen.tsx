@@ -76,7 +76,7 @@ export default function ProgressScreen() {
       <p>
         {state.streak > 0 ? `${state.streak} ${state.streak === 1 ? 'week' : 'weeks'} in a row` : 'No streak yet'} · {state.sessions}{' '}
         {state.sessions === 1 ? 'session' : 'sessions'}
-        {state.cardioSessions > 0 && ` · ${state.cardioSessions} cardio`}
+        {state.cardioSessions > 0 && ` · ${state.cardioSessions} cardio (${Math.round(state.cardioXp).toLocaleString()} XP)`}
       </p>
 
       <Card>
@@ -114,7 +114,7 @@ export default function ProgressScreen() {
               {mode === 'ranks' ? (
                 <RankBadge rank={state.muscles[g].rank} />
               ) : (
-                <span className="prog-dot" style={{ background: RECOVERY_COLOR[recovery[g]] }} aria-label={RECOVERY_LABEL[recovery[g]]} />
+                <span className="prog-dot" role="img" style={{ background: RECOVERY_COLOR[recovery[g]] }} aria-label={RECOVERY_LABEL[recovery[g]]} />
               )}
             </button>
           ))}
@@ -154,7 +154,10 @@ export default function ProgressScreen() {
         )}
       </Card>
 
-      <BodyweightCard entries={loaded.bodyweight} onChange={() => loadProgress(now).then((l) => setData({ now, loaded: l })).catch(() => undefined)} />
+      <BodyweightCard entries={loaded.bodyweight} onChange={() => {
+          const at = Date.now();
+          return loadProgress(at).then((l) => setData({ now: at, loaded: l }));
+        }} />
 
       <Card title="Badges">
         {state.badges.length === 0 ? (

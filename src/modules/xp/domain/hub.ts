@@ -94,12 +94,13 @@ const isoDay = (s: string) => {
 // Entries by date, each with the average of the entries in the WEIGHT_TREND_DAYS days ending on it.
 export function weightTrend(entries: readonly BodyweightEntry[]): { date: string; kg: number; avg: number }[] {
   const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
-  return sorted.map((e) => {
-    const day = isoDay(e.date);
-    const win = sorted.filter((x) => {
-      const d = isoDay(x.date);
-      return d <= day && day - d < WEIGHT_TREND_DAYS;
-    });
-    return { date: e.date, kg: e.kg, avg: win.reduce((s, x) => s + x.kg, 0) / win.length };
+  const days = sorted.map((e) => isoDay(e.date));
+  let lo = 0;
+  let sum = 0;
+  // Sliding window: add each entry, drop those that fell out of the window.
+  return sorted.map((e, i) => {
+    sum += e.kg;
+    while (days[i] - days[lo] >= WEIGHT_TREND_DAYS) sum -= sorted[lo++].kg;
+    return { date: e.date, kg: e.kg, avg: sum / (i - lo + 1) };
   });
 }
