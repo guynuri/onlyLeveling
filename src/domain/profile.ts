@@ -16,6 +16,10 @@ export function goalsOf(s: Settings): Goal[] {
   return s.goal ? [s.goal] : ['build-muscle'];
 }
 
+export function workoutViewOf(s: Settings): 'focus' | 'list' {
+  return s.workoutView ?? 'focus';
+}
+
 export function equipmentOf(s: Settings): EquipmentChoice[] {
   if (s.equipment) return s.equipment;
   return s.owned.length > 0 ? ['dumbbell'] : [];

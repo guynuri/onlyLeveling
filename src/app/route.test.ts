@@ -51,6 +51,13 @@ describe('allowedWhileOnboarding', () => {
   });
 });
 
+describe('cardio route', () => {
+  it('#/cardio is its own screen, under More', () => {
+    expect(parseRoute('#/cardio')).toEqual({ screen: 'cardio' });
+    expect(tabFor({ screen: 'cardio' })).toBe('more');
+  });
+});
+
 describe('tabFor', () => {
   it('highlights More for its sub-screens', () => {
     for (const r of [{ screen: 'library' }, { screen: 'history' }, { screen: 'settings' }, { screen: 'credits' }, { screen: 'exercise', id: 'x' }] as const)

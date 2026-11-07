@@ -9,6 +9,7 @@ import {
   addWeight,
   parseAbout,
   validateWeights,
+  workoutViewOf,
 } from './profile';
 import type { Settings } from './types';
 import type { Exercise } from './exercise';
@@ -16,6 +17,14 @@ import type { Exercise } from './exercise';
 const base: Settings = { daysPerWeek: 3, restSec: 90, owned: [] };
 const ex = (id: string, primary: Exercise['muscles']['primary'], tags?: string[]) =>
   ({ id, muscles: { primary, secondary: [] }, ...(tags ? { tags } : {}) }) as unknown as Exercise;
+
+describe('workoutViewOf', () => {
+  it('defaults to focus and returns the saved choice', () => {
+    expect(workoutViewOf(base)).toBe('focus');
+    expect(workoutViewOf({ ...base, workoutView: 'list' })).toBe('list');
+    expect(workoutViewOf({ ...base, workoutView: 'focus' })).toBe('focus');
+  });
+});
 
 describe('goalsOf', () => {
   it('reads the list, then the legacy single goal, then a default', () => {

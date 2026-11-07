@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { blockOf, blockWeek, deloaded, isDeloadWeek, materializeBlock, nextSession, sessionsInBlock, targetOf } from './block';
+import { blockOf, blockWeek, deloaded, isDeloadWeek, materializeBlock, nextSession, sessionStarts, sessionsInBlock, targetOf } from './block';
 import type { Plan } from './plan';
 import type { Exercise } from './exercise';
 import type { TemplateDay } from './template';
@@ -145,3 +145,23 @@ describe('sessionsInBlock', () => {
     expect(sessionsInBlock(plan({ updatedAt: 100 }), [{ start: 50 }, { start: 150 }])).toBe(1);
   });
 });
+
+describe('sessionStarts: what counts as a finished session', () => {
+  it('lifting workouts and planned cardio days count; extra and post-lift cardio do not', () => {
+    const starts = sessionStarts(
+      [{ start: 10 }, { start: 30 }],
+      [
+        { id: 'a', start: 20, minutes: 30, type: 'run', planDay: 1 },
+        { id: 'b', start: 25, minutes: 30, type: 'run' },
+        { id: 'c', start: 28, minutes: 10, type: 'walk', afterWorkoutId: 'w' },
+      ],
+    );
+    expect(starts.sort((x, y) => x - y)).toEqual([10, 20, 30]);
+  });
+  it('rotation moves past a cardio day once it is logged', () => {
+    const p = plan({ days: [day(0), day(1, { kind: 'cardio' }), day(2)], block: { weeks: 8, startedAt: 0, deloadLastWeek: false } });
+    const starts = sessionStarts([{ start: 10 }], [{ id: 'a', start: 20, minutes: 30, type: 'run', planDay: 1 }]);
+    expect(nextSession(p, sessionsInBlock(p, starts.map((s) => ({ start: s }))), 100)?.index).toBe(2);
+  });
+});
+

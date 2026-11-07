@@ -3,6 +3,7 @@
 import { BLOCK } from '../config/thresholds';
 import { AI_PLAN_LIMITS } from '../../shared/ai-plan';
 import { blockOf } from './block';
+import { parseCardio, type CardioType } from './cardio';
 import type { Plan } from './plan';
 import type { Target, TemplateDay } from './template';
 
@@ -25,7 +26,7 @@ function withDay(plan: Plan, dayIndex: number, day: TemplateDay, now: number): P
 
 export function addExercise(plan: Plan, dayIndex: number, exerciseId: string, target: Target, now: number): Plan {
   const day = plan.days[dayIndex];
-  if (!day || day.exerciseIds.includes(exerciseId) || !validTarget(target)) return plan;
+  if (!day || day.kind === 'cardio' || day.exerciseIds.includes(exerciseId) || !validTarget(target)) return plan;
   return withDay(plan, dayIndex, { ...day, exerciseIds: [...day.exerciseIds, exerciseId], targets: { ...day.targets, [exerciseId]: target } }, now);
 }
 
@@ -89,3 +90,48 @@ export function setSchedule(plan: Plan, schedule: 'rotation' | 'weekdays', weekd
     weekdays.every((d, i) => Number.isInteger(d) && d >= 0 && d <= 6 && (i === 0 || d > weekdays[i - 1]));
   return ok ? { ...plan, schedule, weekdays, updatedAt: now } : plan;
 }
+
+// The day list changed, so the weekday list (one weekday per day) no longer fits: rotate until it is picked again.
+function afterDaysChanged(plan: Plan, days: TemplateDay[], now: number): Plan {
+  const used = new Set(days.flatMap((d) => d.exerciseIds));
+  const { weekdays: _drop, ...rest } = plan;
+  return {
+    ...(plan.schedule === 'weekdays' ? rest : plan),
+    schedule: plan.schedule === 'weekdays' ? 'rotation' : plan.schedule,
+    days,
+    daysPerWeek: days.filter((d) => d.kind !== 'cardio').length, // lifting days: the coach's missed-session rule reads this
+    adjustments: plan.adjustments.filter((a) => used.has(a.exerciseId)),
+    updatedAt: now,
+  };
+}
+
+const cardioOk = (c: { type: CardioType; minutes: number }) => parseCardio({ type: c.type, minutes: c.minutes, distanceKm: null, effort: null }).ok;
+
+// A standalone cardio day (U5b): no exercises, logged with the cardio form, and it fills a slot in the weekly streak.
+export function addCardioDay(plan: Plan, cardio: { type: CardioType; minutes: number }, now: number): Plan {
+  if (!cardioOk(cardio)) return plan;
+  const existing = plan.days.filter((d) => d.kind === 'cardio').length;
+  const day: TemplateDay = {
+    index: plan.days.length,
+    label: existing === 0 ? 'Cardio' : `Cardio ${existing + 1}`,
+    kind: 'cardio',
+    cardio,
+    warmup: [],
+    exerciseIds: [],
+    cooldown: [],
+  };
+  return afterDaysChanged(plan, [...plan.days, day], now);
+}
+
+export function removeDay(plan: Plan, dayIndex: number, now: number): Plan {
+  if (!plan.days[dayIndex] || plan.days.length <= 1) return plan;
+  const days = plan.days.filter((_, i) => i !== dayIndex).map((d, i) => ({ ...d, index: i }));
+  return afterDaysChanged(plan, days, now);
+}
+
+export function setCardioDay(plan: Plan, dayIndex: number, cardio: { type: CardioType; minutes: number }, now: number): Plan {
+  const day = plan.days[dayIndex];
+  if (!day || day.kind !== 'cardio' || !cardioOk(cardio)) return plan;
+  return { ...plan, days: plan.days.map((d, i) => (i === dayIndex ? { ...d, cardio } : d)), updatedAt: now };
+}
+

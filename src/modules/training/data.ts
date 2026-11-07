@@ -80,11 +80,18 @@ export function defaultSettings(): Settings {
 import { repRangeFor } from '../../domain/reps';
 export { repRangeFor };
 
+// The weights an exercise can be loaded with: owned dumbbells for dumbbell moves, owned kettlebells for kettlebell moves,
+// none for bands and bodyweight. Progression and the workout's weight stepper both use this one list.
+export function ownedWeightsFor(ex: Exercise, s: Settings): number[] {
+  const kind = loadKind(ex);
+  return kind === 'dumbbell' ? s.owned : kind === 'kettlebell' ? (s.ownedKettlebells ?? []) : [];
+}
+
 // Dumbbell moves snap to owned dumbbells, kettlebell moves to owned kettlebells; bands and bodyweight go by reps only.
 export function progressionConfigFor(ex: Exercise, s: Settings, target?: Target): ProgressionConfig {
   const range = target ? { min: target.repMin, max: target.repMax } : repRangeFor(ex);
   const kind = loadKind(ex);
-  const owned = kind === 'dumbbell' ? s.owned : kind === 'kettlebell' ? (s.ownedKettlebells ?? []) : [];
+  const owned = ownedWeightsFor(ex, s);
   return {
     repMin: range.min,
     repMax: range.max,

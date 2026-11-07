@@ -3,6 +3,7 @@
 import { XP } from '../../../config/thresholds';
 import type { Exercise } from '../../../domain/exercise';
 import type { BodyweightEntry, Workout } from '../../../domain/types';
+import { cardioXp, countsForStreak, type CardioSession } from '../../../domain/cardio';
 import { e1rm } from '../../../domain/onerm';
 import { BENCHMARK, GROUPS, bellsFor, type Group } from './muscles';
 import { emptyGroupXp, sessionXp, type GroupXp, type SessionEntry } from './sessionXp';
@@ -16,7 +17,8 @@ export interface ProgressInput {
   workouts: readonly Workout[];
   exerciseById: (id: string) => Exercise | undefined;
   bodyweight: readonly BodyweightEntry[];
-  daysPerWeek: number;
+  cardio?: readonly CardioSession[]; // cardio XP, and planned cardio days for the streak
+  daysPerWeek: number; // the plan's sessions per week, cardio days included
   repMaxFor: (exerciseId: string) => number;
   now: number;
 }
@@ -30,10 +32,13 @@ export interface MuscleProgress {
 
 export interface ProgressState {
   muscles: Record<Group, MuscleProgress>;
-  sessions: number;
+  sessions: number; // lifting sessions
+  cardioXp: number; // never added to a muscle
+  cardioSessions: number;
   streak: number;
   badges: string[];
   flaggedSets: number;
+  usedDefaultBodyweight: boolean; // some bodyweight set was scored with the default bodyweight
 }
 
 // Local calendar day as a number, so day differences ignore DST.
@@ -44,6 +49,11 @@ function localDay(ms: number): number {
 function isoDay(s: string): number {
   const [y, m, d] = s.split('-').map(Number);
   return Date.UTC(y, m - 1, d) / DAY;
+}
+
+// The latest bodyweight on or before the moment `ms`, within the window. Null when there is none.
+export function bodyweightAt(ms: number, entries: readonly BodyweightEntry[]): number | null {
+  return bodyweightFor(localDay(ms), entries);
 }
 
 // The latest bodyweight on or before the session day, within the window. Null when there is none.
@@ -78,6 +88,7 @@ export function computeProgress(input: ProgressInput): ProgressState {
   const bestWeight = new Map<string, number>(); // exercise → best working weight so far
   const seen: { start: number; entries: SessionEntry[] }[] = [];
   let flaggedSets = 0;
+  let usedDefaultBodyweight = false;
   let firstPr = false;
   let rankUp = false;
 
@@ -103,8 +114,9 @@ export function computeProgress(input: ProgressInput): ProgressState {
       return best;
     };
 
-    const res = sessionXp(entries, recentBest, input.repMaxFor);
+    const res = sessionXp(entries, recentBest, input.repMaxFor, bodyweightFor(day, input.bodyweight));
     flaggedSets += res.flaggedSets;
+    if (res.usedDefaultBodyweight) usedDefaultBodyweight = true;
     for (const g of GROUPS) xp[g] += res.byGroup[g];
 
     // First personal record: a working weight above the best before it (the very first lift of an exercise is not one).
@@ -146,15 +158,17 @@ export function computeProgress(input: ProgressInput): ProgressState {
   ) as Record<Group, MuscleProgress>;
 
   const sessions = sorted.length;
+  const cardio = input.cardio ?? [];
+  // A lifting session fills a slot, and so does a finished planned cardio day; an extra or post-lift one does not.
+  const slotStarts = [...sorted.map((w) => w.start), ...cardio.filter(countsForStreak).map((c) => c.start)];
   return {
     muscles,
     sessions,
-    streak: streakWeeks(
-      sorted.map((w) => w.start),
-      input.daysPerWeek,
-      input.now,
-    ),
+    cardioXp: cardio.reduce((sum, c) => sum + cardioXp(c), 0),
+    cardioSessions: cardio.length,
+    streak: streakWeeks(slotStarts, input.daysPerWeek, input.now),
     badges: earnedBadges({ sessions, firstPr, rankUp, maxRank }),
     flaggedSets,
+    usedDefaultBodyweight,
   };
 }

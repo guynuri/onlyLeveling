@@ -378,3 +378,51 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
 .ob-weights .ui-chip { min-width: 52px; justify-content: center; font-variant-numeric: tabular-nums; }
 .ob-add-weight { display: flex; gap: var(--s-2); }
 .ob-add-weight input { flex: 1; }
+
+/* Workout (U5): set controls, RIR picker, rest bar, live exercise cards */
+.ui-set-controls { display: flex; flex-direction: column; gap: var(--s-3); }
+.ui-log { min-height: 56px; font-size: var(--fs-lg); }
+.ui-rir { display: flex; flex-direction: column; gap: var(--s-1); }
+.ui-rir-row { display: flex; gap: var(--s-2); }
+.ui-rir-btn {
+  flex: 1; min-height: var(--tap);
+  border: 2px solid var(--rir); border-radius: var(--r-md);
+  background: transparent; color: var(--fg);
+  font: inherit; font-weight: var(--fw-bold); cursor: pointer;
+}
+.ui-rir-btn[aria-checked='true'] { background: var(--rir); color: var(--bg); }
+.ui-rir-btn--0 { --rir: var(--danger); }
+.ui-rir-btn--1 { --rir: var(--warn); }
+.ui-rir-btn--2 { --rir: var(--accent); }
+.ui-rir-btn--3 { --rir: var(--success); }
+.ui-rir-btn--4 { --rir: var(--muted); }
+.ui-rir-line { margin: 0; }
+.ui-restbar {
+  position: fixed; left: var(--s-4); right: var(--s-4);
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + var(--s-3));
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+  padding: var(--s-2) var(--s-4);
+  background: var(--surface-2); border: 1px solid var(--accent); border-radius: var(--r-pill);
+  box-shadow: var(--glow), var(--shadow);
+  z-index: 15;
+}
+.ui-restbar-time { font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; }
+.ui-live { margin-bottom: var(--s-3); }
+.ui-live--current { border-color: var(--accent); box-shadow: var(--glow); }
+.ui-live--idle { opacity: 0.65; }
+.ui-set-chips { display: flex; flex-wrap: wrap; gap: var(--s-2); margin: var(--s-2) 0; }
+.ui-set-chip {
+  padding: var(--s-1) var(--s-3); border-radius: var(--r-pill);
+  background: var(--surface-2); color: var(--muted);
+  font-size: var(--fs-sm); font-variant-numeric: tabular-nums;
+}
+.ui-set-chip--next { background: var(--accent); color: var(--on-accent); }
+.ui-pr-badge {
+  display: inline-block; margin-left: var(--s-2); padding: 0 var(--s-2);
+  border-radius: var(--r-pill); background: var(--warn); color: var(--bg);
+  font-size: var(--fs-xs); font-weight: var(--fw-bold);
+}
+.ui-set-controls .ui-row > div, .ui-fields > div { display: flex; flex-direction: column; gap: var(--s-1); }
+/* Room under the last button for the pinned rest bar and the tab bar */
+.ui-pad-rest { padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + var(--tap) + var(--s-6)); }
+@media (prefers-reduced-motion: reduce) { .ui-restbar { box-shadow: var(--shadow); } }

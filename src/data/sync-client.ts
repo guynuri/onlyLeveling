@@ -15,9 +15,10 @@ export interface PushResult {
 }
 
 // The outbox op names the app writes, mapped to the server's op kinds.
-type Kind = 'workout' | 'settings' | 'bodyweight' | 'plan' | 'suggestion' | 'badge';
+type Kind = 'workout' | 'settings' | 'bodyweight' | 'plan' | 'suggestion' | 'badge' | 'cardio';
 const KIND: Record<string, Kind> = {
   saveWorkout: 'workout',
+  saveCardio: 'cardio',
   saveSettings: 'settings',
   saveBodyweight: 'bodyweight',
   savePlan: 'plan',

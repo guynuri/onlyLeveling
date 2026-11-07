@@ -1,9 +1,9 @@
-// IndexedDB schema. v1: meta, outbox (Phase 1). v2: training stores and reserved empty stores (PLAN §3.3).
+// IndexedDB schema. v1: meta, outbox (Phase 1). v2: training stores and reserved empty stores (PLAN §3.3). v3: cardio (U5b).
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { OutboxItem } from '../data/outbox-core';
 
 export const DB_NAME = 'onlyleveling';
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 
 export interface AppSchema extends DBSchema {
   meta: { key: string; value: unknown };
@@ -17,6 +17,7 @@ export interface AppSchema extends DBSchema {
   suggestions: { key: string; value: unknown }; // Phase 5
   badges: { key: string; value: unknown }; // Phase 6
   aiCache: { key: string; value: unknown }; // Phase 7
+  cardio: { key: string; value: unknown }; // U5b: one CardioSession per id
 }
 
 export type Db = IDBPDatabase<AppSchema>;
@@ -41,6 +42,9 @@ export function openAppDb(name: string = DB_NAME, opts: OpenOptions = {}): Promi
         for (const store of ['settings', 'plans', 'workouts', 'bodyweight', 'suggestions', 'badges', 'aiCache'] as const) {
           db.createObjectStore(store);
         }
+      }
+      if (oldVersion < 3) {
+        db.createObjectStore('cardio');
       }
     },
     blocked() {

@@ -214,3 +214,36 @@ describe('export (SPEC §6.3)', () => {
     await expect(fetchExport(CONFIG, async () => new Response('{}', { status: 401 }))).rejects.toThrow(/HTTP 401/);
   });
 });
+
+describe('syncNow: cardio', () => {
+  const server = (body: Record<string, unknown>): typeof fetch => async (url) =>
+    String(url).includes('/api/sync/pull')
+      ? json({ workouts: [], settings: null, bodyweight: [], serverTime: 9000, ...body })
+      : json({ applied: 0, duplicates: 0 });
+  const C = { id: 'from-server', start: 4, minutes: 25, type: 'bike' };
+
+  it('applies pulled cardio sessions', async () => {
+    const local = createRepo(db);
+    await syncNow({ outbox: createOutbox(db), local, state: FRESH, fetch: server({ cardio: [C] }), now: () => 1 });
+    expect((await local.listCardio()).map((c) => c.id)).toEqual(['from-server']);
+  });
+
+  it('keeps the local copy of a session whose write is still queued', async () => {
+    const outbox = createOutbox(db);
+    const local = createRepo(db);
+    const synced = createSyncedRepo(local, outbox, () => 100);
+    await synced.saveCardio({ id: 'from-server', start: 4, minutes: 99, type: 'bike' });
+    // the push fails, so the write stays queued while the pull still returns the older server copy
+    const failingPush: typeof fetch = async (url) =>
+      String(url).includes('/api/sync/push') ? new Response('{}', { status: 500 }) : json({ workouts: [], settings: null, bodyweight: [], cardio: [C], serverTime: 9000 });
+    await syncNow({ outbox, local, state: FRESH, fetch: failingPush, now: () => 200 });
+    expect((await local.listCardio())[0].minutes).toBe(99);
+  });
+
+  it('a server that does not know cardio yet (no field in the pull) is fine', async () => {
+    const local = createRepo(db);
+    const state = await syncNow({ outbox: createOutbox(db), local, state: FRESH, fetch: server({}), now: () => 1 });
+    expect(state.lastError).toBeNull();
+    expect(await local.listCardio()).toEqual([]);
+  });
+});

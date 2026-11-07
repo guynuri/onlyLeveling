@@ -11,6 +11,7 @@ export type BodyPart = 'shoulder' | 'elbow' | 'wrist' | 'lower-back' | 'hip' | '
 export interface Settings {
   daysPerWeek: number;
   restSec: number; // 0 = rest timer off
+  workoutView?: 'focus' | 'list'; // how the workout screen shows a session (U5); read via workoutViewOf()
   owned: number[]; // owned dumbbell weights, kg
   // Onboarding v2 (UX design §4). All optional: older records are read through domain/profile.ts accessors.
   goals?: Goal[];

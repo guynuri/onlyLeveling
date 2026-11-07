@@ -9,7 +9,7 @@ const B = 'u_b';
 
 // Each test gets a clean database; the migrations are applied once per file in setup.ts.
 beforeEach(async () => {
-  for (const t of ['workouts', 'settings', 'bodyweight', 'plans', 'suggestions', 'badges', 'ops_applied']) {
+  for (const t of ['workouts', 'settings', 'bodyweight', 'plans', 'suggestions', 'badges', 'cardio_sessions', 'ops_applied']) {
     await db.prepare(`DELETE FROM ${t}`).run();
   }
 });
@@ -239,5 +239,55 @@ describe('badges (Phase 6): first award wins, never revoked', () => {
     for (const k of ['x', 'x'.repeat(1000), 'session:11', 'muscle:chest:F', 'muscle:arms:C']) {
       expect(() => parseOps(op(k))).toThrow();
     }
+  });
+});
+
+describe('cardio sessions (U5b)', () => {
+  const cardio = (id: string, minutes: number, updatedAt: number): Op => ({
+    opId: `c-${id}-${updatedAt}`,
+    kind: 'cardio',
+    data: { id, start: 5, minutes, type: 'run', planDay: 1 },
+    updatedAt,
+  });
+
+  it('round-trips through push, pull and export; the newer write wins', async () => {
+    await applyPush(db, A, [cardio('c1', 30, 100)], 1000);
+    await applyPush(db, A, [cardio('c1', 10, 50)], 1001); // older client clock: ignored
+    await applyPush(db, A, [cardio('c1', 45, 200)], 1002);
+    expect((await exportAll(db, A)).cardio).toEqual([{ id: 'c1', start: 5, minutes: 45, type: 'run', planDay: 1 }]);
+    expect((await pull(db, A, 1001, 2000)).cardio).toHaveLength(1);
+    expect((await pull(db, A, 1002, 2000)).cardio).toHaveLength(0);
+  });
+
+  it("never shows one user another user's cardio", async () => {
+    await applyPush(db, A, [cardio('c1', 30, 100)], 1000);
+    expect((await exportAll(db, B)).cardio).toEqual([]);
+  });
+
+  it.each([
+    ['a missing start', { start: undefined }],
+    ['a non-numeric start', { start: 'now' }],
+    ['effort 11', { effort: 11 }],
+    ['effort 0', { effort: 0 }],
+    ['a distance of 0', { distanceKm: 0 }],
+    ['a distance over 500', { distanceKm: 501 }],
+    ['a fractional plan day', { planDay: 1.5 }],
+    ['a negative plan day', { planDay: -1 }],
+    ['minutes over 600', { minutes: 601 }],
+    ['an afterWorkoutId that is not text', { afterWorkoutId: 7 }],
+  ])('rejects %s', (_name, over) => {
+    const data = { id: 'c1', start: 5, minutes: 30, type: 'run', ...over };
+    expect(() => parseOps({ ops: [{ opId: 'x', kind: 'cardio', data, updatedAt: 1 }] })).toThrow();
+  });
+  it('accepts the optional fields when they are valid', () => {
+    const data = { id: 'c1', start: 5, minutes: 30, type: 'run', effort: 7, distanceKm: 5.2, planDay: 0, afterWorkoutId: 'w_1' };
+    expect(parseOps({ ops: [{ opId: 'x', kind: 'cardio', data, updatedAt: 1 }] })).toHaveLength(1);
+  });
+  it('rejects a cardio op with no minutes, no type or no id', () => {
+    const bad = (data: Record<string, unknown>) => () => parseOps({ ops: [{ opId: 'x', kind: 'cardio', data, updatedAt: 1 }] });
+    expect(bad({ id: 'c1', type: 'run' })).toThrow();
+    expect(bad({ id: 'c1', minutes: 0, type: 'run' })).toThrow();
+    expect(bad({ id: 'c1', minutes: 30 })).toThrow();
+    expect(bad({ minutes: 30, type: 'run' })).toThrow();
   });
 });

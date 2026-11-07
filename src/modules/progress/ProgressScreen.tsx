@@ -37,12 +37,16 @@ export default function ProgressScreen() {
       const s = (await repo.getSettings()) ?? defaultSettings();
       const workouts = await repo.listWorkouts();
       const bodyweight = await repo.listBodyweight();
+      const cardio = await repo.listCardio();
+      const plan = await repo.getPlan();
       const now = Date.now();
       const p = computeProgress({
         workouts,
         exerciseById: getExercise,
         bodyweight,
-        daysPerWeek: s.daysPerWeek,
+        cardio,
+        // The week's target is the plan's sessions, cardio days included (UX design §6.5).
+        daysPerWeek: plan && plan.days.length > 0 ? plan.days.length : s.daysPerWeek,
         repMaxFor: (id) => {
           const ex = getExercise(id);
           return ex ? repRangeFor(ex).max : 0;
@@ -70,6 +74,11 @@ export default function ProgressScreen() {
         {state.streak > 0 ? `${state.streak} ${state.streak === 1 ? 'week' : 'weeks'} in a row` : 'No streak yet'} ·{' '}
         {state.sessions} {state.sessions === 1 ? 'session' : 'sessions'}
       </p>
+      {state.cardioSessions > 0 && (
+        <p className="muted small">
+          Cardio: {state.cardioSessions} {state.cardioSessions === 1 ? 'session' : 'sessions'} · {Math.round(state.cardioXp).toLocaleString()} XP
+        </p>
+      )}
       {state.flaggedSets > 0 && (
         <p className="muted small">
           {state.flaggedSets} {state.flaggedSets === 1 ? 'set' : 'sets'} above {XP.overRepsCap} reps earned no XP.

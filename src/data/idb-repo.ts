@@ -3,6 +3,7 @@ import type { Db } from '../db/idb';
 import type { BodyweightEntry, Settings, Workout } from '../domain/types';
 import type { Plan } from '../domain/plan';
 import type { Suggestion } from '../domain/suggestion';
+import type { CardioSession } from '../domain/cardio';
 import type { Repo } from './repo';
 
 const SETTINGS_KEY = 'settings';
@@ -21,6 +22,13 @@ export function createRepo(db: Db): Repo {
     },
     async listWorkouts() {
       const all = (await db.getAll('workouts')) as Workout[];
+      return all.sort((a, b) => b.start - a.start);
+    },
+    async saveCardio(c) {
+      await db.put('cardio', c, c.id);
+    },
+    async listCardio() {
+      const all = (await db.getAll('cardio')) as CardioSession[];
       return all.sort((a, b) => b.start - a.start);
     },
     async addBodyweight(date, kg) {

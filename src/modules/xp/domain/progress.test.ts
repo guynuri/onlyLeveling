@@ -3,6 +3,7 @@ import { computeProgress } from './progress';
 import type { Exercise } from '../../../domain/exercise';
 import type { Workout, BodyweightEntry } from '../../../domain/types';
 import type { SetRow } from '../../../domain/session';
+import type { CardioSession } from '../../../domain/cardio';
 
 const bench: Exercise = {
   id: 'fx_Dumbbell_Bench_Press',
@@ -159,3 +160,66 @@ describe('rules inside the computation', () => {
     expect(p.badges).not.toContain('session:10');
   });
 });
+
+describe('bodyweight work through computeProgress', () => {
+  const pushup: Exercise = { ...bench, id: 'fx_Pushups', name: 'Push-Up', equipment: 'bodyweight', requires: [], secondaryMuscles: [] };
+  const pu = new Map([[pushup.id, pushup]]);
+  const w: Workout = {
+    id: 'pu1',
+    start: START,
+    end: START + 3_600_000,
+    entries: [{ exerciseId: pushup.id, planned: { w: 0, reps: 10, sets: 3 }, sets: sets(0, 10) }],
+  };
+  const run = (bodyweight: BodyweightEntry[]) =>
+    computeProgress({ workouts: [w], exerciseById: (id) => pu.get(id), bodyweight, daysPerWeek: 3, repMaxFor: () => 10, now: NOW });
+
+  it('push-ups earn chest XP from the logged bodyweight', () => {
+    const p = run([{ date: '2026-11-02', kg: 80 }]);
+    expect(p.muscles.chest.xp).toBeCloseTo(52 * 10 * 3 + 150);
+    expect(p.usedDefaultBodyweight).toBe(false);
+  });
+
+  it('with no bodyweight logged they still earn XP and the default is flagged', () => {
+    const p = run([]);
+    expect(p.muscles.chest.xp).toBeGreaterThan(0);
+    expect(p.usedDefaultBodyweight).toBe(true);
+  });
+});
+
+describe('cardio in progress', () => {
+  const THURSDAY = START + 3 * DAY; // the week that started Monday START is still open
+  const cardio = (id: string, day: number, over: Partial<CardioSession> = {}): CardioSession => ({ id, start: START + day * DAY, minutes: 30, type: 'run', ...over });
+  const lifting = (day: number) => session(`l${day}`, START + day * DAY, 16);
+  const base = { exerciseById, bodyweight: [{ date: '2026-11-02', kg: 80 }], repMaxFor: () => 10, now: THURSDAY };
+
+  it('cardio XP is its own total and never reaches a muscle', () => {
+    const p = computeProgress({ ...base, workouts: [], daysPerWeek: 3, cardio: [cardio('c1', 1, { effort: 5 })] });
+    expect(p.cardioXp).toBe(45);
+    expect(p.cardioSessions).toBe(1);
+    expect(Object.values(p.muscles).every((m) => m.xp === 0)).toBe(true);
+  });
+
+  it('a planned cardio day fills a streak slot; an extra session does not', () => {
+    const planned = computeProgress({ ...base, workouts: [lifting(0)], daysPerWeek: 2, cardio: [cardio('c1', 1, { planDay: 1 })] });
+    const extra = computeProgress({ ...base, workouts: [lifting(0)], daysPerWeek: 2, cardio: [cardio('c1', 1)] });
+    expect(planned.streak).toBe(1);
+    expect(extra.streak).toBe(0);
+  });
+
+  it('a post-lift block does not count as a session of its own', () => {
+    const p = computeProgress({ ...base, workouts: [lifting(0)], daysPerWeek: 2, cardio: [cardio('c1', 0, { afterWorkoutId: 'l0' })] });
+    expect(p.streak).toBe(0);
+  });
+
+  it('two lifting sessions and one planned cardio day meet a 3-day target', () => {
+    const p = computeProgress({ ...base, workouts: [lifting(0), lifting(1)], daysPerWeek: 3, cardio: [cardio('c1', 2, { planDay: 2 })] });
+    expect(p.streak).toBe(1);
+  });
+
+  it('without cardio nothing changes', () => {
+    const p = computeProgress({ ...base, workouts: [lifting(0)], daysPerWeek: 1 });
+    expect(p.cardioXp).toBe(0);
+    expect(p.streak).toBe(1);
+  });
+});
+

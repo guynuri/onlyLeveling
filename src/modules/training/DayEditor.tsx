@@ -86,7 +86,7 @@ export function DayEditor(props: {
           return (
             <li key={id} className="ui-list-stack">
               <ExerciseName id={id} name={ex?.name ?? id} />
-              <div className="ui-row">
+              <div className="ui-row ui-fields">
                 <div>
                   <span className="muted small">Sets</span>
                   <Stepper label="sets" value={t.sets} min={1} max={5} onChange={(v) => retarget(id, { ...t, sets: v })} />

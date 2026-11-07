@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { listExercises } from '../../data/exercises';
 import type { Plan } from '../../domain/plan';
 import { getRepo, getLocalRepo, defaultSettings, currentPlan } from './data';
-import { Card, EmptyState } from '../../ui/primitives';
+import { Button, Card, EmptyState } from '../../ui/primitives';
+import { CARDIO } from '../../config/thresholds';
+import { addCardioDay, removeDay } from '../../domain/plan-edit';
+import { CardioDayEditor } from './CardioDayEditor';
 import { Sheet } from '../../ui/controls';
 import { PLAN_CHANGED_EVENT } from '../library/labels';
 import { blockedIds, equipmentOf } from '../../domain/profile';
@@ -10,9 +13,7 @@ import type { EquipmentChoice, Settings } from '../../domain/types';
 import { ProposePlan } from '../ai/ui/ProposePlan';
 import { PlanHeader } from './PlanHeader';
 import { DayEditor } from './DayEditor';
-
-// Applies an edit to the latest plan with the clock read here, outside render.
-const applyEdit = (cur: Plan, fn: (plan: Plan, now: number) => Plan): Plan => fn(cur, Date.now());
+import { usePlanEditor } from './usePlanEditor';
 
 // The saved plan. Warm-up and cool-down are shown as their own blocks, never as exercises.
 export default function PlanScreen() {
@@ -21,11 +22,10 @@ export default function PlanScreen() {
   const [avoid, setAvoid] = useState<string[]>([]);
   const [equipment, setEquipment] = useState<EquipmentChoice[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
   const [building, setBuilding] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState<number | null>(null);
   const [now] = useState(() => Date.now());
-  const latest = useRef<Plan | null>(null); // the newest plan, so quick taps build on each other
-  const saves = useRef<Promise<unknown>>(Promise.resolve()); // saves run one after another, in order
+  const { edit, error: saveError } = usePlanEditor(plan, setPlan);
 
   useEffect(() => {
     const load = () =>
@@ -35,9 +35,7 @@ export default function PlanScreen() {
         setSettings(s);
         setAvoid([...blockedIds(s, listExercises())]);
         setEquipment(equipmentOf(s));
-        const p = await currentPlan(repo, await getLocalRepo(), s);
-        latest.current = p;
-        setPlan(p);
+        setPlan(await currentPlan(repo, await getLocalRepo(), s));
       })().catch(() => setError('Could not load your plan. Reload to try again.'));
     load();
     // A swap from the exercise sheet, or a new plan from the builder, saves the plan behind this screen.
@@ -63,33 +61,41 @@ export default function PlanScreen() {
     );
   }
 
-  // Shown at once, saved in the background in order; a failed save says so.
-  const edit = (fn: (plan: Plan, now: number) => Plan) => {
-    const cur = latest.current ?? plan;
-    const next = applyEdit(cur, fn);
-    if (next === cur) return;
-    latest.current = next;
-    setPlan(next);
-    setSaveError(null);
-    saves.current = saves.current
-      .then(async () => (await getRepo()).savePlan(next))
-      .catch(() => setSaveError('Could not save your last change. Check it, then try again.'));
-  };
+  const lifting = plan.days.filter((d) => d.kind !== 'cardio').length;
+  // Remove a day after a second tap, so one slip does not drop it.
+  const removeButton = (index: number) =>
+    plan.days.length > 1 &&
+    (confirmRemove === index ? (
+      <Button size="sm" variant="danger" onClick={() => { setConfirmRemove(null); edit((p, at) => removeDay(p, index, at)); }}>
+        Yes, remove this day
+      </Button>
+    ) : (
+      <Button size="sm" variant="ghost" onClick={() => setConfirmRemove(index)}>
+        Remove day
+      </Button>
+    ));
 
   return (
     <section>
       <h1>Plan</h1>
       {saveError && <p className="error">{saveError}</p>}
       <PlanHeader key={`${plan.block?.startedAt ?? 0}-${plan.days.length}`} plan={plan} now={now} onEdit={edit} onRegenerate={() => setBuilding(true)} />
-      {plan.days.length !== settings.daysPerWeek && (
+      {lifting !== settings.daysPerWeek && (
         <p className="muted small">
-          Your plan has {plan.days.length} days; Settings says {settings.daysPerWeek} a week. Tap “New plan” to match.
+          Your plan has {lifting} lifting {lifting === 1 ? 'day' : 'days'}; Settings says {settings.daysPerWeek} a week. Tap “New plan” to match.
         </p>
       )}
       <p className="muted small">
         Your plan. Change it however you like, or build a new one. Tap an exercise to see how it is done.
       </p>
-      {plan.days.map((day) => (
+      {plan.days.map((day) =>
+        day.kind === 'cardio' ? (
+          <Card key={day.index} title={day.label ?? 'Cardio'}>
+            <p className="muted small">A cardio day. Logging it from Train counts toward the week’s target.</p>
+            <CardioDayEditor day={day} onEdit={edit} />
+            {removeButton(day.index)}
+          </Card>
+        ) : (
         <Card key={day.index} title={day.label ?? `Day ${day.index + 1}`}>
           <h3>Warm-up</h3>
           <ul className="ui-list">
@@ -117,8 +123,13 @@ export default function PlanScreen() {
               </li>
             ))}
           </ul>
+          {removeButton(day.index)}
         </Card>
-      ))}
+        ),
+      )}
+      <Button variant="secondary" onClick={() => edit((p, at) => addCardioDay(p, { type: 'walk', minutes: CARDIO.defaultMinutes }, at))}>
+        Add cardio day
+      </Button>
       <Sheet open={building} onClose={() => setBuilding(false)} title="New plan">
         <ProposePlan settings={settings} onSaved={built} />
       </Sheet>

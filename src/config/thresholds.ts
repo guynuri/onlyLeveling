@@ -37,6 +37,13 @@ export const E1RM = {
   maxReps: 12,
 } as const;
 
+// The workout screen (UX design §6.4, U5).
+export const WORKOUT = {
+  draftMaxHours: 12, // a session in progress is restored on reopen only if it was started this recently
+  timedStepSec: 5, // seconds per tap on a timed set
+  timedMaxSec: 600,
+} as const;
+
 // Training blocks (UX design §5, U4): a plan runs for one of these lengths; an older plan counts as the default.
 export const BLOCK = {
   defaultWeeks: 8,
@@ -122,6 +129,43 @@ export const XP = {
   badgeSessionMilestones: [1, 10, 100], // "first session", then 10 and 100 sessions
   badgeRankFrom: 'C', // achievement badges per muscle start at this rank
 } as const;
+// Cardio (UX design §6.5, U5b). XP = minutes × effort × xpPerEffortMinute ÷ 10; it never counts toward muscle ranks.
+export const CARDIO = {
+  types: [
+    { value: 'run', label: 'Run' },
+    { value: 'walk', label: 'Walk' },
+    { value: 'bike', label: 'Bike' },
+    { value: 'rower', label: 'Rower' },
+    { value: 'jump-rope', label: 'Jump rope' },
+    { value: 'hiit', label: 'HIIT' },
+    { value: 'other', label: 'Other' },
+  ],
+  minutesMax: 600,
+  distanceMax: 500, // km
+  defaultMinutes: 20,
+  minutesStep: 5,
+  distanceStep: 0.5,
+  defaultEffort: 5, // 1 to 10; used for XP when none was given
+  xpPerEffortMinute: 3,
+} as const;
+
+// XP for work with no weight on the bar (UX design §3.3, U5b). A bodyweight exercise counts as a share of the latest
+// bodyweight (first row whose name matches wins, else the default); a band set counts a fixed load. These are proposals,
+// tuned with real logs like the rest of the XP table. Timed exercises earn no muscle XP.
+export const UNWEIGHTED_XP = {
+  defaultBodyweightKg: 70, // used when no bodyweight is logged; the finish summary asks for one
+  bandLoadKg: 10,
+  defaultFraction: 0.5,
+  fractions: [
+    { match: 'pull-?up|chin-?up', fraction: 1.0 },
+    { match: 'dip', fraction: 0.9 },
+    { match: 'push-?up', fraction: 0.65 },
+    { match: 'lunge|split squat', fraction: 0.5 },
+    { match: 'squat', fraction: 0.6 },
+    { match: 'sit-?up|crunch|leg raise', fraction: 0.3 },
+  ],
+} as const;
+
 // Profile and onboarding v2 (UX design §4). Weight grids are what the chip grids offer.
 export const PROFILE = {
   dumbbellGrid: [

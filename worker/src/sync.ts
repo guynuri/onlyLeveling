@@ -9,7 +9,8 @@ export type Op =
   | { opId: string; kind: 'bodyweight'; data: { date: string; kg: number }; updatedAt: number }
   | { opId: string; kind: 'plan'; data: Record<string, unknown>; updatedAt: number }
   | { opId: string; kind: 'suggestion'; data: { id: string } & Record<string, unknown>; updatedAt: number }
-  | { opId: string; kind: 'badge'; data: { badgeKey: string; earnedAt: number }; updatedAt: number };
+  | { opId: string; kind: 'badge'; data: { badgeKey: string; earnedAt: number }; updatedAt: number }
+  | { opId: string; kind: 'cardio'; data: { id: string } & Record<string, unknown>; updatedAt: number };
 
 export class ValidationError extends Error {}
 
@@ -59,6 +60,23 @@ export function parseOps(body: unknown): Op[] {
       // Only the keys the app produces (src/modules/xp/domain/badges.ts). Anything else is rejected, not stored.
       if (!BADGE_KEY.test(raw.data.badgeKey)) throw new ValidationError(`op ${i}: unknown badge key`);
       return { ...common, kind: 'badge', data: { badgeKey: raw.data.badgeKey, earnedAt: raw.data.earnedAt } };
+    }
+    if (raw.kind === 'cardio') {
+      if (!isObj(raw.data) || !isStr(raw.data.id) || !isStr(raw.data.type) || !isNum(raw.data.minutes) || raw.data.minutes <= 0) {
+        throw new ValidationError(`op ${i}: cardio needs id, type and minutes`);
+      }
+      // The same limits as parseCardio in the app (src/domain/cardio.ts, CARDIO in thresholds): the Worker is the trust
+      // boundary, and a bad start, effort or plan day would reach the streak, the rotation and the XP.
+      const d = raw.data;
+      const bad =
+        (d.minutes as number) > 600 ||
+        !isNum(d.start) ||
+        (d.effort !== undefined && !(Number.isInteger(d.effort) && (d.effort as number) >= 1 && (d.effort as number) <= 10)) ||
+        (d.distanceKm !== undefined && !(isNum(d.distanceKm) && d.distanceKm > 0 && d.distanceKm <= 500)) ||
+        (d.planDay !== undefined && !(Number.isInteger(d.planDay) && (d.planDay as number) >= 0)) ||
+        (d.afterWorkoutId !== undefined && !isStr(d.afterWorkoutId));
+      if (bad) throw new ValidationError(`op ${i}: cardio has a field out of range`);
+      return { ...common, kind: 'cardio', data: raw.data as { id: string } & Record<string, unknown> };
     }
     throw new ValidationError(`op ${i}: unknown kind`);
   });
@@ -136,6 +154,16 @@ async function upsert(db: D1Database, userId: string, op: Op, serverAt: number):
       )
       .bind(userId, op.data.id, JSON.stringify(op.data), op.updatedAt, serverAt)
       .run();
+  } else if (op.kind === 'cardio') {
+    await db
+      .prepare(
+        `INSERT INTO cardio_sessions (user_id, id, data, updated_at, server_at) VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT (user_id, id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at,
+           server_at = excluded.server_at
+         WHERE excluded.updated_at >= cardio_sessions.updated_at`,
+      )
+      .bind(userId, op.data.id, JSON.stringify(op.data), op.updatedAt, serverAt)
+      .run();
   } else if (op.kind === 'badge') {
     // First award wins and is never revoked: a second write for the same badge does nothing.
     await db
@@ -165,6 +193,7 @@ export interface Pulled {
   plan: unknown | null;
   suggestions: unknown[];
   badges: { badgeKey: string; earnedAt: number }[];
+  cardio: unknown[];
   serverTime: number;
 }
 
@@ -193,6 +222,10 @@ export async function pull(db: D1Database, userId: string, since: number, now = 
     .prepare('SELECT badge_key, earned_at FROM badges WHERE user_id = ? AND server_at > ? ORDER BY server_at')
     .bind(userId, since)
     .all<{ badge_key: string; earned_at: number }>();
+  const c = await db
+    .prepare('SELECT data FROM cardio_sessions WHERE user_id = ? AND server_at > ? ORDER BY server_at')
+    .bind(userId, since)
+    .all<{ data: string }>();
   return {
     workouts: w.results.map((r) => JSON.parse(r.data)),
     settings: s ? JSON.parse(s.data) : null,
@@ -200,6 +233,7 @@ export async function pull(db: D1Database, userId: string, since: number, now = 
     plan: p ? JSON.parse(p.data) : null,
     suggestions: g.results.map((r) => JSON.parse(r.data)),
     badges: bd.results.map((r) => ({ badgeKey: r.badge_key, earnedAt: r.earned_at })),
+    cardio: c.results.map((r) => JSON.parse(r.data)),
     serverTime: now,
   };
 }

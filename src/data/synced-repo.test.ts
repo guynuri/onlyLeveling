@@ -52,3 +52,14 @@ describe('synced repo: every write is saved locally and queued for the server', 
     expect(await outbox.count()).toBe(1);
   });
 });
+
+describe('synced repo: cardio', () => {
+  it('saveCardio saves locally and queues one op keyed by the session id', async () => {
+    const local = createRepo(db);
+    const repo = createSyncedRepo(local, outbox, () => 700);
+    await repo.saveCardio({ id: 'c1', start: 5, minutes: 30, type: 'walk', planDay: 2 });
+    expect((await local.listCardio()).map((c) => c.id)).toEqual(['c1']);
+    const [item] = await outbox.peek(10_000_000);
+    expect(item).toMatchObject({ op: 'saveCardio', key: 'c1', createdAt: 700 });
+  });
+});

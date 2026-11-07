@@ -12,6 +12,7 @@ import ExerciseList from './modules/library/ExerciseList';
 import CreditsScreen from './modules/library/CreditsScreen';
 import WorkoutScreen from './modules/training/WorkoutScreen';
 import PlanScreen from './modules/training/PlanScreen';
+import CardioScreen from './modules/training/CardioScreen';
 import HistoryScreen from './modules/training/HistoryScreen';
 import SettingsScreen from './modules/training/SettingsScreen';
 import ProgressScreen from './modules/progress/ProgressScreen';
@@ -52,6 +53,8 @@ function Screen({ route }: { route: Route }) {
       return <SettingsScreen />;
     case 'credits':
       return <CreditsScreen />;
+    case 'cardio':
+      return <CardioScreen />;
     case 'progress':
       return <ProgressScreen />;
     case 'onboarding':
@@ -109,7 +112,9 @@ export default function App() {
 
   // Hash navigation keeps the old offset, so set it once the new screen is in the DOM.
   // ponytail: a list that fills in after an async read may be too short to restore fully; wait-for-height if it shows up.
-  useLayoutEffect(() => window.scrollTo(0, nextScroll.current), [route]);
+  useLayoutEffect(() => {
+    window.scrollTo(0, nextScroll.current); // a block body: an effect must not return scrollTo's result as its cleanup
+  }, [route]);
 
   const active = tabFor(route);
 

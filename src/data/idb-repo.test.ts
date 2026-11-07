@@ -4,6 +4,7 @@ import { openAppDb, type Db } from '../db/idb';
 import { createRepo } from './idb-repo';
 import type { Repo } from './repo';
 import type { Settings, Workout } from '../domain/types';
+import type { CardioSession } from '../domain/cardio';
 
 let db: Db;
 let repo: Repo;
@@ -63,5 +64,17 @@ describe('repo: bodyweight', () => {
       { date: '2026-11-03', kg: 82.1 },
       { date: '2026-11-01', kg: 82.5 },
     ]);
+  });
+});
+
+describe('cardio sessions', () => {
+  const C = (id: string, start: number): CardioSession => ({ id, start, minutes: 30, type: 'run' });
+  it('saves and lists them newest first, and a second save of the same id replaces it', async () => {
+    await repo.saveCardio(C('c1', 100));
+    await repo.saveCardio(C('c2', 300));
+    await repo.saveCardio({ ...C('c1', 100), minutes: 45 });
+    const all = await repo.listCardio();
+    expect(all.map((c) => c.id)).toEqual(['c2', 'c1']);
+    expect(all[1].minutes).toBe(45);
   });
 });
