@@ -78,3 +78,14 @@ describe('cardio sessions', () => {
     expect(all[1].minutes).toBe(45);
   });
 });
+
+describe('game records (U7)', () => {
+  it('keeps the first write for a key', async () => {
+    expect(await repo.putGame({ key: 'quests:2026-11-02', data: [1], at: 1 })).toBe(true);
+    expect(await repo.putGame({ key: 'quests:2026-11-02', data: [2], at: 2 })).toBe(false);
+    expect(await repo.listGame()).toEqual([{ key: 'quests:2026-11-02', data: [1], at: 1 }]);
+    // The server's copy (pull) replaces it.
+    await repo.putGame({ key: 'quests:2026-11-02', data: [3], at: 3 }, true);
+    expect((await repo.listGame())[0].data).toEqual([3]);
+  });
+});

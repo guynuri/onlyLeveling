@@ -1,7 +1,8 @@
-// Home hub (UX design §6.2): next workout, level and XP, streak, coach. Each tile opens its screen. Fits one iPhone
+// Home hub (UX design §6.2): monthly recap (first open of a month), next workout, level and XP, streak, quests, coach. Each tile opens its screen. Fits one iPhone
 // screen: one card plus three compact tiles.
 import { useEffect, useState } from 'react';
-import { Flame, MessageCircle, Trophy } from 'lucide-react';
+import { Flame, MessageCircle, Swords, Trophy } from 'lucide-react';
+import { RecapCard } from '../modules/progress/GameCards';
 import { getExercise } from '../data/exercises';
 import { blockWeek, isDeloadWeek, nextSession, sessionsInBlock } from '../domain/block';
 import type { BodySlug } from '../domain/muscle-map';
@@ -42,6 +43,7 @@ export default function HomeScreen() {
 
   return (
     <section className="ui-stack home">
+      {loaded.recap && <RecapCard recap={loaded.recap} plan={plan} now={now} onDismiss={() => setData({ now, loaded: { ...loaded, recap: null } })} />}
       <Card
         title={day ? (day.kind === 'cardio' ? 'Next: cardio day' : `Next: ${day.label ?? `Day ${day.index + 1}`}`) : 'No plan yet'}
         action={
@@ -86,7 +88,13 @@ export default function HomeScreen() {
         href="#/progress"
         icon={<Flame />}
         label="Streak"
-        value={state.streak > 0 ? `${state.streak} ${state.streak === 1 ? 'week' : 'weeks'} in a row` : 'Finish this week’s sessions to start one'}
+        value={`${state.streak > 0 ? `${state.streak} ${state.streak === 1 ? 'week' : 'weeks'} in a row` : 'Finish this week’s sessions to start one'}${state.freezes > 0 ? ` · ${state.freezes} ${state.freezes === 1 ? 'freeze' : 'freezes'}` : ''}`}
+      />
+      <Tile
+        href="#/progress"
+        icon={<Swords />}
+        label="Weekly quests"
+        value={`${loaded.quests.filter((q) => q.have >= q.quest.need).length} of ${loaded.quests.length} done`}
       />
       <Tile
         href="#/workout"

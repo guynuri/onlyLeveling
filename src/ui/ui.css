@@ -449,3 +449,27 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
   background: var(--surface-2); color: var(--fg); border: 1px solid var(--border); border-radius: var(--r-md);
 }
 .prog-muscles button[aria-pressed='true'] { border-color: var(--accent); box-shadow: var(--glow); }
+
+/* Celebration (U7): CSS only, no media. Reduced motion: no animation, same content. */
+.celebrate {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--s-4);
+  background: rgb(0 0 0 / 75%);
+  animation: celebrate-in 0.3s ease-out;
+}
+.celebrate-burst {
+  position: absolute; width: 320px; height: 320px; border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+  animation: celebrate-pulse 1.6s ease-in-out infinite;
+}
+.celebrate-body { position: relative; display: flex; flex-direction: column; align-items: center; gap: var(--s-3); text-align: center; }
+.celebrate-eyebrow { margin: 0; color: var(--accent); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: 0.1em; }
+.celebrate-big { margin: 0; font-size: 2.5rem; font-weight: var(--fw-bold); color: var(--fg); text-shadow: 0 0 18px var(--accent); animation: celebrate-pop 0.6s ease-out; }
+.celebrate-rank { margin: 0; display: flex; align-items: center; gap: var(--s-2); font-size: var(--fs-lg, 1.25rem); color: var(--fg); }
+@keyframes celebrate-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes celebrate-pop { 0% { transform: scale(0.4); opacity: 0; } 70% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes celebrate-pulse { 0%, 100% { transform: scale(0.85); opacity: 0.6; } 50% { transform: scale(1.1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .celebrate, .celebrate-burst, .celebrate-big { animation: none; }
+}

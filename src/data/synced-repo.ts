@@ -42,5 +42,11 @@ export function createSyncedRepo(local: Repo, outbox: Outbox, now: () => number 
       if (first) await outbox.enqueue('awardBadge', { badgeKey, earnedAt }, now(), `badge:${badgeKey}`);
       return first;
     },
+    listGame: () => local.listGame(),
+    async putGame(r) {
+      const first = await local.putGame(r);
+      if (first) await outbox.enqueue('putGame', r, now(), `game:${r.key}`);
+      return first;
+    },
   };
 }

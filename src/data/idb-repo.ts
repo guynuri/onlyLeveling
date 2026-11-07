@@ -4,7 +4,7 @@ import type { BodyweightEntry, Settings, Workout } from '../domain/types';
 import type { Plan } from '../domain/plan';
 import type { Suggestion } from '../domain/suggestion';
 import type { CardioSession } from '../domain/cardio';
-import type { Repo } from './repo';
+import type { GameRecord, Repo } from './repo';
 
 const SETTINGS_KEY = 'settings';
 const PLAN_KEY = 'plan';
@@ -58,6 +58,17 @@ export function createRepo(db: Db): Repo {
       if (had) return false;
       await db.put('badges', { badgeKey, earnedAt }, badgeKey);
       return true;
+    },
+    async listGame() {
+      return (await db.getAll('game')) as GameRecord[];
+    },
+    async putGame(r, overwrite = false) {
+      // One transaction, so two loads at once cannot both store a week's quests.
+      const tx = db.transaction('game', 'readwrite');
+      const had = !overwrite && (await tx.store.get(r.key)) !== undefined;
+      if (!had) await tx.store.put(r, r.key);
+      await tx.done;
+      return !had;
     },
   };
 }

@@ -15,6 +15,8 @@ import { CoachCards } from '../coach/CoachCards';
 import { scheduleRestAlert, cancelRestAlert } from '../push/actions';
 import { WeeklyReview } from '../review/ui/WeeklyReview';
 import { isLivePr, summarize, type SessionSummary } from '../xp/domain/sessionSummary';
+import { loadProgress } from '../progress/load';
+import { levelOf } from '../xp/domain/hub';
 import { Button, Card } from '../../ui/primitives';
 import { SegmentedControl } from '../../ui/controls';
 import { ExerciseName } from '../library/ExerciseSheet';
@@ -58,6 +60,7 @@ export default function WorkoutScreen() {
   const [editing, setEditing] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [summary, setSummary] = useState<SessionSummary | null>(null);
+  const [levelUp, setLevelUp] = useState<{ from: number; to: number } | null>(null);
   const [status, setStatus] = useState('');
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0); // bumped after Done, so the next session loads fresh
@@ -177,7 +180,12 @@ export default function WorkoutScreen() {
     try {
       const workout: Workout = { id: `w_${startedAt}`, start: startedAt, end: nowMs(), entries: toEntries(live) };
       const repo = await getRepo();
+      // Player level before and after, for the celebration (U7). A failed read only skips the moment.
+      const levelNow = () => loadProgress().then((l) => levelOf(l.totalXp).level).catch(() => null);
+      const levelBefore = await levelNow();
       await repo.saveWorkout(workout);
+      const levelAfter = await levelNow();
+      setLevelUp(levelBefore !== null && levelAfter !== null && levelAfter > levelBefore ? { from: levelBefore, to: levelAfter } : null);
       // A finished workout ends any pending rest alert and the draft. A failed cancel must not block saving.
       cancelRestAlert().catch(() => undefined);
       await clearDraft(await getDb());
@@ -228,6 +236,7 @@ export default function WorkoutScreen() {
     return (
       <FinishSummary
         summary={summary}
+        levelUp={levelUp ?? undefined}
         names={names}
         sex={settings.about?.sex ?? 'male'}
         onDone={leave}

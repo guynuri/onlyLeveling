@@ -15,7 +15,7 @@ export interface PushResult {
 }
 
 // The outbox op names the app writes, mapped to the server's op kinds.
-type Kind = 'workout' | 'settings' | 'bodyweight' | 'plan' | 'suggestion' | 'badge' | 'cardio';
+type Kind = 'workout' | 'settings' | 'bodyweight' | 'plan' | 'suggestion' | 'badge' | 'cardio' | 'game';
 const KIND: Record<string, Kind> = {
   saveWorkout: 'workout',
   saveCardio: 'cardio',
@@ -24,6 +24,7 @@ const KIND: Record<string, Kind> = {
   savePlan: 'plan',
   saveSuggestion: 'suggestion',
   awardBadge: 'badge',
+  putGame: 'game',
 };
 
 // Server op for one outbox row. The op id is stable for the row, so a retry is a duplicate, not a second write.
