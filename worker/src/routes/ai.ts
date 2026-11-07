@@ -25,6 +25,8 @@ export type ProposeResult =
   | { status: 'fallback'; reason: 'invalid' | 'unreachable' | 'none' | 'capped' };
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+const MAX_ROUTINE = 150;
+const ROUTINE_ID = /^(fx|rp|og)_[A-Za-z0-9_.()'-]{1,90}$/;
 const intIn = (v: unknown, lo: number, hi: number) => typeof v === 'number' && Number.isInteger(v) && v >= lo && v <= hi;
 
 // Shape only: the validator checks the content of the AI's answer, not this request.
@@ -45,6 +47,15 @@ export function parsePlanRequest(body: unknown): PlanRequest | null {
     else if (c.loads !== undefined) return null;
     candidates[id] = { name: c.name, repMin: c.repMin as number, repMax: c.repMax as number, ...(loads === undefined ? {} : { loads }) };
   }
+  // Optional warm-up and cool-down choices: id → short name, bounded.
+  let routine: Record<string, string> | undefined;
+  if (body.routine !== undefined) {
+    if (!isObj(body.routine)) return null;
+    const rs = Object.entries(body.routine);
+    if (rs.length > MAX_ROUTINE) return null;
+    // Library-shaped ids and short names only; anything else is dropped, so client text cannot pad the prompt.
+    routine = Object.fromEntries(rs.filter(([id, n]) => ROUTINE_ID.test(id) && typeof n === 'string' && n.length <= 60 && !/[\r\n]/.test(n))) as Record<string, string>;
+  }
   return {
     summary: body.summary,
     candidates,
@@ -53,6 +64,7 @@ export function parsePlanRequest(body: unknown): PlanRequest | null {
     owned: body.owned as number[],
     avoid: body.avoid as string[],
     supersets: body.supersets === true,
+    ...(routine ? { routine } : {}),
   };
 }
 
@@ -72,6 +84,7 @@ export async function proposePlan(db: D1Database, userId: string, req: PlanReque
     avoid: req.avoid,
     candidates: req.candidates,
     supersets: req.supersets === true,
+    ...(req.routine ? { routine: req.routine } : {}),
   };
   const out = await runChain(
     deps.providers,

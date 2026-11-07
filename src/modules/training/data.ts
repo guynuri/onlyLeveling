@@ -10,6 +10,7 @@ import type { HistorySession, ProgressionConfig } from '../../domain/progression
 import type { Settings, Workout } from '../../domain/types';
 import { planFromTemplate, type Plan } from '../../domain/plan';
 import { buildRulesPlan } from '../../domain/plan-builder';
+import { withRoutines } from '../../domain/routine';
 import { materializeBlock } from '../../domain/block';
 import { listExercises } from '../../data/exercises';
 
@@ -62,11 +63,11 @@ export async function getRepo(): Promise<Repo> {
 // When nothing the user owns fits, an empty plan is returned and nothing is saved.
 export async function currentPlan(repo: Repo, local: Repo, s: Settings, now = Date.now()): Promise<Plan> {
   const saved = await repo.getPlan();
-  if (saved) return materializeBlock(saved);
+  if (saved) return withRoutines(materializeBlock(saved), listExercises());
   const built = buildRulesPlan({ settings: s, catalogue: listExercises(), kind: 'auto', weeks: BLOCK.defaultWeeks, now });
   if (!built.ok) return planFromTemplate([], s.daysPerWeek, now);
   await local.savePlan(built.plan);
-  return built.plan;
+  return withRoutines(built.plan, listExercises());
 }
 
 export function defaultSettings(): Settings {

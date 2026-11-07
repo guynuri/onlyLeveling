@@ -5,11 +5,14 @@ import { BodyMap } from '../../ui/body/BodyMap';
 import type { SessionSummary } from '../xp/domain/sessionSummary';
 import { GROUP_LABEL } from '../xp/domain/muscles';
 import { Celebration } from '../progress/GameCards';
+import { RoutineList } from './RoutineList';
+import type { RoutineItem } from '../../domain/template';
 
 
 export function FinishSummary(props: {
   summary: SessionSummary;
   levelUp?: { from: number; to: number }; // shows the celebration with any rank-ups (U7)
+  cooldown?: readonly RoutineItem[];
   names: Record<string, string>; // exercise id → name
   sex: 'male' | 'female';
   onDone: () => void;
@@ -65,6 +68,11 @@ export function FinishSummary(props: {
       <Card title="Muscles worked">
         <BodyMap primary={s.primary} secondary={s.secondary} sex={props.sex} />
       </Card>
+      {props.cooldown && props.cooldown.length > 0 && (
+        <Card title="Cool-down">
+          <RoutineList items={props.cooldown} />
+        </Card>
+      )}
       {props.extra}
       <Button block onClick={props.onDone}>
         Done

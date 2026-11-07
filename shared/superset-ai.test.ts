@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { supersetRuns } from './ai-plan';
+import { supersetRuns, validateAiPlan } from './ai-plan';
 import { buildPrompt } from './ai-prompt';
 
 describe('supersetRuns (AI superset letters)', () => {
@@ -17,5 +17,29 @@ describe('buildPrompt superset switch', () => {
   it('asks for supersets only when switched on', () => {
     expect(buildPrompt({ ...req, supersets: true })).toContain('Use supersets');
     expect(buildPrompt(req)).toContain('Do not use the "superset" field.');
+  });
+  it('lists warm-up and cool-down choices only when given', () => {
+    expect(buildPrompt({ ...req, routine: { s1: 'Chest stretch' } })).toContain('s1 | Chest stretch');
+    expect(buildPrompt(req)).not.toContain('Stretch list');
+  });
+});
+
+describe('validateAiPlan routine picks', () => {
+  const input = {
+    daysPerWeek: 1,
+    exercisesPerDay: 4,
+    owned: [10],
+    avoid: [],
+    candidates: { x: { name: 'X', repMin: 8, repMax: 12 } },
+    routine: { s1: 'Stretch 1', s2: 'Stretch 2' },
+  };
+  const answer = (day: Record<string, unknown>) => ({
+    plan: { name: 'P', days: [{ label: 'A', exercises: [{ exerciseId: 'x', reason: 'r', w: 10, reps: 10, sets: 3 }], ...day }] },
+    note: 'n',
+  });
+  it('keeps only listed ids, once each; anything else is dropped, not an error', () => {
+    const r = validateAiPlan(answer({ warmup: ['s1', 'evil', 's1', 's2'], cooldown: 'nope' }), input);
+    expect(r.ok && r.plan.days[0].warmup).toEqual(['s1', 's2']);
+    expect(r.ok && r.plan.days[0].cooldown).toBeUndefined();
   });
 });

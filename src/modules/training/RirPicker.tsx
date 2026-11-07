@@ -1,35 +1,69 @@
+// How the last set felt, on one slider (owner request 2026-11-07): below zero = fell short by that many reps, 0 = could
+// not do another, 1 to 4+ = reps left in reserve. Optional; Clear removes the rating. live-session.ts rateSet applies it.
 import { useId } from 'react';
-// Reps left in reserve after a set, 0 to 4+ (UX design §6.4): five coloured buttons and one plain line for the one
-// picked. Optional: tapping the picked level again clears it.
-const LEVELS = [
-  { value: 0, label: '0', line: 'Could not do another rep.' },
-  { value: 1, label: '1', line: 'Could do 1 more rep.' },
-  { value: 2, label: '2', line: 'Could do 2 more reps.' },
-  { value: 3, label: '3', line: 'Could do 3 more reps.' },
-  { value: 4, label: '4+', line: 'Plenty left: 4 or more reps.' },
-] as const;
+import { WORKOUT } from '../../config/thresholds';
 
-export function RirPicker(props: { value?: number; onChange: (v: number | undefined) => void; disabled?: boolean }) {
-  const picked = LEVELS.find((l) => l.value === props.value);
+const MAX = WORKOUT.rirMax;
+
+export function effortLine(v: number): string {
+  if (v <= -WORKOUT.missMax) return `Fell short by ${WORKOUT.missMax} or more reps.`;
+  if (v < 0) return `Fell short by ${-v} ${v === -1 ? 'rep' : 'reps'}.`;
+  if (v === 0) return 'Could not do another rep.';
+  if (v >= MAX) return 'Plenty left: 4 or more reps.';
+  return `Could do ${v} more ${v === 1 ? 'rep' : 'reps'}.`;
+}
+
+const label = (v: number) => (v === MAX ? '4+' : v <= -WORKOUT.missMax ? `−${WORKOUT.missMax}` : v < 0 ? `−${-v}` : String(v));
+
+// `min`: the lowest rating this set allows (a set keeps at least one rep).
+export function RirPicker(props: { value?: number; onChange: (v: number | undefined) => void; disabled?: boolean; min?: number }) {
+  const lo = Math.max(-WORKOUT.missMax, props.min ?? -WORKOUT.missMax);
   const lineId = useId();
+  const unset = props.value === undefined;
+  const ticks = Array.from({ length: MAX + WORKOUT.missMax + 1 }, (_, i) => i - WORKOUT.missMax);
   return (
-    <div className="ui-rir">
-      <div className="ui-rir-row" role="radiogroup" aria-label="Reps left in reserve" aria-describedby={lineId}>
-        {LEVELS.map((l) => (
+    <div className={`ui-effort${unset ? ' ui-effort--unset' : ''}`}>
+      <div className="ui-effort-head">
+        <span className="small">How did that set feel?</span>
+        {!unset && !props.disabled && (
+          <button type="button" className="ui-effort-clear" onClick={() => props.onChange(undefined)}>
+            Clear
+          </button>
+        )}
+      </div>
+      <input
+        type="range"
+        className="ui-effort-range"
+        min={-WORKOUT.missMax}
+        max={MAX}
+        step={1}
+        value={props.value ?? 0}
+        disabled={props.disabled}
+        aria-label="Reps left, or reps short"
+        aria-valuetext={unset ? 'Not rated' : effortLine(props.value!)}
+        aria-describedby={lineId}
+        // The scale keeps its full width so the labels line up; a value below `lo` stops at `lo`.
+        onChange={(e) => props.onChange(Math.max(lo, Number(e.target.value)))}
+      />
+      {/* Tappable labels too: from unset, the thumb's resting spot (0) cannot be picked by tapping the slider. */}
+      <div className="ui-effort-ticks">
+        {ticks.map((t) => (
           <button
-            key={l.value}
+            key={t}
             type="button"
-            role="radio"
-            aria-checked={props.value === l.value}
-            disabled={props.disabled}
-            className={`ui-rir-btn ui-rir-btn--${l.value}`}
-            onClick={() => props.onChange(props.value === l.value ? undefined : l.value)}
+            tabIndex={-1}
+            aria-hidden="true"
+            disabled={props.disabled || t < lo}
+            className={t === props.value ? 'on' : undefined}
+            onClick={() => props.onChange(t)}
           >
-            {l.label}
+            {label(t)}
           </button>
         ))}
       </div>
-      <p id={lineId} className="muted small ui-rir-line">{props.disabled ? 'Log a set of this exercise, then rate how many reps were left.' : picked ? picked.line : 'How many reps were left? Optional.'}</p>
+      <p id={lineId} className="muted small ui-rir-line">
+        {props.disabled ? 'Log a set of this exercise, then slide to rate it.' : unset ? 'Optional: slide left if you fell short, right if reps were left.' : effortLine(props.value!)}
+      </p>
     </div>
   );
 }

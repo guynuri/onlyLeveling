@@ -7,7 +7,7 @@ import { isDeloadWeek, nextSession, sessionStarts, sessionsInBlock } from '../..
 import { CARDIO } from '../../config/thresholds';
 import { cardioXp, makeCardio, type CardioSession } from '../../domain/cardio';
 import { loadKind } from '../../domain/exercise';
-import { buildLive, canFinish, currentPosition, logSet, nextSetDefaults, setRir, toEntries, undoLastSet, type LiveExercise } from '../../domain/live-session';
+import { buildLive, canFinish, currentPosition, logSet, nextSetDefaults, rateSet, ratingOf, toEntries, undoLastSet, type LiveExercise } from '../../domain/live-session';
 import type { Plan } from '../../domain/plan';
 import { blockedIds, equipmentOf, workoutViewOf } from '../../domain/profile';
 import type { BodyweightEntry, Settings, Workout } from '../../domain/types';
@@ -17,6 +17,9 @@ import { WeeklyReview } from '../review/ui/WeeklyReview';
 import { isLivePr, summarize, type SessionSummary } from '../xp/domain/sessionSummary';
 import { loadProgress } from '../progress/load';
 import { afterSet, supersetLabel } from '../../domain/superset';
+import { RoutineList } from './RoutineList';
+import { ExerciseMedia } from '../../ui/ExerciseMedia';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { unlockSound } from '../../ui/sound';
 import { levelOf } from '../xp/domain/hub';
 import { Button, Card } from '../../ui/primitives';
@@ -271,6 +274,7 @@ export default function WorkoutScreen() {
       <FinishSummary
         summary={summary}
         levelUp={levelUp ?? undefined}
+        cooldown={day.cooldown}
         names={names}
         sex={settings.about?.sex ?? 'male'}
         onDone={leave}
@@ -341,14 +345,7 @@ export default function WorkoutScreen() {
         <WeeklyReview />
         <CoachCards />
         <Card title="Warm-up">
-          <ul className="ui-list">
-            {day.warmup.map((r) => (
-              <li key={r.name}>
-                <span>{r.name}</span>
-                <span className="muted small">{Math.round(r.seconds / 60)} min</span>
-              </li>
-            ))}
-          </ul>
+          <RoutineList items={day.warmup} />
         </Card>
         <Card
           title="Exercises"
@@ -405,12 +402,17 @@ export default function WorkoutScreen() {
           <ExerciseName id={le.exerciseId} name={names[le.exerciseId] ?? le.exerciseId} />
           {supersetLabel(day, le.exerciseId) && <span className="pe-ss ui-live-ss">Superset {supersetLabel(day, le.exerciseId)}</span>}
         </h2>
+        {open && view === 'focus' && ex?.media && (
+          <div className="ui-live-media">
+            <ExerciseMedia media={ex.media} name={ex.name} />
+          </div>
+        )}
         <p className="muted">Target {target}</p>
         <SetChips count={le.sets.length}>
           {le.sets.map((s, k) => (
             <span key={`${s.at}-${k}`} className="ui-set-chip" role="listitem">
               {le.mode === 'time' ? `${s.r} s` : `${weighted ? `${s.w} × ` : ''}${s.r}`}
-              {s.rir !== undefined && ` · ${s.rir === 4 ? '4+' : s.rir} left`}
+              {s.missed ? ` · ${s.missed} short` : s.rir !== undefined && ` · ${s.rir === 4 ? '4+' : s.rir} left`}
               {isLivePr(le, history, k) && <span className="ui-pr-badge">PR</span>}
             </span>
           ))}
@@ -428,12 +430,14 @@ export default function WorkoutScreen() {
               setsTotal={le.prescription.sets}
               onChange={(nv) => setPending({ ...pending, [le.exerciseId]: nv })}
               onLog={() => log(i)}
+              onNext={done && i < live.length - 1 ? () => setFocus(i + 1) : undefined}
             />
             {/* Always rendered, so logging a set does not push the page down; it rates the last set of this exercise. */}
             <RirPicker
               disabled={!(lastSet && lastSet.exercise === i)}
-              value={lastSet && lastSet.exercise === i ? le.sets[lastSet.set]?.rir : undefined}
-              onChange={(rir) => lastSet && setLive(live.map((x, k) => (k === i ? setRir(x, lastSet.set, rir) : x)))}
+              value={lastSet && lastSet.exercise === i ? ratingOf(le.sets[lastSet.set]) : undefined}
+              min={lastSet && lastSet.exercise === i ? 1 - ((le.sets[lastSet.set]?.r ?? 1) + (le.sets[lastSet.set]?.missed ?? 0)) : undefined}
+              onChange={(v) => lastSet && setLive(live.map((x, k) => (k === i ? rateSet(x, lastSet.set, v) : x)))}
             />
           </>
         )}
@@ -459,17 +463,26 @@ export default function WorkoutScreen() {
       />
       {shown.map((i) => card(live[i], i))}
       {view === 'focus' && (
-        <div className="ui-row">
-          <Button variant="secondary" disabled={focus === 0} onClick={() => setFocus(focus - 1)}>
-            Previous
-          </Button>
-          <span className="muted">
-            Exercise {focus + 1} of {live.length}
-          </span>
-          <Button variant="secondary" disabled={focus >= live.length - 1} onClick={() => setFocus(focus + 1)}>
-            Next
-          </Button>
-        </div>
+        <nav className="ui-exnav" aria-label="Exercises">
+          <button type="button" className="ui-exnav-arrow" aria-label="Previous exercise" disabled={focus === 0} onClick={() => setFocus(focus - 1)}>
+            <ChevronLeft />
+          </button>
+          <div className="ui-exnav-dots">
+            {live.map((e, k) => (
+              <button
+                key={e.exerciseId}
+                type="button"
+                aria-label={`Exercise ${k + 1}: ${names[e.exerciseId] ?? e.exerciseId}`}
+                aria-current={k === focus ? 'step' : undefined}
+                className={`ui-exnav-dot${e.sets.length >= e.prescription.sets ? ' ui-exnav-dot--done' : ''}`}
+                onClick={() => setFocus(k)}
+              />
+            ))}
+          </div>
+          <button type="button" className="ui-exnav-arrow" aria-label="Next exercise" disabled={focus >= live.length - 1} onClick={() => setFocus(focus + 1)}>
+            <ChevronRight />
+          </button>
+        </nav>
       )}
       {(day.postCardioMinutes || day.mobilityMinutes) && (
         <p className="muted">

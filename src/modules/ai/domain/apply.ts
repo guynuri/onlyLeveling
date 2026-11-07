@@ -6,9 +6,18 @@ import { ROUTINE } from '../../../config/thresholds';
 import { planFromTemplate, type Plan, type Adjustment } from '../../../domain/plan';
 import { applyBlend } from '../../../domain/plan-builder';
 import { goalsOf } from '../../../domain/profile';
-import type { TemplateDay } from '../../../domain/template';
+import type { RoutineItem, TemplateDay } from '../../../domain/template';
+import { getExercise } from '../../../data/exercises';
 import type { Settings } from '../../../domain/types';
 import type { ValidPlan } from '../../../../shared/ai-plan';
+
+// The AI's validated warm-up or cool-down ids as routine items; a pulse raiser gets its longer time. Null: none picked,
+// the rules fill it (domain/routine.ts withRoutines).
+function aiRoutine(ids: readonly string[] | undefined, seconds: number): RoutineItem[] | null {
+  if (!ids || ids.length === 0) return null;
+  const pulse = new Set<string>(ROUTINE.pulseIds);
+  return ids.map((id) => ({ name: getExercise(id)?.name ?? id, seconds: pulse.has(id) ? ROUTINE.pulseSeconds : seconds, exerciseId: id, by: 'ai' as const }));
+}
 
 export function planFromProposal(
   v: ValidPlan,
@@ -20,7 +29,7 @@ export function planFromProposal(
   const days: TemplateDay[] = v.days.map((d, index) => ({
     index,
     label: d.label,
-    warmup: ROUTINE.warmup.map((r) => ({ ...r })),
+    warmup: aiRoutine(d.warmup, ROUTINE.warmupStretchSeconds) ?? ROUTINE.warmup.map((r) => ({ ...r })),
     exerciseIds: d.exercises.map((e) => e.exerciseId),
     ...(d.supersets ? { supersets: d.supersets } : {}),
     targets: Object.fromEntries(
@@ -29,7 +38,7 @@ export function planFromProposal(
         return [e.exerciseId, { sets: e.sets, repMin: r.min, repMax: r.max }];
       }),
     ),
-    cooldown: ROUTINE.cooldown.map((r) => ({ ...r })),
+    cooldown: aiRoutine(d.cooldown, ROUTINE.cooldownStretchSeconds) ?? ROUTINE.cooldown.map((r) => ({ ...r })),
   }));
   const adjustments: Adjustment[] = [];
   for (const d of v.days) {

@@ -6,6 +6,7 @@ export interface SetRow {
   r: number; // reps done
   done: boolean;
   rir?: number;
+  missed?: number; // reps short of what was entered (rated below zero); r already has them taken off
   phase: SetPhase;
   at: number; // epoch ms
 }

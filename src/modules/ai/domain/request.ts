@@ -1,5 +1,6 @@
 // What leaves the device for a plan proposal (SPEC §5.3): structured fields and library ids only. No dates of birth,
 // no free text, no raw logs, no account identity. Pure.
+import { routineCatalogue } from '../../../domain/routine';
 import { loadKind, movementPattern, usableWith, type Exercise } from '../../../domain/exercise';
 import { repRangeFor } from '../../../domain/reps';
 import type { Settings } from '../../../domain/types';
@@ -59,5 +60,6 @@ export function buildPlanRequest(
     owned: [...s.owned],
     avoid,
     supersets,
+    routine: Object.fromEntries(routineCatalogue(catalogue).map((e) => [e.id, e.name])),
   };
 }

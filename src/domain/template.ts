@@ -15,6 +15,8 @@ export interface TemplateInput {
 export interface RoutineItem {
   name: string;
   seconds: number;
+  exerciseId?: string; // a library stretch or pulse raiser; absent on older generic items
+  by?: 'ai'; // picked by the AI; rules routines are re-derived from the day's exercises
 }
 
 // What one exercise asks for in a plan: sets and a rep range (U4). Absent: the library default for the exercise.

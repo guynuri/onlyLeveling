@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildLive, canFinish, currentPosition, logSet, nextSetDefaults, setRir, toEntries, undoLastSet, type LiveExercise } from './live-session';
+import { buildLive, canFinish, currentPosition, logSet, nextSetDefaults, rateSet, ratingOf, setRir, toEntries, undoLastSet, type LiveExercise } from './live-session';
 import type { Exercise } from './exercise';
 
 const ex = (id: string, mode: 'reps' | 'time' = 'reps') => ({ id, mode }) as Exercise;
@@ -98,5 +98,32 @@ describe('toEntries and canFinish', () => {
   it('canFinish refuses an empty session and accepts one with a set', () => {
     expect(canFinish([le()])).toEqual({ ok: false, error: 'Log at least one set first.' });
     expect(canFinish([logSet(le(), { w: 8, r: 10 }, 1)])).toEqual({ ok: true });
+  });
+});
+
+describe('rateSet (effort scale -3 to 4+)', () => {
+  const le: LiveExercise = { exerciseId: 'x', mode: 'reps', prescription: { w: 10, reps: 10, sets: 3 }, sets: [{ w: 10, r: 10, done: true, phase: 'work', at: 1 }] };
+  it('0 to 4 is RIR and keeps the reps', () => {
+    const r = rateSet(le, 0, 2).sets[0];
+    expect(r).toMatchObject({ r: 10, rir: 2 });
+    expect(r.missed).toBeUndefined();
+  });
+  it('below zero takes reps off, and moving back up restores them', () => {
+    const missed = rateSet(le, 0, -2);
+    expect(missed.sets[0]).toMatchObject({ r: 8, rir: 0, missed: 2 });
+    expect(ratingOf(missed.sets[0])).toBe(-2);
+    expect(rateSet(missed, 0, -3).sets[0]).toMatchObject({ r: 7, missed: 3 });
+    expect(rateSet(missed, 0, 1).sets[0]).toMatchObject({ r: 10, rir: 1 });
+    const cleared = rateSet(missed, 0, undefined).sets[0];
+    expect(cleared.r).toBe(10);
+    expect(cleared.rir).toBeUndefined();
+  });
+  it('ignores values off the scale and unknown sets', () => {
+    expect(rateSet(le, 0, -4)).toBe(le);
+    expect(rateSet(le, 0, 5)).toBe(le);
+    expect(rateSet(le, 3, 1)).toBe(le);
+    const two = { ...le, sets: [{ ...le.sets[0], r: 2 }] };
+    expect(rateSet(two, 0, -2)).toBe(two); // would leave 0 reps
+    expect(rateSet(two, 0, -1).sets[0].r).toBe(1);
   });
 });

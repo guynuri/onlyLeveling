@@ -2,7 +2,7 @@
 // (copy-paste fallback). The AI is never trusted for numbers: every value is checked here, and out-of-range numbers are
 // corrected and reported, never silently passed on.
 import { ownedFloor } from '../src/domain/dumbbells';
-import { SUPERSET } from '../src/config/thresholds';
+import { ROUTINE, SUPERSET } from '../src/config/thresholds';
 
 export const AI_PLAN_LIMITS = {
   nameMax: 60,
@@ -30,6 +30,7 @@ export interface PlanInput {
   avoid: readonly string[]; // exercise ids that must not appear
   candidates: Record<string, Candidate>; // dumbbell-compatible library exercises, by id
   supersets?: boolean; // the athlete asked for supersets; otherwise any superset letters are ignored
+  routine?: Record<string, string>; // stretches and pulse raisers the AI may pick for warm-ups and cool-downs, id → name
 }
 
 export interface ValidExercise {
@@ -43,7 +44,7 @@ export interface ValidExercise {
 export interface ValidPlan {
   name: string;
   note: string;
-  days: { label: string; exercises: ValidExercise[]; supersets?: string[][] }[];
+  days: { label: string; exercises: ValidExercise[]; supersets?: string[][]; warmup?: string[]; cooldown?: string[] }[];
 }
 
 export interface Correction {
@@ -168,7 +169,21 @@ export function validateAiPlan(raw: unknown, input: PlanInput): ValidationResult
     const dup = exOut.find((e, i) => exOut.findIndex((o) => o.exerciseId === e.exerciseId) !== i);
     if (dup) errors.push(`${at}: ${dup.exerciseId} appears twice in one day`);
     const supersets = supersetRuns(exOut.map((e) => e.exerciseId), letters);
-    outDays.push({ label: day.label, exercises: exOut, ...(supersets.length > 0 ? { supersets } : {}) });
+    // Warm-up and cool-down picks: only ids from the routine list, no repeats, at most ROUTINE.aiMaxItems. Anything
+    // else is dropped and the rules fill the gap (never an error).
+    const routinePick = (v: unknown): string[] => {
+      if (!Array.isArray(v) || !input.routine) return [];
+      return [...new Set(v.filter((id): id is string => typeof id === 'string' && Object.hasOwn(input.routine!, id)))].slice(0, ROUTINE.aiMaxItems);
+    };
+    const warmup = routinePick(day.warmup);
+    const cooldown = routinePick(day.cooldown);
+    outDays.push({
+      label: day.label,
+      exercises: exOut,
+      ...(supersets.length > 0 ? { supersets } : {}),
+      ...(warmup.length > 0 ? { warmup } : {}),
+      ...(cooldown.length > 0 ? { cooldown } : {}),
+    });
   });
 
   if (errors.length > 0) return { ok: false, errors };
