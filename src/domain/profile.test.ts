@@ -132,5 +132,6 @@ describe('difficulty lock (lockedUntil, blockedIds)', () => {
     const s: Settings = { daysPerWeek: 3, restSec: 90, owned: [] };
     expect([...blockedIds(s, cat, {})]).toEqual([]);
     expect([...blockedIds({ ...s, lockByRank: true }, cat, { chest: 'D' })]).toEqual(['hard']);
+    expect([...blockedIds({ ...s, lockByRank: true }, cat, null)]).toEqual([]); // ranks not known yet: the lock waits
   });
 });

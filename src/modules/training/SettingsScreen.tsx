@@ -199,7 +199,7 @@ export default function SettingsScreen() {
         </Chip>
         <p className="muted small">
           When on, intermediate exercises open at rank {DIFFICULTY_LOCK.intermediate} of the muscles they train and expert ones at rank{' '}
-          {DIFFICULTY_LOCK.expert}. Plans, swaps and the AI only use open ones. A new plan applies focus and locks.
+          {DIFFICULTY_LOCK.expert}. Plans, swaps and the AI only use open ones. Your current plan stays as it is: a new plan applies focus and locks (rules plans add the extra work, the AI gets focus as a priority).
         </p>
         <Button onClick={save}>Save</Button>
       </Card>

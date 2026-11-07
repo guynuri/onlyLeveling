@@ -43,7 +43,7 @@ export default function ExerciseList() {
       alive = false;
     };
   }, []);
-  const ranks = useMemo(readRanks, []);
+  const ranks = useMemo(() => readRanks(), []);
   const rows = useMemo(() => filterLibrary(listExercises(), { text, kit, muscle }), [text, kit, muscle]);
 
   return (
@@ -82,7 +82,7 @@ export default function ExerciseList() {
                 <span>{ex.name}</span>
                 <span className="muted small">
                   {kitLabel(ex)} · {ex.muscles.primary.map((s) => SLUG_LABEL[s]).join(', ') || 'Muscles unknown'}
-                  {lock && lockedUntil(ex, ranks) && <span className="lib-lock"> · Locked until rank {lockedUntil(ex, ranks)}</span>}
+                  {lock && ranks && lockedUntil(ex, ranks) && <span className="lib-lock"> · Locked until rank {lockedUntil(ex, ranks)}</span>}
                 </span>
               </span>
             </a>

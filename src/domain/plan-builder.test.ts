@@ -186,6 +186,9 @@ describe('focus muscles (addFocus)', () => {
     expect(out[1].exerciseIds).toEqual(['curl']); // nothing in the pool trains triceps, and no other biceps move
     expect(out[1].targets?.curl.sets).toBe(4);
   });
+  it('focusOf drops repeats', () => {
+    expect(focusOf({ focusMuscles: ['chest', 'chest', 'back'] })).toEqual(['chest', 'back']);
+  });
   it('focusOf keeps known groups, at most 5', () => {
     expect(focusOf({ focusMuscles: ['chest', 'x', 'back', 'quads', 'calves', 'core', 'glutes'] })).toEqual(['chest', 'back', 'quads', 'calves', 'core']);
   });

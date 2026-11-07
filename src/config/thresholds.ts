@@ -168,7 +168,7 @@ export const AI_REQUEST = { maxCandidates: 90, maxRoutine: 30 } as const;
 export const DIFFICULTY_LOCK = { intermediate: 'D', expert: 'B' } as const;
 
 // Focus muscles (owner decision 2026-11-07): up to 5; a rules plan adds one exercise and one set for each.
-export const FOCUS = { max: 5, extraSets: 1 } as const;
+export const FOCUS = { max: 5, extraSets: 1, maxExtraPerDay: 2 } as const;
 
 // Supersets (owner decision 2026-11-07): 2 to 3 exercises done in turn, rest after the round.
 export const SUPERSET = { minSize: 2, maxSize: 3 } as const;

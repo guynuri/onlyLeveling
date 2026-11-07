@@ -9,7 +9,7 @@ import { cardioXp, makeCardio, type CardioSession } from '../../domain/cardio';
 import { loadKind } from '../../domain/exercise';
 import { buildLive, canFinish, currentPosition, logSet, nextSetDefaults, rateSet, ratingOf, toEntries, undoLastSet, type LiveExercise } from '../../domain/live-session';
 import type { Plan } from '../../domain/plan';
-import { blockedIds, equipmentOf, workoutViewOf } from '../../domain/profile';
+import { equipmentOf, workoutViewOf } from '../../domain/profile';
 import type { BodyweightEntry, Settings, Workout } from '../../domain/types';
 import { CoachCards } from '../coach/CoachCards';
 import { scheduleRestAlert, cancelRestAlert } from '../push/actions';

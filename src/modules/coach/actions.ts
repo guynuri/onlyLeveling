@@ -3,7 +3,7 @@ import { listExercises, getExercise } from '../../data/exercises';
 import { applySuggestion, planExerciseIds } from '../../domain/plan';
 import { notNowUntil, candidates, reconcile } from './domain/suggest';
 import type { Suggestion } from '../../domain/suggestion';
-import { blockedIds, equipmentOf } from '../../domain/profile';
+import { equipmentOf } from '../../domain/profile';
 import { getRepo, getLocalRepo, defaultSettings, currentPlan, repRangeFor } from '../training/data';
 import { blockedFor } from '../progress/ranks-cache';
 

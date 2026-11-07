@@ -69,16 +69,17 @@ export function lockedUntil(ex: Pick<Exercise, 'level' | 'primaryMuscles'>, rank
 }
 
 // Exercises plans, swaps and the AI must not use: the avoid list, the limits, and (when the lock is on) exercises
-// harder than the user's muscle ranks allow. `ranks` missing counts every muscle as F.
+// harder than the user's muscle ranks allow. `ranks` null means not known yet on this device: the lock waits rather
+// than locking everything; an empty object counts every muscle as F.
 export function blockedIds(
   s: Settings,
   catalogue: readonly Pick<Exercise, 'id' | 'muscles' | 'tags' | 'level' | 'primaryMuscles'>[],
-  ranks: Readonly<Partial<Record<Group, Rank>>> = {},
+  ranks: Readonly<Partial<Record<Group, Rank>>> | null = {},
 ): Set<string> {
   const out = new Set(s.avoid ?? []);
   const parts = s.limits?.parts ?? [];
   if (parts.length > 0) for (const ex of catalogue) if (excludedByLimits(ex, parts)) out.add(ex.id);
-  if (s.lockByRank) for (const ex of catalogue) if (lockedUntil(ex, ranks)) out.add(ex.id);
+  if (s.lockByRank && ranks) for (const ex of catalogue) if (lockedUntil(ex, ranks)) out.add(ex.id);
   return out;
 }
 

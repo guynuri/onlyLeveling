@@ -4,7 +4,7 @@
 import type { Plan } from '../../domain/plan';
 import type { Exercise } from '../../domain/exercise';
 import type { Settings, Workout } from '../../domain/types';
-import { blockedIds, equipmentOf } from '../../domain/profile';
+import { equipmentOf } from '../../domain/profile';
 import { materializeBlock } from '../../domain/block';
 import type { EquipmentChoice } from '../../domain/types';
 import { blockedFor } from '../progress/ranks-cache';

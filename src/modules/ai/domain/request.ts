@@ -86,7 +86,7 @@ export function buildPlanRequest(
   exercisesPerDay: number,
   bodyweightKg: number | null = null,
   supersets = false,
-  ranks: Partial<Record<Group, Rank>> = {}, // for the difficulty lock
+  ranks: Partial<Record<Group, Rank>> | null = null, // for the difficulty lock; null: not known yet
 ): PlanRequest {
   const avoid = s.avoid ?? [];
   const owned = [...s.owned].sort((a, b) => a - b);

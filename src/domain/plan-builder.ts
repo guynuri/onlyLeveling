@@ -64,13 +64,14 @@ function pickDay(pool: readonly Exercise[], slots: readonly Region[], n: number,
 
 const GROUP_SET = new Set<string>(GROUPS);
 export function focusOf(s: Pick<Settings, 'focusMuscles'>): Group[] {
-  return (s.focusMuscles ?? []).filter((g): g is Group => GROUP_SET.has(g)).slice(0, FOCUS.max);
+  return [...new Set(s.focusMuscles ?? [])].filter((g): g is Group => GROUP_SET.has(g)).slice(0, FOCUS.max);
 }
 
 const trainsGroup = (e: Exercise, g: Group) => e.primaryMuscles.some((m) => groupOf(m) === g);
 
 // Focus muscles (owner decision 2026-11-07): for each, on the first day that trains it (else the shortest day), one
-// more exercise for it from the pool and FOCUS.extraSets more on its first exercise there. Pure.
+// more exercise for it from the pool (at most FOCUS.maxExtraPerDay extra per day) and FOCUS.extraSets more on its first
+// exercise there. Pure.
 export function addFocus(days: TemplateDay[], focus: readonly Group[], pool: readonly Exercise[], bias: 'none' | 'heavier' | 'lighter'): TemplateDay[] {
   const out = days.map((d) => ({ ...d, exerciseIds: [...d.exerciseIds], targets: { ...d.targets } }));
   const byId = new Map(pool.map((e) => [e.id, e]));
@@ -84,7 +85,7 @@ export function addFocus(days: TemplateDay[], focus: readonly Group[], pool: rea
       day.targets[first] = { ...day.targets[first], sets: Math.min(AI_PLAN_LIMITS.setsMax, day.targets[first].sets + FOCUS.extraSets) };
     }
     const extra = pool.find((e) => trainsGroup(e, g) && !used.has(e.id)) ?? pool.find((e) => trainsGroup(e, g) && !day.exerciseIds.includes(e.id));
-    if (extra) {
+    if (extra && day.exerciseIds.length < TEMPLATE.exercisesPerDay + FOCUS.maxExtraPerDay) {
       day.exerciseIds.push(extra.id);
       day.targets[extra.id] = targetFor(extra, bias);
       used.add(extra.id);
@@ -99,7 +100,7 @@ export function buildRulesPlan(input: {
   kind: TemplateKind | 'auto';
   weeks: Block['weeks'];
   now: number;
-  ranks?: Partial<Record<Group, Rank>>; // for the difficulty lock
+  ranks?: Partial<Record<Group, Rank>> | null; // for the difficulty lock; null: not known yet
 }): { ok: true; plan: Plan } | { ok: false; error: 'no-exercises' } {
   const s = input.settings;
   const goals = goalsOf(s);

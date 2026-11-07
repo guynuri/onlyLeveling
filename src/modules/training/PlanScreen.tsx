@@ -8,7 +8,7 @@ import { addCardioDay, removeDay } from '../../domain/plan-edit';
 import { CardioDayEditor } from './CardioDayEditor';
 import { Sheet } from '../../ui/controls';
 import { PLAN_CHANGED_EVENT } from '../library/labels';
-import { blockedIds, equipmentOf } from '../../domain/profile';
+import { equipmentOf } from '../../domain/profile';
 import type { EquipmentChoice, Settings } from '../../domain/types';
 import { ProposePlan } from '../ai/ui/ProposePlan';
 import { PlanHeader } from './PlanHeader';
