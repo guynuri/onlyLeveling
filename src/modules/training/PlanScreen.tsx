@@ -15,7 +15,9 @@ import { PlanHeader } from './PlanHeader';
 import { DayEditor } from './DayEditor';
 import { usePlanEditor } from './usePlanEditor';
 
-// The saved plan. Warm-up and cool-down are shown as their own blocks, never as exercises.
+const minutesOf = (items: readonly { seconds: number }[]) => Math.round(items.reduce((s, r) => s + r.seconds, 0) / 60);
+
+// The saved plan. Warm-up and cool-down are one folded line per day, never exercises.
 export default function PlanScreen() {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -85,9 +87,6 @@ export default function PlanScreen() {
           Your plan has {lifting} lifting {lifting === 1 ? 'day' : 'days'}; Settings says {settings.daysPerWeek} a week. Tap “New plan” to match.
         </p>
       )}
-      <p className="muted small">
-        Your plan. Change it however you like, or build a new one. Tap an exercise to see how it is done.
-      </p>
       {plan.days.map((day) =>
         day.kind === 'cardio' ? (
           <Card key={day.index} title={day.label ?? 'Cardio'}>
@@ -96,33 +95,30 @@ export default function PlanScreen() {
             {removeButton(day.index)}
           </Card>
         ) : (
-        <Card key={day.index} title={day.label ?? `Day ${day.index + 1}`}>
-          <h3>Warm-up</h3>
-          <ul className="ui-list">
-            {day.warmup.map((r) => (
-              <li key={r.name}>
-                <span>{r.name}</span>
-                <span className="muted small">{Math.round(r.seconds / 60)} min</span>
-              </li>
-            ))}
-          </ul>
-          <h3>Exercises</h3>
+        <Card
+          key={day.index}
+          title={day.label ?? `Day ${day.index + 1}`}
+          action={<span className="muted small">{day.exerciseIds.length} exercises</span>}
+        >
+          <details className="pe-routine">
+            <summary className="muted small">
+              Warm-up {minutesOf(day.warmup)} min · cool-down {minutesOf(day.cooldown)} min
+              {day.postCardioMinutes ? ` · cardio after ${day.postCardioMinutes} min` : ''}
+              {day.mobilityMinutes ? ` · mobility ${day.mobilityMinutes} min` : ''}
+            </summary>
+            <ul className="ui-list">
+              {[...day.warmup.map((r) => ({ ...r, part: 'Warm-up' })), ...day.cooldown.map((r) => ({ ...r, part: 'Cool-down' }))].map((r) => (
+                <li key={r.part + r.name}>
+                  <span>
+                    <span className="muted small">{r.part} · </span>
+                    {r.name}
+                  </span>
+                  <span className="muted small">{Math.round(r.seconds / 60)} min</span>
+                </li>
+              ))}
+            </ul>
+          </details>
           <DayEditor plan={plan} day={day} equipment={equipment} blocked={avoid} onEdit={edit} />
-          {(day.postCardioMinutes || day.mobilityMinutes) && (
-            <p className="muted small">
-              {day.postCardioMinutes ? `Cardio after lifting: ${day.postCardioMinutes} min. ` : ''}
-              {day.mobilityMinutes ? `Mobility: ${day.mobilityMinutes} min.` : ''}
-            </p>
-          )}
-          <h3>Cool-down</h3>
-          <ul className="ui-list">
-            {day.cooldown.map((r) => (
-              <li key={r.name}>
-                <span>{r.name}</span>
-                <span className="muted small">{Math.round(r.seconds / 60)} min</span>
-              </li>
-            ))}
-          </ul>
           {removeButton(day.index)}
         </Card>
         ),

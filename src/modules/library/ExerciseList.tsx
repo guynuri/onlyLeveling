@@ -6,7 +6,7 @@ import { equipmentOf } from '../../domain/profile';
 import { listExercises } from '../../data/exercises';
 import { BODY_SLUGS, SLUG_LABEL, type BodySlug } from '../../domain/muscle-map';
 import { Button, Chip, ChipGroup, EmptyState } from '../../ui/primitives';
-import { BodyMap } from '../../ui/body/BodyMap';
+import { ExThumb } from './ExThumb';
 import { filterLibrary, type KitChoice } from './filter';
 import { kitLabel } from './labels';
 
@@ -20,7 +20,6 @@ const KIT_OPTIONS: readonly { value: KitChoice; label: string }[] = [
 ];
 
 const PAGE = 60;
-const thumb = (path: string) => import.meta.env.BASE_URL + path;
 
 export default function ExerciseList() {
   const [text, setText] = useState('');
@@ -71,13 +70,7 @@ export default function ExerciseList() {
         {rows.slice(0, shown).map((ex) => (
           <li key={ex.id}>
             <a className="ui-list-link ui-ex-row" href={`#/library/${encodeURIComponent(ex.id)}`}>
-              <span className="ui-ex-thumb">
-                {ex.media ? (
-                  <img src={thumb(ex.media.stills[ex.media.stills.length - 1])} alt="" loading="lazy" decoding="async" />
-                ) : (
-                  <BodyMap primary={ex.muscles.primary} size="sm" />
-                )}
-              </span>
+              <ExThumb ex={ex} />
               <span className="ui-ex-text">
                 <span>{ex.name}</span>
                 <span className="muted small">

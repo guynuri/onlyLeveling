@@ -1,17 +1,22 @@
 // Edit one day of the plan in place (UX design §5; owner: anyone can change a template or an AI plan however they
-// want). Add any library exercise, remove, reorder, change sets and rep range, swap. Every change goes out through
-// `onEdit` as a pure plan edit; the screen saves it.
+// want). Compact rows (picture, name, sets × reps); tapping a row's chevron opens its editor: sets, rep range, move,
+// swap, remove. Swap suggests similar exercises first (coach swap rules); the whole library is one tap further.
+// Every change goes out through `onEdit` as a pure plan edit; the screen saves it.
 import { useState } from 'react';
+import { ArrowDown, ArrowUp, ChevronDown, Repeat, Trash2 } from 'lucide-react';
 import { getExercise, listExercises } from '../../data/exercises';
-import { movementPattern, usableWith, type Exercise } from '../../domain/exercise';
+import { usableWith, type Exercise } from '../../domain/exercise';
 import { addExercise, moveExercise, removeExercise, replaceInDay, setTarget } from '../../domain/plan-edit';
 import type { Plan } from '../../domain/plan';
 import { repRangeFor } from '../../domain/reps';
 import type { Target, TemplateDay } from '../../domain/template';
 import type { EquipmentChoice } from '../../domain/types';
 import { targetOf } from '../../domain/block';
+import { SLUG_LABEL } from '../../domain/muscle-map';
+import { swapCandidates } from '../coach/domain/swap';
 import { filterLibrary } from '../library/filter';
 import { ExerciseName } from '../library/ExerciseSheet';
+import { ExThumb } from '../library/ExThumb';
 import { Button } from '../../ui/primitives';
 import { Sheet, Stepper } from '../../ui/controls';
 
@@ -41,9 +46,12 @@ function ExercisePicker(props: {
       <ul className="ui-list">
         {rows.map((ex) => (
           <li key={ex.id}>
-            <span>
-              {ex.name}
-              {props.note(ex) && <span className="muted small"> · {props.note(ex)}</span>}
+            <span className="pe-head">
+              <ExThumb ex={ex} className="pe-thumb" />
+              <span className="pe-text">
+                <span>{ex.name}</span>
+                {props.note(ex) && <span className="muted small">{props.note(ex)}</span>}
+              </span>
             </span>
             <Button size="sm" variant="secondary" onClick={() => props.onPick(ex)}>
               Choose
@@ -66,79 +74,107 @@ export function DayEditor(props: {
 }) {
   const { plan, day } = props;
   const [picker, setPicker] = useState<Picker>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [browse, setBrowse] = useState(false); // swap: the whole library instead of the suggestions
   const di = plan.days.indexOf(day);
   const blocked = new Set(props.blocked);
   const inDay = new Set(day.exerciseIds);
+  const inPlan = new Set(plan.days.flatMap((d) => d.exerciseIds));
 
   const retarget = (id: string, t: Target) => props.onEdit((p, now) => setTarget(p, di, id, t, now));
+  const close = () => {
+    setPicker(null);
+    setBrowse(false);
+  };
 
   // Any library exercise can be added by hand; the note says when it needs kit the user has not picked.
   const addable = listExercises().filter((e) => !inDay.has(e.id));
-  const swappable = listExercises().filter((e) => usableWith(e, props.equipment) && movementPattern(e) !== 'unknown' && !inDay.has(e.id) && !blocked.has(e.id));
-  const addNote = (e: Exercise) => (usableWith(e, props.equipment) ? null : 'needs equipment you have not picked');
+  const swappable = listExercises().filter((e) => usableWith(e, props.equipment) && !inDay.has(e.id) && !blocked.has(e.id));
+  const addNote = (e: Exercise) => (usableWith(e, props.equipment) ? null : 'Needs equipment you have not picked');
+  const swapFrom = picker?.mode === 'swap' ? getExercise(picker.fromId) : undefined;
+  // Recency is not known here (no history on this screen), so suggestions rank by pattern and mechanic only.
+  const similar = swapFrom
+    ? swapCandidates({ exercise: swapFrom, catalogue: listExercises(), inPlan, avoid: blocked, equipment: props.equipment, lastUsed: new Map(), now: 0 })
+    : [];
+  const swapTo = (toId: string) => {
+    if (picker?.mode === 'swap') {
+      const fromId = picker.fromId;
+      props.onEdit((p, now) => replaceInDay(p, di, fromId, toId, now));
+    }
+    setOpenId(null);
+    close();
+  };
 
   return (
     <>
-      <ol className="ui-list ui-list--numbered">
+      <ol className="pe-list">
         {day.exerciseIds.map((id, i) => {
           const ex = getExercise(id);
           const t = ex ? targetOf(day, ex) : (day.targets?.[id] ?? { sets: 3, repMin: 8, repMax: 12 });
+          const open = openId === id;
+          const reps = t.repMin === t.repMax ? `${t.repMin}` : `${t.repMin}–${t.repMax}`;
+          const name = ex?.name ?? id;
           return (
-            <li key={id} className="ui-list-stack">
-              <ExerciseName id={id} name={ex?.name ?? id} />
-              <div className="ui-row ui-fields">
-                <div>
-                  <span className="muted small">Sets</span>
-                  <Stepper label="sets" value={t.sets} min={1} max={5} onChange={(v) => retarget(id, { ...t, sets: v })} />
-                </div>
-                <div>
-                  <span className="muted small">Min reps</span>
-                  <Stepper
-                    label="min reps"
-                    value={t.repMin}
-                    min={1}
-                    max={50}
-                    onChange={(v) => retarget(id, { ...t, repMin: v, repMax: Math.max(v, t.repMax) })}
-                  />
-                </div>
-                <div>
-                  <span className="muted small">Max reps</span>
-                  <Stepper
-                    label="max reps"
-                    value={t.repMax}
-                    min={1}
-                    max={50}
-                    onChange={(v) => retarget(id, { ...t, repMax: v, repMin: Math.min(v, t.repMin) })}
-                  />
-                </div>
+            <li key={id} className={open ? 'pe-row pe-row--open' : 'pe-row'}>
+              <div className="pe-head">
+                {ex && <ExThumb ex={ex} className="pe-thumb" />}
+                <span className="pe-text">
+                  <ExerciseName id={id} name={name} />
+                  <span className="muted small">
+                    {t.sets} × {reps}
+                    {ex?.mode === 'time' ? ' s' : ''}
+                  </span>
+                </span>
+                <button type="button" className="pe-toggle" aria-expanded={open} aria-label={`Edit ${name}`} onClick={() => setOpenId(open ? null : id)}>
+                  <ChevronDown />
+                </button>
               </div>
-              <div className="ui-row">
-                <Button size="sm" variant="ghost" disabled={i === 0} aria-label={`Move ${ex?.name ?? id} up`} onClick={() => props.onEdit((p, now) => moveExercise(p, di, id, -1, now))}>
-                  Up
-                </Button>
-                <Button size="sm" variant="ghost" disabled={i === day.exerciseIds.length - 1} aria-label={`Move ${ex?.name ?? id} down`} onClick={() => props.onEdit((p, now) => moveExercise(p, di, id, 1, now))}>
-                  Down
-                </Button>
-                <Button size="sm" variant="secondary" onClick={() => setPicker({ mode: 'swap', fromId: id })}>
-                  Swap
-                </Button>
-                <Button
-                  size="sm"
-                  variant="danger"
-                  disabled={day.exerciseIds.length <= 1}
-                  aria-label={`Remove ${ex?.name ?? id}`}
-                  onClick={() => props.onEdit((p, now) => removeExercise(p, di, id, now))}
-                >
-                  Remove
-                </Button>
-              </div>
+              {open && (
+                <div className="pe-edit">
+                  <div className="pe-fields">
+                    <div className="pe-field">
+                      <span className="muted small">Sets</span>
+                      <Stepper label="sets" value={t.sets} min={1} max={5} onChange={(v) => retarget(id, { ...t, sets: v })} />
+                    </div>
+                    <div className="pe-field">
+                      <span className="muted small">Reps from</span>
+                      <Stepper label="min reps" value={t.repMin} min={1} max={50} onChange={(v) => retarget(id, { ...t, repMin: v, repMax: Math.max(v, t.repMax) })} />
+                    </div>
+                    <div className="pe-field">
+                      <span className="muted small">to</span>
+                      <Stepper label="max reps" value={t.repMax} min={1} max={50} onChange={(v) => retarget(id, { ...t, repMax: v, repMin: Math.min(v, t.repMin) })} />
+                    </div>
+                  </div>
+                  <div className="pe-actions">
+                    <Button size="sm" variant="ghost" icon={<ArrowUp />} disabled={i === 0} aria-label={`Move ${name} up`} onClick={() => props.onEdit((p, now) => moveExercise(p, di, id, -1, now))}>
+                      Up
+                    </Button>
+                    <Button size="sm" variant="ghost" icon={<ArrowDown />} disabled={i === day.exerciseIds.length - 1} aria-label={`Move ${name} down`} onClick={() => props.onEdit((p, now) => moveExercise(p, di, id, 1, now))}>
+                      Down
+                    </Button>
+                    <Button size="sm" variant="secondary" icon={<Repeat />} onClick={() => setPicker({ mode: 'swap', fromId: id })}>
+                      Swap
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      icon={<Trash2 />}
+                      disabled={day.exerciseIds.length <= 1}
+                      aria-label={`Remove ${name}`}
+                      onClick={() => props.onEdit((p, now) => removeExercise(p, di, id, now))}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              )}
             </li>
           );
         })}
       </ol>
       {day.exerciseIds.length <= 1 && <p className="muted small">A day needs at least one exercise.</p>}
-      <Button variant="secondary" onClick={() => setPicker({ mode: 'add' })}>
-        Add exercise
+      <Button variant="ghost" size="sm" onClick={() => setPicker({ mode: 'add' })}>
+        + Add exercise
       </Button>
 
       <ExercisePicker
@@ -146,24 +182,39 @@ export function DayEditor(props: {
         title="Add an exercise"
         exercises={addable}
         note={addNote}
-        onClose={() => setPicker(null)}
+        onClose={close}
         onPick={(ex) => {
           const r = repRangeFor(ex);
           props.onEdit((p, now) => addExercise(p, di, ex.id, { sets: 3, repMin: r.min, repMax: r.max }, now));
-          setPicker(null);
+          close();
         }}
       />
-      <ExercisePicker
-        open={picker?.mode === 'swap'}
-        title="Swap for"
-        exercises={swappable}
-        note={() => null}
-        onClose={() => setPicker(null)}
-        onPick={(ex) => {
-          if (picker?.mode === 'swap') props.onEdit((p, now) => replaceInDay(p, di, picker.fromId, ex.id, now));
-          setPicker(null);
-        }}
-      />
+      <ExercisePicker open={picker?.mode === 'swap' && browse} title="Swap for" exercises={swappable} note={() => null} onClose={close} onPick={(ex) => swapTo(ex.id)} />
+      <Sheet open={picker?.mode === 'swap' && !browse} onClose={close} title={`Similar to ${swapFrom?.name ?? 'this'}`}>
+        {similar.length === 0 ? (
+          <p className="muted">No close match with your equipment.</p>
+        ) : (
+          <ul className="ui-list">
+            {similar.map((c) => (
+              <li key={c.id}>
+                <span className="pe-head">
+                  <ExThumb ex={c} className="pe-thumb" />
+                  <span className="pe-text">
+                    <span>{c.name}</span>
+                    <span className="muted small">{c.muscles.primary.map((m) => SLUG_LABEL[m]).join(', ')}</span>
+                  </span>
+                </span>
+                <Button size="sm" variant="secondary" onClick={() => swapTo(c.id)}>
+                  Choose
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <Button variant="ghost" block onClick={() => setBrowse(true)}>
+          Search the whole library
+        </Button>
+      </Sheet>
     </>
   );
 }

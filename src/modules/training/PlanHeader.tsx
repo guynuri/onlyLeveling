@@ -39,29 +39,37 @@ export function PlanHeader(props: {
     if (next.length === n) props.onEdit((p, now) => setSchedule(p, 'weekdays', [...next].sort((a, b) => a - b), now));
   };
 
+  const summary = `${mode === 'rotation' ? 'Rotation' : `Weekdays (${picked.length} of ${n})`} · ${block.deloadLastWeek ? 'deload in the last week' : 'no deload week'}`;
   return (
-    <div className="ui-stack">
+    <Card
+      className="ph-card"
+      title={week.over ? 'Block complete' : `Week ${week.week} of ${week.of}`}
+      action={
+        <Button size="sm" variant="ghost" onClick={props.onRegenerate}>
+          New plan
+        </Button>
+      }
+    >
       {week.over ? (
-        <Card title="Block complete">
-          <p className="muted">You finished all {week.of} weeks. Build the next block, or keep going with this one.</p>
+        <>
+          <p className="muted small">You finished all {week.of} weeks. Build the next block, or keep going with this one.</p>
           <div className="ui-row">
-            <Button onClick={props.onRegenerate}>Build next block</Button>
-            <Button variant="secondary" onClick={() => props.onEdit((p, now) => extendBlock(p, EXTEND_WEEKS, now))}>
+            <Button size="sm" onClick={props.onRegenerate}>
+              Build next block
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => props.onEdit((p, now) => extendBlock(p, EXTEND_WEEKS, now))}>
               Extend by {EXTEND_WEEKS} weeks
             </Button>
           </div>
-        </Card>
+        </>
       ) : (
-        <Card title={`Week ${week.week} of ${week.of}`}>
+        <>
           <ProgressBar value={week.week} max={week.of} label={`Week ${week.week} of ${week.of}`} />
           {isDeloadWeek(plan, props.now) && <p className="muted small">Deload week: lighter work so you come back fresh.</p>}
-          <Chip selected={block.deloadLastWeek} onToggle={() => props.onEdit((p, now) => setDeload(p, !block.deloadLastWeek, now))}>
-            Deload in the last week
-          </Chip>
-        </Card>
+        </>
       )}
-
-      <Card title="Schedule">
+      <details className="ph-settings">
+        <summary className="muted small">{summary}</summary>
         <SegmentedControl
           label="Schedule"
           options={[
@@ -90,13 +98,10 @@ export function PlanHeader(props: {
             </div>
           </>
         )}
-      </Card>
-
-      <div className="ui-row">
-        <Button variant="ghost" onClick={props.onRegenerate}>
-          New plan
-        </Button>
-      </div>
-    </div>
+        <Chip selected={block.deloadLastWeek} onToggle={() => props.onEdit((p, now) => setDeload(p, !block.deloadLastWeek, now))}>
+          Deload in the last week
+        </Chip>
+      </details>
+    </Card>
   );
 }
