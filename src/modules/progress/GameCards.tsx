@@ -7,6 +7,7 @@ import { GROUP_LABEL, type Group } from '../xp/domain/muscles';
 import type { MonthlyRecap, Quest } from '../xp/domain/game';
 import { Button, Card, ProgressBar, RankBadge } from '../../ui/primitives';
 import { dismissRecap } from './load';
+import { playLevelUp } from '../../ui/sound';
 
 export function questLabel(q: Quest): string {
   switch (q.kind) {
@@ -95,6 +96,7 @@ export function RecapCard(props: { recap: { key: string; month: number; recap: M
 // still (ui.css).
 export function Celebration(props: { level?: { from: number; to: number }; rankUps: { group: Group; to: string }[]; onClose: () => void }) {
   const [open, setOpen] = useState(true);
+  useEffect(() => playLevelUp(), []);
   const { onClose } = props;
   useEffect(() => {
     if (!open) return;

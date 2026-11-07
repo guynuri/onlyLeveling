@@ -18,7 +18,7 @@ export function SetControls(props: {
   const timed = props.mode === 'time';
   return (
     <div className="ui-set-controls">
-      <div className="ui-row">
+      <div className="ui-set-steppers">
         {props.weighted && (
           <div>
             <span className="muted small">Weight</span>

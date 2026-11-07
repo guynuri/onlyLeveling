@@ -1,7 +1,7 @@
 // Today's session (UX design §6.4). Three stages: a preview you can edit, logging (focus or list view, one tap per
 // pre-filled set), and the finish summary. The session in progress is kept on the device after every change, so a
 // killed iOS PWA does not lose it; only Finish saves a Workout.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { getExercise, listExercises } from '../../data/exercises';
 import { isDeloadWeek, nextSession, sessionStarts, sessionsInBlock } from '../../domain/block';
 import { CARDIO } from '../../config/thresholds';
@@ -16,6 +16,7 @@ import { scheduleRestAlert, cancelRestAlert } from '../push/actions';
 import { WeeklyReview } from '../review/ui/WeeklyReview';
 import { isLivePr, summarize, type SessionSummary } from '../xp/domain/sessionSummary';
 import { loadProgress } from '../progress/load';
+import { unlockSound } from '../../ui/sound';
 import { levelOf } from '../xp/domain/hub';
 import { Button, Card } from '../../ui/primitives';
 import { SegmentedControl } from '../../ui/controls';
@@ -41,6 +42,21 @@ interface Loaded {
   bodyweight: BodyweightEntry[];
   dayIndex: number;
   deload: boolean;
+}
+
+// Logged sets in one scrolling row. It jumps to the newest set only when one is added, not on every render (the rest
+// timer re-renders each second), so earlier sets stay reachable.
+function SetChips({ count, children }: { count: number; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    el?.scrollTo({ left: el.scrollWidth });
+  }, [count]);
+  return (
+    <div ref={ref} className="ui-set-chips" role="list" aria-label="Sets" tabIndex={0}>
+      {children}
+    </div>
+  );
 }
 
 // The clock is read here, outside render.
@@ -172,6 +188,7 @@ export default function WorkoutScreen() {
   };
 
   const finish = async () => {
+    unlockSound(); // inside the tap: iOS plays the level-up sound only from a context resumed here
     const ok = canFinish(live);
     if (!ok.ok) {
       setStatus(ok.error);
@@ -371,16 +388,16 @@ export default function WorkoutScreen() {
           <ExerciseName id={le.exerciseId} name={names[le.exerciseId] ?? le.exerciseId} />
         </h2>
         <p className="muted">Target {target}</p>
-        <div className="ui-set-chips">
+        <SetChips count={le.sets.length}>
           {le.sets.map((s, k) => (
-            <span key={`${s.at}-${k}`} className="ui-set-chip">
+            <span key={`${s.at}-${k}`} className="ui-set-chip" role="listitem">
               {le.mode === 'time' ? `${s.r} s` : `${weighted ? `${s.w} × ` : ''}${s.r}`}
               {s.rir !== undefined && ` · ${s.rir === 4 ? '4+' : s.rir} left`}
               {isLivePr(le, history, k) && <span className="ui-pr-badge">PR</span>}
             </span>
           ))}
-          {!done && <span className="ui-set-chip ui-set-chip--next">Set {le.sets.length + 1}</span>}
-        </div>
+          {!done && <span className="ui-set-chip ui-set-chip--next" role="listitem">Set {le.sets.length + 1}</span>}
+        </SetChips>
         {open && (
           <>
             <SetControls
@@ -394,9 +411,12 @@ export default function WorkoutScreen() {
               onChange={(nv) => setPending({ ...pending, [le.exerciseId]: nv })}
               onLog={() => log(i)}
             />
-            {lastSet && lastSet.exercise === i && (
-              <RirPicker value={le.sets[lastSet.set]?.rir} onChange={(rir) => setLive(live.map((x, k) => (k === i ? setRir(x, lastSet.set, rir) : x)))} />
-            )}
+            {/* Always rendered, so logging a set does not push the page down; it rates the last set of this exercise. */}
+            <RirPicker
+              disabled={!(lastSet && lastSet.exercise === i)}
+              value={lastSet && lastSet.exercise === i ? le.sets[lastSet.set]?.rir : undefined}
+              onChange={(rir) => lastSet && setLive(live.map((x, k) => (k === i ? setRir(x, lastSet.set, rir) : x)))}
+            />
           </>
         )}
       </article>

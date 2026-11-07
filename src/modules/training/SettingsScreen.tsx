@@ -7,6 +7,7 @@ import { workoutViewOf } from '../../domain/profile';
 import { Button, Card } from '../../ui/primitives';
 import { SegmentedControl, Stepper, toast } from '../../ui/controls';
 import { applyTheme, readTheme, type ThemeChoice } from '../../ui/theme';
+import { setSoundOn, soundOn } from '../../ui/sound';
 import {
   readSyncState,
   runSync,
@@ -48,6 +49,7 @@ export default function SettingsScreen() {
   const [rest, setRest] = useState(90);
   const [view, setView] = useState<'focus' | 'list'>('focus');
   const [theme, setTheme] = useState<ThemeChoice>(readTheme);
+  const [sound, setSound] = useState(soundOn);
   const [loaded, setLoaded] = useState(false);
   const [status, setStatus] = useState('');
   const [sync, setSync] = useState<SyncState | null>(null);
@@ -198,6 +200,19 @@ export default function SettingsScreen() {
             applyTheme(t);
           }}
         />
+        <SegmentedControl
+          label="Sounds"
+          options={[
+            { value: 'on', label: 'Sounds on' },
+            { value: 'off', label: 'Sounds off' },
+          ]}
+          value={sound ? 'on' : 'off'}
+          onChange={(v) => {
+            setSound(v === 'on');
+            setSoundOn(v === 'on');
+          }}
+        />
+        <p className="muted small">On iPhone the silent switch mutes these sounds.</p>
       </Card>
 
       <PushSettings />

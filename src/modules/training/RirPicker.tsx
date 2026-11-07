@@ -1,3 +1,4 @@
+import { useId } from 'react';
 // Reps left in reserve after a set, 0 to 4+ (UX design §6.4): five coloured buttons and one plain line for the one
 // picked. Optional: tapping the picked level again clears it.
 const LEVELS = [
@@ -8,17 +9,19 @@ const LEVELS = [
   { value: 4, label: '4+', line: 'Plenty left: 4 or more reps.' },
 ] as const;
 
-export function RirPicker(props: { value?: number; onChange: (v: number | undefined) => void }) {
+export function RirPicker(props: { value?: number; onChange: (v: number | undefined) => void; disabled?: boolean }) {
   const picked = LEVELS.find((l) => l.value === props.value);
+  const lineId = useId();
   return (
     <div className="ui-rir">
-      <div className="ui-rir-row" role="radiogroup" aria-label="Reps left in reserve">
+      <div className="ui-rir-row" role="radiogroup" aria-label="Reps left in reserve" aria-describedby={lineId}>
         {LEVELS.map((l) => (
           <button
             key={l.value}
             type="button"
             role="radio"
             aria-checked={props.value === l.value}
+            disabled={props.disabled}
             className={`ui-rir-btn ui-rir-btn--${l.value}`}
             onClick={() => props.onChange(props.value === l.value ? undefined : l.value)}
           >
@@ -26,7 +29,7 @@ export function RirPicker(props: { value?: number; onChange: (v: number | undefi
           </button>
         ))}
       </div>
-      <p className="muted small ui-rir-line">{picked ? picked.line : 'How many reps were left? Optional.'}</p>
+      <p id={lineId} className="muted small ui-rir-line">{props.disabled ? 'Log a set of this exercise, then rate how many reps were left.' : picked ? picked.line : 'How many reps were left? Optional.'}</p>
     </div>
   );
 }
