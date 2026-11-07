@@ -164,7 +164,7 @@ export const aiSlot: SlotHandler = async (req: Request, env: Env, principal: Pri
   const parsed = parsePlanRequest(body);
   if (!parsed) return send({ error: 'bad request' }, 400);
 
-  const providers = [workersAiProvider(env.AI, AI.model, AI.maxTokens)];
+  const providers = AI.models.map((m) => workersAiProvider(env.AI, m, AI.maxTokens));
   const result = await proposePlan(env.DB, principal.userId, parsed, {
     providers,
     dailyCap: AI.dailyCap,

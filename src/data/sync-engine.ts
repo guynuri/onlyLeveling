@@ -38,8 +38,10 @@ export async function saveSyncState(db: Db, state: SyncState): Promise<void> {
 
 // A sync that was already running must not write back the config it started with: a sign-out or a new
 // sign-in during the sync wins. The results of the sync (cursor, last sync, error) are kept.
-export function withLatestConfig(after: SyncState, latest: SyncState): SyncState {
-  return { ...after, config: latest.config };
+// The one exception: the server ended the very session this sync used (401 cleared it), so it stays cleared.
+export function withLatestConfig(after: SyncState, latest: SyncState, started?: SyncState): SyncState {
+  const ended = after.config === null && !!started?.config && latest.config?.token === started.config.token;
+  return { ...after, config: ended ? null : latest.config };
 }
 
 // A 401 means the server has ended this session (expired, recovered, or signed out elsewhere). The device

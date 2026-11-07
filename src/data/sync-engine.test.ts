@@ -151,6 +151,13 @@ describe('sign-out and sign-in are not undone by a sync already running', () => 
     // Sync results are kept.
     expect(withLatestConfig(finished, signedOut)).toMatchObject({ lastSyncedAt: 9, cursor: 8 });
   });
+  it('a session the server ended during this sync stays ended', () => {
+    const started: SyncState = { ...FRESH, config: CONFIG };
+    const ended: SyncState = { ...started, config: null, lastError: 'Your session has ended. Sign in again.' };
+    expect(withLatestConfig(ended, started, started).config).toBeNull();
+    const other = { baseUrl: 'https://other.example', token: 'new' };
+    expect(withLatestConfig(ended, { ...started, config: other }, started).config).toEqual(other); // a new sign-in wins
+  });
 });
 
 describe('a session the server has ended', () => {
