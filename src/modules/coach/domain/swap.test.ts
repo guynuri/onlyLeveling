@@ -27,7 +27,7 @@ const input = (catalogue: Exercise[], o: Partial<SwapInput> = {}): SwapInput => 
 });
 
 describe('swapCandidates', () => {
-  it('ranks same pattern, then same mechanic, then not recent; filters muscle, kit, plan and avoid', () => {
+  it('ranks same pattern, then not recent, then same mechanic; filters muscle, kit, plan and avoid', () => {
     const cat = [
       ex('fly', { mechanic: 'isolation' }),
       ex('pullover', { force: 'pull' }),
@@ -41,7 +41,7 @@ describe('swapCandidates', () => {
     const ids = swapCandidates(
       input(cat, { inPlan: new Set(['inplan']), avoid: new Set(['avoided']), lastUsed: new Map([['recent', 1e12 - 86_400_000]]) }),
     ).map((c) => c.id);
-    expect(ids).toEqual(['incline', 'recent', 'fly', 'pullover']);
+    expect(ids).toEqual(['incline', 'fly', 'recent', 'pullover']);
   });
   it('pickSwap still requires the same movement pattern', () => {
     expect(pickSwap(input([ex('pullover', { force: 'pull' })]))).toBeNull();

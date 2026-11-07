@@ -176,7 +176,10 @@ export function DayEditor(props: {
                       icon={<Trash2 />}
                       disabled={day.exerciseIds.length <= 1}
                       aria-label={`Remove ${name}`}
-                      onClick={() => props.onEdit((p, now) => removeExercise(p, di, id, now))}
+                      onClick={() => {
+                        setOpenId(null);
+                        props.onEdit((p, now) => removeExercise(p, di, id, now));
+                      }}
                     >
                       Remove
                     </Button>

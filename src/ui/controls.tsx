@@ -80,7 +80,9 @@ export function Sheet(props: { open: boolean; onClose: () => void; title: string
       ref={ref}
       className="ui-sheet"
       aria-label={props.title}
-      onClose={onClose}
+      // Only a user close (Escape) reports back: closing because `open` went false is the caller's own doing, and
+      // reporting it would undo a hand-off from one sheet to another.
+      onClose={() => open && onClose()}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}

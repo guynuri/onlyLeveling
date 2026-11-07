@@ -17,7 +17,8 @@ export interface SwapInput {
 }
 
 // Ranked swap candidates: same primary muscle and usable kit, not avoided or in the plan. Same movement pattern first
-// (when the exercise has one), then the same mechanic (compound/isolation), then not used recently, then least recently.
+// (when the exercise has one), then not used recently (CLAUDE.md swaps rule), then the same mechanic (compound or
+// isolation), then least recently used.
 export function swapCandidates(input: SwapInput, limit = 8): Exercise[] {
   const { exercise: ex, now } = input;
   const pattern = movementPattern(ex);
@@ -31,8 +32,8 @@ export function swapCandidates(input: SwapInput, limit = 8): Exercise[] {
     const last = input.lastUsed.get(c.id) ?? -Infinity;
     return [
       pattern !== 'unknown' && movementPattern(c) === pattern ? 0 : 1,
-      c.mechanic === ex.mechanic ? 0 : 1,
       last >= recentFrom ? 1 : 0,
+      c.mechanic === ex.mechanic ? 0 : 1,
       last,
     ];
   };
