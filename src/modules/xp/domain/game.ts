@@ -130,7 +130,8 @@ export function questHave(
 }
 
 // Muscle XP from finished quests (owner decision 2026-11-07: no player level; quest XP goes to the muscles). A "train
-// X" quest gives its group the whole bonus; any other finished quest splits it over the groups trained that week.
+// X" quest gives its group the whole bonus; any other finished quest splits it over the groups trained that week, or
+// over every group in a week without lifting.
 export function questBonusByGroup(
   weeks: readonly { quests: readonly Quest[]; weekOf: number }[],
   h: { workouts: readonly Workout[]; cardio: readonly CardioSession[]; slotStarts: readonly number[]; exerciseById: ById },
@@ -145,7 +146,11 @@ export function questBonusByGroup(
     for (const q of w.quests) {
       if (questHave(q, { ...h, weekOf: w.weekOf }) < q.need) continue;
       if (q.kind === 'group') add(q.group, GAME.questBonusXp);
-      else for (const g of trained) add(g, GAME.questBonusXp / trained.length);
+      else {
+        // A week with no lifting (cardio only): the bonus spreads over every muscle, so it is never lost.
+        const to = trained.length > 0 ? trained : GROUPS;
+        for (const g of to) add(g, GAME.questBonusXp / to.length);
+      }
     }
   }
   return out;
@@ -164,8 +169,10 @@ export interface MonthlyRecap {
 export function monthlyRecap(input: ProgressInput, ms: number): MonthlyRecap {
   const { from, to } = monthBounds(ms);
   const cardio = input.cardio ?? [];
+  // Sessions only: quest XP is not dated precisely enough to split around the month's edges.
   const at = (t: number) => ({
     ...input,
+    bonusXp: undefined,
     workouts: input.workouts.filter((w) => w.start < t),
     cardio: cardio.filter((c) => c.start < t),
     now: t,
