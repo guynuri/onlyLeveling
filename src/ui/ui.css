@@ -535,3 +535,34 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
 .ui-body--sm .ui-body-sil { fill: var(--body-sil); opacity: 0.75; }
 .ui-body--sm .ui-body-m--secondary { fill: var(--accent); fill-opacity: 0.55; }
 .ui-body--sm .ui-body-m--primary { fill: var(--accent); filter: drop-shadow(0 0 2px var(--accent)); }
+
+/* Plan editor: compact rows that open in place */
+.pe-list { list-style: none; margin: 0 0 var(--s-2); padding: 0; display: flex; flex-direction: column; }
+.pe-row { border-bottom: 1px solid var(--border); }
+.pe-row:last-child { border-bottom: 0; }
+.pe-head { display: flex; align-items: center; gap: var(--s-3); min-height: 60px; min-width: 0; flex: 1; }
+.pe-thumb { width: 44px; height: 44px; }
+.pe-thumb .ui-body--sm { height: 40px; gap: 1px; }
+.pe-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.pe-toggle {
+  flex: none; width: var(--tap); height: var(--tap); padding: 0; min-height: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; color: var(--muted); border-radius: var(--r-md);
+}
+.pe-toggle svg { width: 20px; height: 20px; transition: transform 0.2s; }
+.pe-toggle[aria-expanded='true'] svg { transform: rotate(180deg); color: var(--accent); }
+.pe-row--open { background: var(--surface-2); margin: 0 calc(-1 * var(--s-2)); padding: 0 var(--s-2); border-radius: var(--r-md); }
+.pe-edit { display: flex; flex-direction: column; gap: var(--s-3); padding: var(--s-1) 0 var(--s-3); }
+.pe-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-2); }
+.pe-field { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pe-field .ui-stepper { display: flex; width: 100%; background: var(--surface); }
+.pe-field .ui-stepper-btn { width: 34px; flex: none; }
+.pe-field .ui-stepper-value { flex: 1; min-width: 0; }
+.pe-actions { display: flex; flex-wrap: wrap; gap: var(--s-1); }
+.pe-routine { margin-bottom: var(--s-2); }
+.pe-routine > summary { cursor: pointer; min-height: var(--tap); display: flex; align-items: center; }
+.ui-list li .pe-head { min-height: 52px; }
+.ph-settings { margin-top: var(--s-3); }
+.ph-settings > summary { cursor: pointer; min-height: var(--tap); display: flex; align-items: center; }
+.ph-settings[open] > summary { margin-bottom: var(--s-2); }
+.ph-settings > .ui-chip { margin-top: var(--s-2); }
