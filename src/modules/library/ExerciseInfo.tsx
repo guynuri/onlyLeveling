@@ -6,7 +6,9 @@ import type { Exercise } from '../../domain/exercise';
 import type { Plan } from '../../domain/plan';
 import { replaceExercise, planExerciseIds } from '../../domain/plan';
 import type { EquipmentChoice, Workout } from '../../domain/types';
-import { pickSwap } from '../coach/domain/swap';
+import { swapCandidates } from '../coach/domain/swap';
+
+const SWAP_CHOICES = 3; // suggestions to flip through before swapping
 import { getRepo } from '../training/data';
 import { readSheetContext, type SheetContext } from './sheet-context';
 import { Button, Card } from '../../ui/primitives';
@@ -33,6 +35,8 @@ function useTrainingContext() {
   return [ctx, setCtx] as const;
 }
 
+// A swap is shown before it happens (owner request 2026-11-07): the suggested exercise with its picture or muscles,
+// what it needs and how it is done, then Swap in my plan, Another one, or Not now.
 function SwapButton({
   ex,
   plan,
@@ -50,27 +54,55 @@ function SwapButton({
   now: number;
   onSwapped: (p: Plan) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const [k, setK] = useState(0);
   const inPlan = new Set(planExerciseIds(plan));
   if (!inPlan.has(ex.id)) return null;
   const lastUsed = new Map<string, number>();
   for (const w of workouts) for (const e of w.entries) lastUsed.set(e.exerciseId, Math.max(lastUsed.get(e.exerciseId) ?? 0, w.start));
-  const to = pickSwap({ exercise: ex, catalogue: listExercises(), inPlan, avoid: new Set(avoid), equipment, lastUsed, now });
-  if (!to) return null;
+  const options = swapCandidates({ exercise: ex, catalogue: listExercises(), inPlan, avoid: new Set(avoid), equipment, lastUsed, now }, SWAP_CHOICES);
+  if (options.length === 0) return null;
+  const to = options[k % options.length];
   const swap = async () => {
     try {
-      const next = replaceExercise(plan, ex.id, to.id, Date.now());
+      const next = replaceExercise(plan, ex.id, to.id, now); // when the sheet opened: render must stay pure
       await (await getRepo()).savePlan(next);
       onSwapped(next);
+      setOpen(false);
       window.dispatchEvent(new Event(PLAN_CHANGED_EVENT));
       toast(`Swapped for ${to.name} in your plan.`);
     } catch {
       toast('Could not swap that exercise. Try again.');
     }
   };
+  if (!open) {
+    return (
+      <Button variant="secondary" onClick={() => setOpen(true)}>
+        See a swap
+      </Button>
+    );
+  }
   return (
-    <Button variant="secondary" onClick={swap}>
-      Swap for {to.name}
-    </Button>
+    <Card title={`Swap for ${to.name}?`} className="swap-preview">
+      {to.media ? <ExerciseMedia media={to.media} name={to.name} /> : <BodyMap primary={to.muscles.primary} secondary={to.muscles.secondary} />}
+      <p className="muted small">
+        {kitLabel(to)}
+        {to.level ? ` · ${LEVEL_LABEL[to.level]}` : ''}
+        {to.mechanic ? ` · ${mechanicLabel(to)}` : ''}
+      </p>
+      {to.instructions[0] && <p className="small">{to.instructions[0]}</p>}
+      <div className="ui-row">
+        <Button onClick={() => void swap()}>Swap in my plan</Button>
+        {options.length > 1 && (
+          <Button variant="secondary" onClick={() => setK(k + 1)}>
+            Another one
+          </Button>
+        )}
+        <Button variant="ghost" onClick={() => setOpen(false)}>
+          Not now
+        </Button>
+      </div>
+    </Card>
   );
 }
 
