@@ -426,3 +426,26 @@ dialog.ui-sheet:modal { max-width: min(640px, 100%); max-height: 90dvh; }
 /* Room under the last button for the pinned rest bar and the tab bar */
 .ui-pad-rest { padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + var(--tap) + var(--s-6)); }
 @media (prefers-reduced-motion: reduce) { .ui-restbar { box-shadow: var(--shadow); } }
+
+/* Home hub (U6) */
+.home-next { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-3); }
+.home-next .ui-body--sm { height: 96px; flex: none; }
+.home-thumbs { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); min-width: 0; }
+.home-thumbs .ui-ex-thumb { width: 48px; height: 48px; font-size: var(--fs-xs); text-align: center; padding: 2px; }
+.home-level .ui-tile-text { gap: var(--s-1); }
+
+/* Progress v2 (U6): tappable body map, selected muscle, weight chart */
+.ui-body-m--tap { cursor: pointer; }
+.ui-body-m--selected { stroke: var(--fg); stroke-width: 3; }
+.prog-legend { display: flex; flex-wrap: wrap; gap: var(--s-3); justify-content: center; font-size: var(--fs-xs); color: var(--muted); }
+.prog-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+.prog-chart { width: 100%; height: 140px; display: block; }
+.prog-chart .raw { fill: var(--muted); }
+.prog-chart .avg { fill: none; stroke: var(--accent); stroke-width: 2.5; vector-effect: non-scaling-stroke; }
+.prog-muscles { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s-2); }
+.prog-muscles button {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-2);
+  min-height: var(--tap); padding: 0 var(--s-3);
+  background: var(--surface-2); color: var(--fg); border: 1px solid var(--border); border-radius: var(--r-md);
+}
+.prog-muscles button[aria-pressed='true'] { border-color: var(--accent); box-shadow: var(--glow); }

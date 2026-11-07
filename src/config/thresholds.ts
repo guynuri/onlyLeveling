@@ -129,6 +129,17 @@ export const XP = {
   badgeSessionMilestones: [1, 10, 100], // "first session", then 10 and 100 sessions
   badgeRankFrom: 'C', // achievement badges per muscle start at this rank
 } as const;
+// Player level on Home (UX design §6.2, U6). Total XP (all muscles + cardio) to reach level L is levelXp × (L−1)²,
+// so each level needs a little more than the one before. ~36 sessions land around level 8. Tuned with real logs.
+export const LEVEL = { levelXp: 2_000 } as const;
+
+// Progress map, Recovery mode (UX design §6.6, U6). A muscle group trained less than recoveringHours ago is still
+// recovering; one not trained for neglectedDays (or never) is neglected.
+export const RECOVERY = { recoveringHours: 48, neglectedDays: 10 } as const;
+
+// Bodyweight chart: the trend line averages the entries in this many days up to each point.
+export const WEIGHT_TREND_DAYS = 7;
+
 // Cardio (UX design §6.5, U5b). XP = minutes × effort × xpPerEffortMinute ÷ 10; it never counts toward muscle ranks.
 export const CARDIO = {
   types: [

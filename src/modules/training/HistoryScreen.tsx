@@ -1,49 +1,22 @@
 import { useEffect, useState } from 'react';
 import { getExercise } from '../../data/exercises';
-import type { BodyweightEntry, Workout } from '../../domain/types';
+import type { Workout } from '../../domain/types';
 import { getRepo } from './data';
-import { isIsoDate } from './validate';
 import { ExerciseName } from '../library/ExerciseSheet';
 import { Dumbbell } from 'lucide-react';
-import { Button, Card, EmptyState } from '../../ui/primitives';
+import { Card, EmptyState } from '../../ui/primitives';
 
 const minutes = (w: Workout) => Math.max(1, Math.round((w.end - w.start) / 60000));
 
-// Past sessions, plus the bodyweight log (SPEC §2: bodyweight is logged over time).
+// Past sessions. Bodyweight is logged on Progress (UX design §6.6).
 export default function HistoryScreen() {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
-  const [bw, setBw] = useState<BodyweightEntry[]>([]);
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [kg, setKg] = useState('');
-  const [status, setStatus] = useState('');
 
   useEffect(() => {
     getRepo().then(async (r) => {
       setWorkouts(await r.listWorkouts());
-      setBw(await r.listBodyweight());
     });
   }, []);
-
-  async function addBw() {
-    const value = Number(kg);
-    if (!isIsoDate(date)) {
-      setStatus('Enter a date.');
-      return;
-    }
-    if (!(value > 0)) {
-      setStatus('Enter a weight in kg.');
-      return;
-    }
-    try {
-      const repo = await getRepo();
-      await repo.addBodyweight(date, value);
-      setBw(await repo.listBodyweight());
-      setKg('');
-      setStatus('Saved on this device.');
-    } catch {
-      setStatus('Could not save. Try again.');
-    }
-  }
 
   return (
     <section>
@@ -73,30 +46,6 @@ export default function HistoryScreen() {
         </Card>
       ))}
 
-      <Card title="Bodyweight">
-        <div className="row">
-          <label>
-            Date
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          </label>
-          <label>
-            kg
-            <input inputMode="decimal" value={kg} onChange={(e) => setKg(e.target.value)} />
-          </label>
-          <Button onClick={addBw}>Add</Button>
-        </div>
-        <p className="muted small" role="status">
-          {status}
-        </p>
-        <ul className="ui-list">
-          {bw.map((b) => (
-            <li key={b.date}>
-              <span>{b.date}</span>
-              <span className="muted">{b.kg} kg</span>
-            </li>
-          ))}
-        </ul>
-      </Card>
     </section>
   );
 }

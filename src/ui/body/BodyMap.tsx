@@ -27,7 +27,9 @@ function useGeometry(): Geometry | null {
   return g;
 }
 
-function Figure({ view, primary, secondary }: { view: View; primary: ReadonlySet<string>; secondary: ReadonlySet<string> }) {
+type Extra = { fills?: Partial<Record<BodySlug, string>>; selected?: ReadonlySet<string>; onPick?: (slug: BodySlug) => void };
+
+function Figure({ view, primary, secondary, fills, selected, onPick }: { view: View; primary: ReadonlySet<string>; secondary: ReadonlySet<string> } & Extra) {
   return (
     <svg className="ui-body-view" viewBox={view.vb} aria-hidden="true">
       {INERT.map((slug) => (view.p[slug] ?? []).map((d, i) => <path key={slug + i} className="ui-body-sil" d={d} />))}
@@ -36,7 +38,13 @@ function Figure({ view, primary, secondary }: { view: View; primary: ReadonlySet
           <path
             key={slug + i}
             d={d}
-            className={primary.has(slug) ? 'ui-body-m ui-body-m--primary' : secondary.has(slug) ? 'ui-body-m ui-body-m--secondary' : 'ui-body-m'}
+            className={
+              (primary.has(slug) ? 'ui-body-m ui-body-m--primary' : secondary.has(slug) ? 'ui-body-m ui-body-m--secondary' : 'ui-body-m') +
+              (selected?.has(slug) ? ' ui-body-m--selected' : '') +
+              (onPick ? ' ui-body-m--tap' : '')
+            }
+            style={fills?.[slug] ? { fill: fills[slug] } : undefined}
+            onClick={onPick ? () => onPick(slug) : undefined}
           />
         )),
       )}
@@ -49,19 +57,22 @@ export function BodyMap(props: {
   secondary?: readonly BodySlug[];
   sex?: 'male' | 'female';
   size?: 'sm' | 'md';
-}) {
+  label?: string;
+} & Extra) {
   const g = useGeometry();
   const primary = new Set<string>(props.primary);
   const secondary = new Set<string>(props.secondary ?? []);
+  const selected = props.selected;
   const label =
+    props.label ??
     props.primary.length > 0 ? `Works ${props.primary.map((s) => SLUG_LABEL[s]).join(', ')}` : 'Body figure, no muscles marked';
   const body = g?.[props.sex ?? 'male'];
   return (
     <div className={`ui-body ui-body--${props.size ?? 'md'}`} role="img" aria-label={label}>
       {body && (
         <>
-          <Figure view={body.front} primary={primary} secondary={secondary} />
-          <Figure view={body.back} primary={primary} secondary={secondary} />
+          <Figure view={body.front} primary={primary} secondary={secondary} fills={props.fills} selected={selected} onPick={props.onPick} />
+          <Figure view={body.back} primary={primary} secondary={secondary} fills={props.fills} selected={selected} onPick={props.onPick} />
         </>
       )}
     </div>
