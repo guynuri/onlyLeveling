@@ -1,6 +1,6 @@
-// Numbers for the Home hub and Progress v2 (UX design §6.2, §6.6, U6): player level, XP to the next rank, the
+// Numbers for the Home hub and Progress v2 (UX design §6.2, §6.6, U6): XP to the next rank, the
 // body-map slugs per XP group, recovery/neglect per group, and the bodyweight trend. Pure: the clock is passed in.
-import { LEVEL, RECOVERY, WEIGHT_TREND_DAYS, XP } from '../../../config/thresholds';
+import { RECOVERY, WEIGHT_TREND_DAYS, XP } from '../../../config/thresholds';
 import type { BodySlug } from '../../../domain/muscle-map';
 import type { Exercise } from '../../../domain/exercise';
 import type { BodyweightEntry, Workout } from '../../../domain/types';
@@ -26,14 +26,6 @@ export const GROUP_SLUGS: Record<Group, readonly BodySlug[]> = {
 
 export function groupOfSlug(slug: BodySlug): Group {
   return GROUPS.find((g) => GROUP_SLUGS[g].includes(slug)) ?? 'core';
-}
-
-// Level L starts at levelXp × (L−1)². `into` and `span` fill the bar toward the next level.
-export function levelOf(totalXp: number): { level: number; into: number; span: number } {
-  const xp = Math.max(0, totalXp);
-  const level = Math.floor(Math.sqrt(xp / LEVEL.levelXp)) + 1;
-  const from = LEVEL.levelXp * (level - 1) ** 2;
-  return { level, into: xp - from, span: LEVEL.levelXp * level ** 2 - from };
 }
 
 // XP still needed for the next volume rank, or null at the top. (Strength can hold a rank back; this is volume only.)

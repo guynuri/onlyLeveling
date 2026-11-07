@@ -30,8 +30,8 @@ export function unlockSound(): void {
   }
 }
 
-// A rising four-note arpeggio with a bright top note: the level-up / rank-up moment.
-export function playLevelUp(): void {
+// A rising four-note arpeggio with a bright top note: the rank-up and badge moment.
+export function playFanfare(): void {
   if (!soundOn() || !ctx) return;
   ctx.resume().catch(() => undefined); // iOS suspends it after the app was in the background
   const t0 = ctx.currentTime + 0.05;

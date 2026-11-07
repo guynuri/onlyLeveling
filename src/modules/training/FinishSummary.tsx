@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Button, Card, RankBadge } from '../../ui/primitives';
 import { BodyMap } from '../../ui/body/BodyMap';
 import type { SessionSummary } from '../xp/domain/sessionSummary';
-import { GROUP_LABEL } from '../xp/domain/muscles';
+import { GROUP_LABEL, type Group } from '../xp/domain/muscles';
 import { Celebration } from '../progress/GameCards';
 import { RoutineList } from './RoutineList';
 import type { RoutineItem } from '../../domain/template';
@@ -11,7 +11,8 @@ import type { RoutineItem } from '../../domain/template';
 
 export function FinishSummary(props: {
   summary: SessionSummary;
-  levelUp?: { from: number; to: number }; // shows the celebration with any rank-ups (U7)
+  // Ranks and badges before and after the save, quest XP included: celebrated, and the rank-up list uses it so both agree.
+  moment?: { rankUps: { group: Group; from: string; to: string }[]; badges: string[] };
   cooldown?: readonly RoutineItem[];
   names: Record<string, string>; // exercise id → name
   sex: 'male' | 'female';
@@ -19,9 +20,12 @@ export function FinishSummary(props: {
   extra?: ReactNode; // e.g. the post-lift cardio card, shown above Done
 }) {
   const s = props.summary;
+  const rankUps = props.moment?.rankUps ?? s.rankUps;
   return (
     <section className="ui-stack">
-      {(props.levelUp || s.rankUps.length > 0) && <Celebration level={props.levelUp} rankUps={s.rankUps} onClose={() => undefined} />}
+      {props.moment && (props.moment.rankUps.length > 0 || props.moment.badges.length > 0) && (
+        <Celebration rankUps={props.moment.rankUps} badges={props.moment.badges} onClose={() => undefined} />
+      )}
       <h1>Session done</h1>
       <Card title="This session">
         <ul className="ui-list">
@@ -51,10 +55,10 @@ export function FinishSummary(props: {
           </ul>
         </Card>
       )}
-      {s.rankUps.length > 0 && (
+      {rankUps.length > 0 && (
         <Card title="Rank up">
           <ul className="ui-list">
-            {s.rankUps.map((r) => (
+            {rankUps.map((r) => (
               <li key={r.group}>
                 <span>{GROUP_LABEL[r.group]}</span>
                 <span>

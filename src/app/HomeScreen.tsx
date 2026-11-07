@@ -1,16 +1,16 @@
-// Home hub (UX design §6.2): monthly recap (first open of a month), next workout, level and XP, streak, quests, coach. Each tile opens its screen. Fits one iPhone
+// Home hub (UX design §6.2): monthly recap (first open of a month), next workout, streak, quests, coach. No player
+// level (owner decision 2026-11-07): progress lives in the muscle ranks. Each tile opens its screen. Fits one iPhone
 // screen: one card plus three compact tiles.
 import { useEffect, useState } from 'react';
-import { Flame, MessageCircle, Swords, Trophy } from 'lucide-react';
+import { Flame, MessageCircle, Swords } from 'lucide-react';
 import { RecapCard } from '../modules/progress/GameCards';
 import { getExercise } from '../data/exercises';
 import { blockWeek, isDeloadWeek, nextSession, sessionsInBlock } from '../domain/block';
 import type { BodySlug } from '../domain/muscle-map';
 import { loadProgress, type Loaded } from '../modules/progress/load';
 import { loadCoachCards } from '../modules/coach/actions';
-import { levelOf } from '../modules/xp/domain/hub';
 import { BodyMap } from '../ui/body/BodyMap';
-import { Card, ProgressBar, Tile, toneVar } from '../ui/primitives';
+import { Card, Tile } from '../ui/primitives';
 
 const thumb = (path: string) => import.meta.env.BASE_URL + path;
 
@@ -39,7 +39,6 @@ export default function HomeScreen() {
   const week = blockWeek(plan, now);
   const exercises = (day?.exerciseIds ?? []).map(getExercise).filter((e) => e !== undefined);
   const slugs = [...new Set(exercises.flatMap((e) => e.muscles.primary))] as BodySlug[];
-  const lvl = levelOf(loaded.totalXp);
 
   return (
     <section className="ui-stack home">
@@ -72,18 +71,6 @@ export default function HomeScreen() {
         </a>
       </Card>
 
-      <a className="ui-tile home-level" href="#/progress">
-        <span className="ui-tile-icon" style={toneVar('amber')}>
-          <Trophy />
-        </span>
-        <span className="ui-tile-text">
-          <span className="ui-tile-label">Level {lvl.level}</span>
-          <ProgressBar value={Math.round(lvl.into)} max={lvl.span} label={`Level ${lvl.level} progress`} />
-          <span className="ui-tile-value">
-            {Math.round(lvl.span - lvl.into).toLocaleString()} XP to level {lvl.level + 1}
-          </span>
-        </span>
-      </a>
       <Tile
         href="#/progress"
         icon={<Flame />}

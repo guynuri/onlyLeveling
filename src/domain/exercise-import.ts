@@ -57,10 +57,17 @@ function mapLevel(v: string): Level {
   throw new Error(`Unmapped level: ${v}`);
 }
 
-// Kit implied by free-exercise-db's single equipment value. Bench needs are not recorded upstream.
-export function kitOf(equipment: Equipment): Kit[] {
-  if (equipment === 'dumbbell' || equipment === 'kettlebell' || equipment === 'band') return [equipment];
-  return [];
+// Kit implied by free-exercise-db's single equipment value, plus a bench or a pull-up bar when the name says so:
+// upstream does not record them, and without this a swap could suggest an exercise needing kit the user lacks.
+const NEEDS_BENCH = /\bbench\b|\bincline\b|\bdecline\b|\bpreacher\b/i;
+const NEEDS_BAR = /\bpull[- ]?ups?\b|\bchin[- ]?ups?\b|\bhanging\b|\bmuscle[- ]?ups?\b/i;
+const NO_BENCH = /\bpush[- ]?ups?\b|\bno\b.*\bbench\b/i; // incline push-ups use any step; \"with no bench\" says so
+
+export function kitOf(equipment: Equipment, name = ''): Kit[] {
+  const kit: Kit[] = equipment === 'dumbbell' || equipment === 'kettlebell' || equipment === 'band' ? [equipment] : [];
+  if (NEEDS_BENCH.test(name) && !NO_BENCH.test(name)) kit.push('bench');
+  if (NEEDS_BAR.test(name)) kit.push('pullup_bar');
+  return kit;
 }
 
 // The fields added in exercise model v2, derived from the v1 ones. Used by the importer and when the committed
@@ -68,7 +75,7 @@ export function kitOf(equipment: Equipment): Kit[] {
 export function upgradeFx(ex: Omit<Exercise, 'requires' | 'mode' | 'muscles'>): Exercise {
   return {
     ...ex,
-    requires: kitOf(ex.equipment),
+    requires: kitOf(ex.equipment, ex.name),
     mode: ex.category === 'stretching' ? 'time' : 'reps',
     muscles: { primary: slugsOf(ex.primaryMuscles), secondary: slugsOf(ex.secondaryMuscles) },
   };

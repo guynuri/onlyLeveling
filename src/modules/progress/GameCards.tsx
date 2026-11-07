@@ -7,7 +7,9 @@ import { GROUP_LABEL, type Group } from '../xp/domain/muscles';
 import type { MonthlyRecap, Quest } from '../xp/domain/game';
 import { Button, Card, ProgressBar, RankBadge } from '../../ui/primitives';
 import { dismissRecap } from './load';
-import { playLevelUp } from '../../ui/sound';
+import { playFanfare } from '../../ui/sound';
+import { badgeCatalogue, badgeLabel } from '../xp/domain/badges';
+import { Medal } from 'lucide-react';
 
 export function questLabel(q: Quest): string {
   switch (q.kind) {
@@ -33,7 +35,7 @@ export function questLabel(q: Quest): string {
 export function QuestsCard({ quests }: { quests: { quest: Quest; have: number }[] }) {
   if (quests.length === 0) return null;
   return (
-    <Card title="This week’s quests" action={<span className="muted small">+{GAME.questBonusXp} XP each</span>}>
+    <Card title="This week’s quests" action={<span className="muted small">+{GAME.questBonusXp} muscle XP each</span>}>
       <ul className="ui-list">
         {quests.map(({ quest, have }) => (
           <li key={quest.kind} className="ui-list-stack">
@@ -98,11 +100,12 @@ export function RecapCard(props: { recap: { key: string; month: number; recap: M
   );
 }
 
-// Full-screen moment after a session that levels the user up or ranks a muscle up. CSS only; reduced motion keeps it
+// Full-screen moment after a session that ranks a muscle up or earns a badge. CSS only; reduced motion keeps it
 // still (ui.css).
-export function Celebration(props: { level?: { from: number; to: number }; rankUps: { group: Group; to: string }[]; onClose: () => void }) {
+// Rank-ups and newly earned badges after a session (owner request 2026-11-07: badges get a moment too).
+export function Celebration(props: { rankUps: readonly { group: Group; to: string }[]; badges: readonly string[]; onClose: () => void }) {
   const [open, setOpen] = useState(true);
-  useEffect(() => playLevelUp(), []);
+  useEffect(() => playFanfare(), []);
   const { onClose } = props;
   useEffect(() => {
     if (!open) return;
@@ -121,20 +124,33 @@ export function Celebration(props: { level?: { from: number; to: number }; rankU
     onClose();
   };
   return (
-    <div className="celebrate" role="dialog" aria-modal="true" aria-label={props.level ? `Level ${props.level.to}` : 'Rank up'} onClick={close}>
+    <div className="celebrate" role="dialog" aria-modal="true" aria-label={props.rankUps.length > 0 ? 'Rank up' : 'New badge'} onClick={close}>
       <div className="celebrate-burst" aria-hidden="true" />
       <div className="celebrate-body">
-        {props.level && (
-          <>
-            <p className="celebrate-eyebrow">Level up</p>
-            <p className="celebrate-big">Level {props.level.to}</p>
-          </>
-        )}
+        {props.rankUps.length > 0 && <p className="celebrate-eyebrow">Rank up</p>}
         {props.rankUps.map((r) => (
           <p key={r.group} className="celebrate-rank">
             {GROUP_LABEL[r.group]} <RankBadge rank={r.to} />
           </p>
         ))}
+        {props.badges.length > 0 && (
+          <>
+            <p className="celebrate-eyebrow">{props.badges.length === 1 ? 'New badge' : 'New badges'}</p>
+            <div className="celebrate-badges">
+              {props.badges.map((key) => {
+                const b = badgeCatalogue([key]).find((x) => x.key === key) ?? { key, label: badgeLabel(key), kind: 'session' as const };
+                return (
+                  <span key={key} className="celebrate-badge">
+                    <span className="badge-medal" style={{ ['--medal' as string]: 'var(--tone-amber)' }} aria-hidden="true">
+                      <Medal />
+                    </span>
+                    <span className="celebrate-badge-label">{b.label}</span>
+                  </span>
+                );
+              })}
+            </div>
+          </>
+        )}
         <Button onClick={close} autoFocus>
           Continue
         </Button>

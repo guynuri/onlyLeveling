@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { BODY_SLUGS } from '../../../domain/muscle-map';
 import type { Workout } from '../../../domain/types';
 import { GROUPS } from './muscles';
-import { GROUP_SLUGS, rankNote, rankProgress, exercisesFor, groupOfSlug, levelOf, recoveryOf, weightTrend, xpToNextRank } from './hub';
+import { GROUP_SLUGS, rankNote, rankProgress, exercisesFor, groupOfSlug, recoveryOf, weightTrend, xpToNextRank } from './hub';
 
 const DAY = 86_400_000;
 const NOW = new Date(2026, 10, 7, 12).getTime();
@@ -24,16 +24,6 @@ describe('GROUP_SLUGS', () => {
     const all = GROUPS.flatMap((g) => GROUP_SLUGS[g]);
     expect([...all].sort()).toEqual([...BODY_SLUGS].sort());
     for (const g of GROUPS) for (const s of GROUP_SLUGS[g]) expect(groupOfSlug(s)).toBe(g);
-  });
-});
-
-describe('levelOf', () => {
-  it('starts at level 1 and grows by (L−1)² × 2000', () => {
-    expect(levelOf(0)).toEqual({ level: 1, into: 0, span: 2000 });
-    expect(levelOf(1999).level).toBe(1);
-    expect(levelOf(2000)).toEqual({ level: 2, into: 0, span: 6000 });
-    expect(levelOf(8000)).toEqual({ level: 3, into: 0, span: 10000 });
-    expect(levelOf(-5).level).toBe(1);
   });
 });
 

@@ -5,6 +5,8 @@ export const AI = {
   model: '@cf/meta/llama-3.1-8b-instruct',
   dailyCap: 5, // plan proposals per user per UTC day, counting failed calls
   timeoutMs: 25_000,
+  // Workers AI answers stop at 256 tokens by default, which cuts a plan's JSON short; a 5-day plan needs ~1,500.
+  maxTokens: 2_048,
 } as const;
 
 // Push (PLAN Phase 9). The subject is a contact URL the push services may use (RFC 8292).

@@ -3,7 +3,7 @@ import type { Exercise } from '../../../domain/exercise';
 import type { Goal, Workout } from '../../../domain/types';
 import type { Group } from './muscles';
 import type { CardioSession } from '../../../domain/cardio';
-import { generateQuests, monthBounds, monthKey, monthlyRecap, questHave, weekKey } from './game';
+import { generateQuests, questBonusByGroup, monthBounds, monthKey, monthlyRecap, questHave, weekKey } from './game';
 import { streakWithFreezes } from './streak';
 
 // Monday 5 Oct 2026, 10:00 local. Week n starts at MON + 7n days (no DST change inside a test needs exact hours).
@@ -139,5 +139,23 @@ describe('monthlyRecap', () => {
     expect(r.xp).toBeGreaterThan(0);
     expect(r.topGroups[0]).toBeDefined();
     expect(r.ranksGained).toEqual([]); // no bodyweight: no rank-ups
+  });
+});
+
+describe('questBonusByGroup', () => {
+  it('a train-X quest feeds its muscle; other finished quests split over the muscles trained that week', () => {
+    const ws = [workout(wk(4), ['bench']), workout(wk(4, 2), ['row'])];
+    const h = { workouts: ws, cardio: [], slotStarts: ws.map((w) => w.start), exerciseById: byId };
+    const bonus = questBonusByGroup(
+      [{ weekOf: wk(4), quests: [{ kind: 'group', group: 'back', need: 1 }, { kind: 'sessions', need: 2 }, { kind: 'pr', need: 1 }] }],
+      h,
+    );
+    expect(bonus).toEqual({ back: 500 + 250, chest: 250 }); // pr not done: nothing
+  });
+  it('a week without lifting spreads a finished quest over every muscle', () => {
+    const h = { workouts: [], cardio: [{ start: wk(4) } as CardioSession], slotStarts: [wk(4)], exerciseById: byId };
+    const bonus = questBonusByGroup([{ weekOf: wk(4), quests: [{ kind: 'sessions', need: 1 }] }], h);
+    expect(bonus.chest).toBe(50);
+    expect(Object.values(bonus).reduce((a, b) => a + b, 0)).toBe(500);
   });
 });

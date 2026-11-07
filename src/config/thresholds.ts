@@ -139,20 +139,16 @@ export const XP = {
   badgeSessionMilestones: [1, 10, 100], // "first session", then 10 and 100 sessions
   badgeRankFrom: 'C', // achievement badges per muscle start at this rank
 } as const;
-// Player level on Home (UX design §6.2, U6). Total XP (all muscles + cardio) to reach level L is levelXp × (L−1)²,
-// so each level needs a little more than the one before. ~36 sessions land around level 8. Tuned with real logs.
-export const LEVEL = { levelXp: 2_000 } as const;
-
 // Progress map, Recovery mode (UX design §6.6, U6). A muscle group trained less than recoveringHours ago is still
 // recovering; one not trained for neglectedDays (or never) is neglected.
 export const RECOVERY = { recoveringHours: 48, neglectedDays: 10 } as const;
 
 // Game layer (UX design §6.7, U7). Freezes protect the weekly streak through a missed week; quests are 2–3 small
-// weekly challenges with bonus XP (added to the player level, never to a muscle). Tuned with real logs.
+// weekly challenges whose bonus XP goes to the muscles (owner decision 2026-11-07). Tuned with real logs.
 export const GAME = {
   freezeEveryWeeks: 4, // one freeze per this many completed weeks
   freezeMax: 2, // freezes held at most
-  questBonusXp: 500, // per completed quest
+  questBonusXp: 500, // per completed quest, to its muscle or split over the week's trained muscles
   questsPerWeek: 3,
   questGroupTimes: 2, // "train <muscle> twice"
   questCardioSessions: 2, // lose fat
@@ -163,6 +159,9 @@ export const GAME = {
   questLookbackDays: 28, // history used to pick the week's quests
   recapTopMuscles: 3,
 } as const;
+
+// What a plan request sends to the AI (owner report 2026-11-07: the full library overflowed the 8B model's context).
+export const AI_REQUEST = { maxCandidates: 90, maxRoutine: 30 } as const;
 
 // Supersets (owner decision 2026-11-07): 2 to 3 exercises done in turn, rest after the round.
 export const SUPERSET = { minSize: 2, maxSize: 3 } as const;

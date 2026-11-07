@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mapFreeExercise, type FreeExerciseRaw } from './exercise-import';
+import { kitOf, mapFreeExercise, type FreeExerciseRaw } from './exercise-import';
 
 const raw = (over: Partial<FreeExerciseRaw> = {}): FreeExerciseRaw => ({
   id: 'Dumbbell_Curl',
@@ -78,5 +78,19 @@ describe('mapFreeExercise', () => {
     expect(() => mapFreeExercise(raw({ equipment: 'trap bar' }))).toThrow(/Unmapped equipment: trap bar/);
     expect(() => mapFreeExercise(raw({ force: 'squat' }))).toThrow(/Unmapped force: squat/);
     expect(() => mapFreeExercise(raw({ level: 'pro' }))).toThrow(/Unmapped level: pro/);
+  });
+});
+
+describe('kitOf', () => {
+  it('adds a bench or a pull-up bar when the name needs one', () => {
+    expect(kitOf('dumbbell', 'Incline Dumbbell Press')).toEqual(['dumbbell', 'bench']);
+    expect(kitOf('dumbbell', 'Dumbbell Bench Press')).toEqual(['dumbbell', 'bench']);
+    expect(kitOf('bodyweight', 'Chin-Up')).toEqual(['pullup_bar']);
+    expect(kitOf('bodyweight', 'Hanging Leg Raise')).toEqual(['pullup_bar']);
+    expect(kitOf('dumbbell', 'Dumbbell Bicep Curl')).toEqual(['dumbbell']);
+    expect(kitOf('bodyweight', 'Pushups')).toEqual([]);
+    expect(kitOf('bodyweight', 'Incline Push-Up')).toEqual([]);
+    expect(kitOf('bodyweight', 'Hyperextensions With No Hyperextension Bench')).toEqual([]);
+    expect(kitOf('bodyweight', 'Wide Pull Up')).toEqual(['pullup_bar']);
   });
 });
