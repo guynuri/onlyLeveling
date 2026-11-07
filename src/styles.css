@@ -22,10 +22,11 @@
 
   /* Icon tones: two-colour gradients for icon chips (tiles, badges). */
   --tone-violet: linear-gradient(135deg, #a78bfa, #6d28d9);
-  --tone-amber: linear-gradient(135deg, #fcd34d, #f97316);
-  --tone-cyan: linear-gradient(135deg, #67e8f9, #2563eb);
+  --tone-amber: linear-gradient(135deg, #f97316, #b45309);
+  --tone-cyan: linear-gradient(135deg, #0ea5e9, #1e40af);
   --tone-pink: linear-gradient(135deg, #f9a8d4, #db2777);
-  --tone-green: linear-gradient(135deg, #86efac, #059669);
+  --tone-green: linear-gradient(135deg, #10b981, #065f46);
+  --medal-shine: rgb(255 255 255 / 55%);
   --tone-red: linear-gradient(135deg, #fca5a5, #dc2626);
   --bg-glow: radial-gradient(120% 60% at 50% -10%, rgb(139 92 246 / 18%), transparent 60%);
 
@@ -113,7 +114,6 @@
 html, body {
   margin: 0;
   background: var(--bg-glow) no-repeat, var(--bg);
-  background-attachment: fixed;
   color: var(--fg);
   font-family: var(--font);
   font-size: var(--fs-md);
@@ -171,6 +171,7 @@ input, textarea, select {
 
 /* Text helpers */
 .muted { color: var(--muted); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .small { font-size: var(--fs-sm); }
 .error { color: var(--danger); }
 .label { color: var(--muted); font-size: var(--fs-sm); }
