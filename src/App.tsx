@@ -5,9 +5,10 @@ import { onboardingDone } from './domain/profile';
 import MoreScreen from './app/MoreScreen';
 import HomeScreen from './app/HomeScreen';
 import CoachScreen from './app/CoachScreen';
+import SignInScreen from './app/SignInScreen';
 import { ToastHost } from './ui/controls';
 import ExerciseSheet from './modules/library/ExerciseSheet';
-import { runSync, SYNC_EVENT } from './modules/sync/actions';
+import { readSyncState, runSync, SYNC_EVENT } from './modules/sync/actions';
 import ExerciseDetail from './modules/library/ExerciseDetail';
 import ExerciseList from './modules/library/ExerciseList';
 import CreditsScreen from './modules/library/CreditsScreen';
@@ -62,6 +63,8 @@ function Screen({ route }: { route: Route }) {
       return <ProgressScreen />;
     case 'onboarding':
       return <Onboarding />;
+    case 'signin':
+      return <SignInScreen />;
   }
 }
 
@@ -69,6 +72,8 @@ export default function App() {
   const [route, setRoute] = useState<Route>(() => parseRoute(window.location.hash));
   // Onboarding is required: while it is unfinished the tab bar is hidden and other screens lead back to it.
   const [mustOnboard, setMustOnboard] = useState(false);
+  // Signing in comes first (owner decision 2026-11-07): no session on this device, only the sign-in screen.
+  const [mustSignIn, setMustSignIn] = useState(false);
   const nextScroll = useRef(0);
 
   useEffect(() => {
@@ -77,10 +82,21 @@ export default function App() {
       setMustOnboard(pending);
       if (pending && !allowedWhileOnboarding(parseRoute(window.location.hash))) window.location.hash = '#/onboarding';
     };
-    // Re-checked on every navigation and pull: finishing onboarding, or signing in on a new phone, releases it.
+    // True when there is no session: shows the sign-in screen and skips the onboarding check until there is one.
+    const signInGate = async () => {
+      const out = !(await readSyncState()).config;
+      setMustSignIn(out);
+      if (out && parseRoute(window.location.hash).screen !== 'signin') window.location.hash = '#/signin';
+      if (!out && parseRoute(window.location.hash).screen === 'signin') window.location.hash = '#/home';
+      return out;
+    };
+    // Re-checked on every navigation and pull: signing in, or finishing onboarding, releases the gates.
     const recheck = () =>
-      readSettings()
-        .then((s) => enforce(!onboardingDone(s ?? defaultSettings())))
+      signInGate()
+        .then(async (out) => {
+          if (out) return;
+          enforce(!onboardingDone((await readSettings()) ?? defaultSettings()));
+        })
         .catch(() => undefined);
     const onHash = (e: HashChangeEvent) => {
       scrollByHash.set(hashOf(e.oldURL), window.scrollY);
@@ -99,8 +115,8 @@ export default function App() {
     window.addEventListener('online', onOnline);
     // Pull on open: the app shows local data at once, and the server's changes arrive a moment later. The onboarding
     // decision waits for that pull (onboarding/gate.ts explains why).
-    needsOnboarding(runSync, readSettings)
-      .then(enforce)
+    signInGate()
+      .then((out) => (out ? undefined : needsOnboarding(runSync, readSettings).then(enforce)))
       .catch(() => undefined);
     return () => {
       window.removeEventListener('hashchange', onHash);
@@ -132,7 +148,7 @@ export default function App() {
         {mustOnboard && route.screen === 'settings' && <a href="#/onboarding">← Back to setup</a>}
         <Screen route={route} />
       </main>
-      <nav className="ui-tabbar" aria-label="Main" hidden={mustOnboard}>
+      <nav className="ui-tabbar" aria-label="Main" hidden={mustOnboard || mustSignIn}>
         {TABS.map((t) => (
           <a
             key={t.tab}
