@@ -7,7 +7,7 @@ const src = (path: string) => import.meta.env.BASE_URL + path;
 export function ExThumb({ ex, sex, className }: { ex: Exercise; sex?: 'male' | 'female'; className?: string }) {
   return (
     <span className={`ui-ex-thumb${className ? ` ${className}` : ''}`}>
-      {ex.media ? (
+      {ex.media && ex.media.stills.length > 0 ? (
         <img src={src(ex.media.stills[ex.media.stills.length - 1])} alt="" loading="lazy" decoding="async" />
       ) : (
         <BodyMap primary={ex.muscles.primary} size="sm" sex={sex} label={ex.name} />
