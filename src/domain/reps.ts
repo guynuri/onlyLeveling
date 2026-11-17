@@ -13,3 +13,19 @@ export function repRangeFor(ex: Pick<Exercise, 'mechanic'> & Partial<Pick<Exerci
   if (coreOrCalves(ex.primaryMuscles)) return REP_RANGES.calvesAndCore;
   return ex.mechanic === 'compound' ? REP_RANGES.compound : REP_RANGES.isolation;
 }
+
+// Top of an exercise's rep range as the plan sets it: the first target the plan holds for it, else the library default
+// (0 for an unknown id). The coach's "too easy" check and the XP progression bonus read this, so they agree with what
+// progression uses (training/data.ts progressionConfigFor), and a change to the library ranges does not rewrite the
+// history of exercises the plan still holds.
+export function repMaxIn(
+  plan: { days: readonly { targets?: Record<string, { repMax: number }> }[] } | null | undefined,
+  byId: (id: string) => (Pick<Exercise, 'mechanic'> & Partial<Pick<Exercise, 'mode' | 'primaryMuscles'>>) | undefined,
+): (id: string) => number {
+  return (id) => {
+    const target = plan?.days.find((d) => d.targets?.[id])?.targets?.[id];
+    if (target) return target.repMax;
+    const ex = byId(id);
+    return ex ? repRangeFor(ex).max : 0;
+  };
+}

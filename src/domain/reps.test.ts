@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { repRangeFor } from './reps';
+import { repMaxIn, repRangeFor } from './reps';
 import { REP_RANGES } from '../config/thresholds';
 
 describe('repRangeFor', () => {
@@ -18,5 +18,19 @@ describe('repRangeFor', () => {
   });
   it('a timed hold is seconds, even for abs', () => {
     expect(repRangeFor({ mechanic: 'isolation', mode: 'time', primaryMuscles: ['abdominals'] })).toEqual(REP_RANGES.hold);
+  });
+});
+
+describe('repMaxIn', () => {
+  const crunch = { mechanic: 'isolation' as const, primaryMuscles: ['abdominals'] };
+  const byId = (id: string) => (id === 'crunch' ? crunch : undefined);
+  it('the plan target wins, so a saved plan keeps its own top of range', () => {
+    const plan = { days: [{ targets: {} as Record<string, { repMax: number }> }, { targets: { crunch: { repMax: 15 } } }] };
+    expect(repMaxIn(plan, byId)('crunch')).toBe(15);
+  });
+  it('without a target it is the library range, and 0 for an unknown id', () => {
+    expect(repMaxIn({ days: [{}] }, byId)('crunch')).toBe(20);
+    expect(repMaxIn(null, byId)('crunch')).toBe(20);
+    expect(repMaxIn(null, byId)('nope')).toBe(0);
   });
 });

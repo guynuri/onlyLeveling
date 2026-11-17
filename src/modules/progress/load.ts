@@ -8,7 +8,8 @@ import { goalsOf } from '../../domain/profile';
 import type { BodyweightEntry, Settings, Workout } from '../../domain/types';
 import type { Repo } from '../../data/repo';
 import { readSyncState } from '../sync/actions';
-import { getLocalRepo, getRepo, defaultSettings, repRangeFor, currentPlan } from '../training/data';
+import { getLocalRepo, getRepo, defaultSettings, currentPlan } from '../training/data';
+import { repMaxIn } from '../../domain/reps';
 import { computeProgress, type ProgressInput, type ProgressState } from '../xp/domain/progress';
 import { groupOf, type Group } from '../xp/domain/muscles';
 import { generateQuests, questBonusByGroup, monthBounds, monthKey, monthlyRecap, questHave, weekKey, type MonthlyRecap, type Quest } from '../xp/domain/game';
@@ -56,10 +57,7 @@ export async function loadProgress(now = Date.now()): Promise<Loaded> {
     cardio,
     // The week's target is the plan's sessions, cardio days included (UX design §6.5).
     daysPerWeek: plan.days.length > 0 ? plan.days.length : settings.daysPerWeek,
-    repMaxFor: (id) => {
-      const ex = getExercise(id);
-      return ex ? repRangeFor(ex).max : 0;
-    },
+    repMaxFor: repMaxIn(plan, getExercise),
     now,
   };
   const slotStarts = sessionStarts(workouts, cardio);
