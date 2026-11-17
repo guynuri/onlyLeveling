@@ -29,7 +29,8 @@ import type { ProgressState } from '../xp/domain/progress';
 import { Button, Card } from '../../ui/primitives';
 import { SegmentedControl } from '../../ui/controls';
 import { ExerciseName } from '../library/ExerciseSheet';
-import { getDb, getRepo, getLocalRepo, defaultSettings, currentPlan, historyFor, ownedWeightsFor, repRangeFor } from './data';
+import { getDb, getRepo, getLocalRepo, defaultSettings, currentPlan, historyFor, ownedWeightsFor } from './data';
+import { repMaxIn } from '../../domain/reps';
 import { clearDraft, isRestorable, readDraft, writeDraft } from './draft';
 import { DayEditor } from './DayEditor';
 import { FinishSummary } from './FinishSummary';
@@ -253,10 +254,7 @@ export default function WorkoutScreen() {
           exerciseById: getExercise,
           bodyweight: loaded.bodyweight,
           daysPerWeek: settings.daysPerWeek,
-          repMaxFor: (id) => {
-            const ex = getExercise(id);
-            return ex ? repRangeFor(ex).max : 0;
-          },
+          repMaxFor: repMaxIn(plan, getExercise),
           now: nowMs(),
         }),
       );

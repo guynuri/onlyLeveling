@@ -3,7 +3,7 @@
 import { readSyncState } from '../sync/actions';
 import { getRepo, defaultSettings } from '../training/data';
 import { getExercise } from '../../data/exercises';
-import { repRangeFor } from '../../domain/reps';
+import { repMaxIn } from '../../domain/reps';
 import { computeProgress } from '../xp/domain/progress';
 import { rulesReviewText, type WeekFacts } from '../../../shared/ai-review';
 import { lastClosedWeekStart, buildFacts, shouldStoreRules } from './domain/review';
@@ -36,10 +36,7 @@ export async function loadWeeklyReview(now: Date = new Date()): Promise<ReviewVi
     exerciseById: getExercise,
     bodyweight: await repo.listBodyweight(),
     daysPerWeek: s.daysPerWeek,
-    repMaxFor: (id) => {
-      const ex = getExercise(id);
-      return ex ? repRangeFor(ex).max : 0;
-    },
+    repMaxFor: repMaxIn(await repo.getPlan(), getExercise),
     now: now.getTime(),
   });
   const pending = (await repo.listSuggestions()).filter((x) => x.status === 'pending').length;
