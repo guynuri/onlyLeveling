@@ -23,6 +23,7 @@ export const REP_RANGES = {
   compound: { min: 6, max: 10 },
   isolation: { min: 10, max: 15 },
   calvesAndCore: { min: 10, max: 20 },
+  hold: { min: 20, max: 45 }, // seconds, for timed exercises (owner decision 2026-11-17); within AI_PLAN_LIMITS.repsMax
 } as const;
 
 // Double progression policy (SPEC §3.3). "double" is the only policy in Phase 3.
@@ -181,7 +182,8 @@ export const DIFFICULTY_LOCK = { intermediate: 'D', expert: 'B' } as const;
 // Focus muscles (owner decision 2026-11-07): up to 5; a rules plan adds one exercise and one set for each.
 // The AI's exercise list starts with up to focusCandidates exercises for the focus muscles, so it has more of them to
 // pick from.
-export const FOCUS = { max: 5, extraSets: 1, maxExtraPerDay: 2, focusCandidates: 24 } as const;
+// The AI plan check wants each focus muscle at least aheadSets weekly sets above the other groups' average.
+export const FOCUS = { max: 5, extraSets: 1, maxExtraPerDay: 2, focusCandidates: 24, aheadSets: 1 } as const;
 
 // Supersets (owner decision 2026-11-07): 2 to 3 exercises done in turn, rest after the round.
 export const SUPERSET = { minSize: 2, maxSize: 3 } as const;

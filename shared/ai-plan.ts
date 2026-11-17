@@ -2,7 +2,7 @@
 // (copy-paste fallback). The AI is never trusted for numbers: every value is checked here, and out-of-range numbers are
 // corrected and reported, never silently passed on.
 import { ownedFloor } from '../src/domain/dumbbells';
-import { ROUTINE, SESSION_TIME, SUPERSET, TRAINING } from '../src/config/thresholds';
+import { FOCUS, ROUTINE, SESSION_TIME, SUPERSET, TRAINING } from '../src/config/thresholds';
 import { daySeconds, minutesOf, trimToBudget, type TimedItem } from './session-time';
 
 export const AI_PLAN_LIMITS = {
@@ -208,10 +208,12 @@ export function validateAiPlan(raw: unknown, input: PlanInput): ValidationResult
 
 type Days = ValidPlan['days'];
 
+// Reps at the top of the candidate's range: the saved plan keeps the library range (planFromProposal), and the plan
+// screen estimates from its top, so the check counts the same.
 const timedItem = (e: ValidExercise, c: Candidate | undefined): TimedItem => ({
   id: e.exerciseId,
   sets: e.sets,
-  reps: e.reps,
+  reps: c?.repMax ?? e.reps,
   ...(c?.timed ? { timed: true } : {}),
   ...(c?.unilateral ? { unilateral: true } : {}),
 });
@@ -234,17 +236,17 @@ function groupSets(days: Days, input: PlanInput): Map<string, number> {
   return out;
 }
 
-// Focus muscles (owner decision 2026-11-17): each needs more weekly sets than the average of the other groups the plan
-// trains. Short ones get one more set at a time on their lightest exercise (up to setsMax); one with no exercise, or
-// whose exercises are all at setsMax, gets a candidate added on the day with the most time left. Every change is a
-// correction.
+// Focus muscles (owner decision 2026-11-17): each needs FOCUS.aheadSets more weekly sets than the average of the other
+// groups the plan trains. Short ones get one more set at a time on their lightest exercise (up to setsMax) on a day that
+// still fits its time; one with no exercise at all gets a candidate added on the day with the most time left (the time
+// check may then drop a non-focus exercise). Every change is a correction.
 function topUpFocus(days: Days, letters: (string | null)[][], input: PlanInput, corrections: Correction[]): void {
   const focus = [...new Set(input.focus ?? [])];
   if (focus.length === 0 || days.length === 0) return;
   const trains = (id: string, g: string) => input.candidates[id]?.groups?.includes(g) ?? false;
   const target = () => {
     const others = [...groupSets(days, input).entries()].filter(([g, n]) => n > 0 && !focus.includes(g)).map(([, n]) => n);
-    return others.length === 0 ? 1 : Math.floor(others.reduce((a, b) => a + b, 0) / others.length) + 1;
+    return others.length === 0 ? 1 : Math.floor(others.reduce((a, b) => a + b, 0) / others.length) + FOCUS.aheadSets;
   };
   const addExercise = (g: string): boolean => {
     const free = (d: Days[number], i: number) => (input.dayBudgetSec?.[i] ?? 0) - daySecs(d, input) - d.exercises.length; // fewer exercises breaks ties
@@ -268,15 +270,24 @@ function topUpFocus(days: Days, letters: (string | null)[][], input: PlanInput, 
     }
     return false;
   };
+  // One more set still fits the day's budget (with the time check's tolerance), or there is no budget.
+  const roomFor = (di: number, ei: number) => {
+    const budget = input.dayBudgetSec?.[di];
+    if (budget === undefined) return true;
+    const d = days[di];
+    const more = { ...d, exercises: d.exercises.map((e, k) => (k === ei ? { ...e, sets: e.sets + 1 } : e)) };
+    return daySecs(more, input) <= budget * (1 + SESSION_TIME.overTolerance);
+  };
+  const maxSteps = days.length * input.exercisesPerDay * AI_PLAN_LIMITS.setsMax; // every set slot once: always ends
   for (const g of focus) {
     let added = false;
-    for (let guard = 0; guard < 40; guard++) {
+    for (let step = 0; step < maxSteps; step++) {
       const have = groupSets(days, input).get(g) ?? 0;
       if (have >= target()) break;
       let best: { d: number; e: number } | null = null;
       days.forEach((d, di) =>
         d.exercises.forEach((e, ei) => {
-          if (trains(e.exerciseId, g) && e.sets < AI_PLAN_LIMITS.setsMax && (!best || e.sets < days[best.d].exercises[best.e].sets)) best = { d: di, e: ei };
+          if (trains(e.exerciseId, g) && e.sets < AI_PLAN_LIMITS.setsMax && roomFor(di, ei) && (!best || e.sets < days[best.d].exercises[best.e].sets)) best = { d: di, e: ei };
         }),
       );
       if (have > 0 && best) {
@@ -284,7 +295,7 @@ function topUpFocus(days: Days, letters: (string | null)[][], input: PlanInput, 
         const ex = days[d].exercises[e];
         corrections.push({ path: `days[${d}].exercises[${e}].sets`, from: ex.sets, to: ex.sets + 1, why: `more sets for your focus on ${g}` });
         ex.sets += 1;
-      } else if (added || !addExercise(g)) {
+      } else if (added || have > 0 || !addExercise(g)) {
         break;
       } else {
         added = true;

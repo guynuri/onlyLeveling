@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { buildPlanRequest, candidatesOf, spread, summaryOf } from './request';
+import { buildPlanRequest, candidatesOf, exerciseCapFor, spread, summaryOf } from './request';
 import { planFromProposal } from './apply';
 import { replaceExercise } from '../../../domain/plan';
 import type { Exercise } from '../../../domain/exercise';
@@ -254,10 +254,19 @@ describe('time budget, focus and recovery in the request and prompt (owner decis
     const prompt = buildPrompt(buildPlanRequest({ ...settings, focusMuscles: ['core'] }, many, 8));
     expect(prompt).toMatch(/Day 1: \d+ min, Day 2: \d+ min, Day 3: \d+ min/);
     expect(prompt).not.toContain('At most 4 exercises');
-    expect(prompt).toContain('at most 8 exercises per day');
-    expect(prompt).toMatch(/fx_plank \| Hold \| core \| seconds 6-10/);
+    expect(prompt).toContain('at most 7 exercises per day'); // 45 min: a cap that fits the budget
+    expect(prompt).toMatch(/fx_plank \| Hold \| core \| seconds 20-45/);
     expect(prompt).toMatch(/Core \(abs\) and calves recover fast/);
     expect(prompt).toMatch(/48 to 72 hours/);
     expect(prompt).toMatch(/focus.*more weekly sets/);
+  });
+});
+
+describe('exerciseCapFor', () => {
+  it('grows with the longest day, within 3 and 8', () => {
+    expect(exerciseCapFor([0])).toBe(3);
+    expect(exerciseCapFor([1350])).toBe(5);
+    expect(exerciseCapFor([1350, 2250])).toBe(7);
+    expect(exerciseCapFor([99999])).toBe(8);
   });
 });

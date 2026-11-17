@@ -10,6 +10,7 @@ import { readLimitedText, TooLargeError } from '../request';
 import { validateAiPlan, type Candidate, type Correction, type PlanInput, type ValidPlan } from '../../../shared/ai-plan';
 import { buildPrompt, type PlanRequest } from '../../../shared/ai-prompt';
 import { runChain, workersAiProvider, type Provider } from '../ai/chain';
+import { GROUPS } from '../../../src/modules/xp/domain/muscles';
 
 const MAX_CANDIDATES = 400;
 
@@ -26,7 +27,8 @@ export type ProposeResult =
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const MAX_ROUTINE = 150;
-const FOCUS_GROUP = /^(chest|back|shoulders|biceps|triceps|quads|hamstrings|glutes|calves|core)$/;
+// Muscle group names: the app's XP groups, one list for both sides.
+const FOCUS_GROUP = new RegExp(`^(${GROUPS.join('|')})$`);
 const ROUTINE_ID = /^(fx|rp|og)_[A-Za-z0-9_.()'-]{1,90}$/;
 const intIn = (v: unknown, lo: number, hi: number) => typeof v === 'number' && Number.isInteger(v) && v >= lo && v <= hi;
 

@@ -5,13 +5,22 @@ import { loadKind, movementPattern, usableWith, type Exercise } from '../../../d
 import { repRangeFor } from '../../../domain/reps';
 import type { Settings } from '../../../domain/types';
 import { blockedIds, equipmentOf, goalsOf } from '../../../domain/profile';
-import { AI_REQUEST, FOCUS, PROFILE, ROUTINE } from '../../../config/thresholds';
+import { AI_REQUEST, FOCUS, PROFILE, ROUTINE, SESSION_TIME, TRAINING } from '../../../config/thresholds';
+import { daySeconds } from '../../../../shared/session-time';
 import type { Candidate } from '../../../../shared/ai-plan';
 import type { PlanRequest } from '../../../../shared/ai-prompt';
 import { groupOf, type Group } from '../../xp/domain/muscles';
 import type { Rank } from '../../xp/domain/rank';
 import { dayBudgetsSec, focusOf } from '../../../domain/plan-builder';
 import { restForEstimate } from '../../../domain/session-time';
+
+// Exercises a day of this many seconds could hold: a typical 3 × 10 exercise each, plus one for supersets and short
+// isolation work, within SESSION_TIME's min and max.
+export function exerciseCapFor(budgets: readonly number[]): number {
+  const typical = daySeconds([{ id: 'x', sets: TRAINING.defaultSets, reps: 10 }], [], TRAINING.restSec);
+  const n = Math.ceil(Math.max(0, ...budgets) / typical) + 1;
+  return Math.min(SESSION_TIME.maxExercises, Math.max(SESSION_TIME.minExercises, n));
+}
 
 // The XP groups an exercise mainly trains, from its primary muscles.
 const groupsOf = (ex: Exercise): Group[] => [...new Set(ex.primaryMuscles.map(groupOf).filter((g): g is Group => g !== null))];
@@ -110,19 +119,21 @@ export function buildPlanRequest(
 ): PlanRequest {
   const avoid = s.avoid ?? [];
   const owned = [...s.owned].sort((a, b) => a - b);
+  const budgets = dayBudgetsSec(s);
   return {
     summary: summaryOf(s, bodyweightKg),
     // Limits remove candidates here too: the AI never sees an exercise the rules would refuse.
     candidates: candidatesOf(catalogue, [...blockedIds(s, catalogue, ranks)], s),
     daysPerWeek: s.daysPerWeek,
-    exercisesPerDay,
+    // Never more than the longest day could hold. Also the only limit a Worker older than the time budget applies.
+    exercisesPerDay: Math.min(exercisesPerDay, exerciseCapFor(budgets)),
     owned,
     avoid,
     supersets,
     ...(supersets && supersetSize ? { supersetSize } : {}),
     routine: routineChoices(catalogue),
     // Time budget and focus (owner decision 2026-11-17): the validator trims long days and tops up focus muscles.
-    dayBudgetSec: dayBudgetsSec(s),
+    dayBudgetSec: budgets,
     restSec: restForEstimate(s),
     ...(focusOf(s).length > 0 ? { focus: focusOf(s) } : {}),
   };

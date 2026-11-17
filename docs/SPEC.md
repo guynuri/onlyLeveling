@@ -57,7 +57,7 @@ Settings live in one config module with thresholds (§4.5). No thresholds are sc
 - **Rotation intent recorded by the user**: "Weekly review decides", so in v1 the coach card *is* the
   accept/reject point for each swap, and the weekly review will reuse the same accept flow later.
 - **Rep ranges per exercise (proposal)**. Compound lifts 6–10 reps; isolation and accessory lifts 10–15;
-  calves and core 10–20. Stated as a default table in config, editable per exercise. Hypertrophy
+  calves and core 10–20; timed holds 20–45 seconds (owner decision 2026-11-17). Stated as a default table in config, editable per exercise. Hypertrophy
   research (Schoenfeld and colleagues) shows similar growth across a wide rep range when sets are near
   failure, so the range is about fit and fatigue, not a fixed rule. Sources: Schoenfeld et al. 2017 meta-analysis of
   low- vs high-load training, [semanticscholar](https://www.semanticscholar.org/paper/Strength-and-Hypertrophy-Adaptations-Between-Low-A-Schoenfeld-Grgic/bf737d9c1090be1a883e2be6873060c6c1c5273e);

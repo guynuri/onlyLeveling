@@ -181,8 +181,8 @@ describe('validateAiPlan: time budget and focus (owner decision 2026-11-17)', ()
     restSec: 90,
   };
   const oneDay = (list: string[], over: Record<string, unknown> = {}) => plan([{ label: 'Day A', exercises: list.map((id) => ex({ exerciseId: id, ...over })) }]);
-  // 3 × 10 reps, 90 s rest: 3×40 + 2×90 + 90 = 390 s an exercise.
-  const per = 390;
+  // Counted at the top of the 8–12 range: 3×48 + 2×90 + 90 = 414 s an exercise.
+  const per = 414;
 
   it('a day over budget drops exercises from the end and reports each drop', () => {
     const r = validateAiPlan(oneDay(ids), { ...timeInput, dayBudgetSec: [per * 4] });
@@ -237,5 +237,46 @@ describe('validateAiPlan: time budget and focus (owner decision 2026-11-17)', ()
   it('more exercises than the ceiling is still an error', () => {
     const r = validateAiPlan(oneDay(ids), { ...timeInput, exercisesPerDay: 5 });
     expect(r.ok).toBe(false);
+  });
+});
+
+describe('validateAiPlan: time and focus edge cases', () => {
+  const base: PlanInput = {
+    daysPerWeek: 1,
+    exercisesPerDay: 8,
+    owned: [4, 6, 8, 10],
+    avoid: [],
+    supersets: true,
+    restSec: 90,
+    candidates: Object.fromEntries(['a', 'b', 'c', 'd', 'e'].map((k) => [`fx_${k}`, { name: k.toUpperCase(), repMin: 8, repMax: 12, groups: [k === 'e' ? 'core' : 'chest'] }])),
+  };
+  const day = (list: [string, string?][]) => plan([{ label: 'A', exercises: list.map(([id, superset]) => ex({ exerciseId: id, ...(superset ? { superset } : {}) })) }]);
+
+  it('a superset that loses a member to the trim is dropped, a whole one is kept', () => {
+    // Superset A+B 618 s, C 414 s, D+E 618 s = 1650 s. Without E: 618 + 414 + 414 = 1446 s, inside 1400 × 1.1.
+    const r = validateAiPlan(day([['fx_a', 'A'], ['fx_b', 'A'], ['fx_c'], ['fx_d', 'B'], ['fx_e', 'B']]), { ...base, dayBudgetSec: [1400] });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const ids = r.plan.days[0].exercises.map((e) => e.exerciseId);
+    expect(ids).toEqual(['fx_a', 'fx_b', 'fx_c', 'fx_d']);
+    expect(r.plan.days[0].supersets).toEqual([['fx_a', 'fx_b']]);
+  });
+
+  it('a focus set is not added when it would push the day over its time', () => {
+    const r = validateAiPlan(day([['fx_a'], ['fx_b'], ['fx_e']]), { ...base, supersets: false, focus: ['core'], dayBudgetSec: [414 * 3] });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.plan.days[0].exercises.map((e) => e.exerciseId)).toEqual(['fx_a', 'fx_b', 'fx_e']);
+    expect(r.corrections).toEqual([]);
+  });
+
+  it('a focus exercise goes to the day with the most time left', () => {
+    const two = { ...base, daysPerWeek: 2, supersets: false, focus: ['core'], dayBudgetSec: [414 * 4, 414 * 8] };
+    const raw = plan([
+      { label: 'A', exercises: [ex({ exerciseId: 'fx_a' }), ex({ exerciseId: 'fx_b' })] },
+      { label: 'B', exercises: [ex({ exerciseId: 'fx_c' }), ex({ exerciseId: 'fx_d' })] },
+    ]);
+    const r = validateAiPlan(raw, two);
+    expect(r.ok && r.plan.days[1].exercises.map((e) => e.exerciseId)).toContain('fx_e');
   });
 });
