@@ -31,7 +31,7 @@ First sign-up runs a short **onboarding interview**. Answers are stored as setti
 | About you | Optional sex, age, height (U3) | Sent to the AI with the latest bodyweight to fit the plan (owner decision 2026-11-06). Sex picks the body figure; a weight given here starts the bodyweight log. |
 | Onboarding | Required (U3) | Until all nine steps end with a chosen plan, the app shows only onboarding and Settings (to sign in). No default weights for a new account. Unfinished = start again. |
 | Days per week | 3 | Plan builder respects it. Changeable any time. |
-| Session length | ~45 min | Limits exercises per session. |
+| Session length | ~45 min | A time budget, not a count (owner decision 2026-11-17): each day's exercises fill the session minus warm-up, cool-down, cardio and mobility, by an estimate per exercise (sets × reps or hold seconds, doubled one side at a time, rest between sets, a generous changeover; a superset rests once per round). 3 to 8 exercises a day. Numbers in `SESSION_TIME`. A guide only: the athlete runs the session as they like. |
 | Dumbbells owned | Picked on a chip grid of common weights 1–50 kg, plus any weight typed in (U3) | Owned weights in kg, per unit, stored as an exact list. Kettlebell weights too when a kettlebell is owned. See §3.4. |
 | Load meaning | `as entered` per exercise | `as entered` / `each bell` / `total`, per `REFERENCE_NOTES.md` §8. |
 | Equipment | Multi-select: dumbbells, kettlebell, bench, pull-up bar, bands (U3) | Library defaults to it. Plans, swaps, AI candidates and progression use only exercises whose equipment is all owned; with nothing picked, only bodyweight exercises (U4). No barbell. |
@@ -57,7 +57,7 @@ Settings live in one config module with thresholds (§4.5). No thresholds are sc
 - **Rotation intent recorded by the user**: "Weekly review decides", so in v1 the coach card *is* the
   accept/reject point for each swap, and the weekly review will reuse the same accept flow later.
 - **Rep ranges per exercise (proposal)**. Compound lifts 6–10 reps; isolation and accessory lifts 10–15;
-  calves and core 10–20. Stated as a default table in config, editable per exercise. Hypertrophy
+  calves and core 10–20; timed holds 20–45 seconds (owner decision 2026-11-17). Stated as a default table in config, editable per exercise. Hypertrophy
   research (Schoenfeld and colleagues) shows similar growth across a wide rep range when sets are near
   failure, so the range is about fit and fatigue, not a fixed rule. Sources: Schoenfeld et al. 2017 meta-analysis of
   low- vs high-load training, [semanticscholar](https://www.semanticscholar.org/paper/Strength-and-Hypertrophy-Adaptations-Between-Low-A-Schoenfeld-Grgic/bf737d9c1090be1a883e2be6873060c6c1c5273e);
@@ -245,7 +245,12 @@ outside this PR.
 2. Schema check (types, required keys, lengths).
 3. Every `exerciseId` exists in the library and is dumbbell-compatible.
 4. No excluded exercise (avoid list).
-5. Day count equals the setting (days per week). Exercise count per day fits session length.
+5. Day count equals the setting (days per week). At most the ceiling of exercises per day. A day estimated more than
+   10% over its time budget drops exercises from the end (focus-muscle ones last, never below 3), as corrections.
+5a. Focus muscles (owner decision 2026-11-17): each gets more weekly sets than the average of the other trained groups;
+   if not, sets are added (or an exercise, when it has none), as corrections. The prompt lists focus exercises first and
+   tells the AI how fast muscle groups recover (core and calves fast, so often; hamstrings, glutes, lower back 48–72 h);
+   how often core is trained is left to the AI.
 6. Repeat or fail on any violation.
 
 ### 5.6 Failure behaviour

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { addFocus, applyBlend, buildRulesPlan, focusOf } from './plan-builder';
+import { addFocus, applyBlend, buildRulesPlan, dayBudgetsSec, focusOf } from './plan-builder';
+import { planDaySeconds } from './session-time';
 import type { Exercise } from './exercise';
 import type { BodySlug } from './muscle-map';
 import type { Plan } from './plan';
@@ -191,5 +192,38 @@ describe('focus muscles (addFocus)', () => {
   });
   it('focusOf keeps known groups, at most 5', () => {
     expect(focusOf({ focusMuscles: ['chest', 'x', 'back', 'quads', 'calves', 'core', 'glutes'] })).toEqual(['chest', 'back', 'quads', 'calves', 'core']);
+  });
+});
+
+describe('buildRulesPlan: time budget (owner decision 2026-11-17)', () => {
+  const lengths = (p: Plan) => p.days.map((d) => d.exerciseIds.length);
+  it('a longer session gets more exercises a day, never more than the ceiling', () => {
+    const short = lengths(planOf(build({ sessionMinutes: 30 })));
+    const long = lengths(planOf(build({ sessionMinutes: 60 })));
+    expect(Math.max(...short)).toBeLessThanOrEqual(4);
+    expect(Math.min(...long)).toBeGreaterThan(4);
+    expect(Math.max(...long)).toBeLessThanOrEqual(8);
+  });
+  it('every day fits its budget, or holds only the minimum', () => {
+    for (const minutes of [30, 45, 60, 90]) {
+      const s = settings({ sessionMinutes: minutes });
+      const p = planOf(build({ sessionMinutes: minutes }));
+      const budgets = dayBudgetsSec(s);
+      p.days.forEach((d, i) => {
+        const secs = planDaySeconds(d, (id) => CATALOGUE.find((e) => e.id === id), 90);
+        expect(secs <= budgets[i] || d.exerciseIds.length === 3).toBe(true);
+      });
+    }
+  });
+  it('a cardio block shortens the day it lands on', () => {
+    const budgets = dayBudgetsSec(settings({ sessionMinutes: 45, goals: ['lose-fat'] }));
+    expect(budgets[2]).toBe(budgets[0] - 20 * 60);
+  });
+  it('focus exercises survive the trim', () => {
+    const p = planOf(build({ sessionMinutes: 30, focusMuscles: ['calves'] }));
+    expect(idsOf(p)).toContain('DB_Calf');
+  });
+  it('no session length uses the 45-minute default', () => {
+    expect(dayBudgetsSec(settings())).toEqual(dayBudgetsSec(settings({ sessionMinutes: 45 })));
   });
 });

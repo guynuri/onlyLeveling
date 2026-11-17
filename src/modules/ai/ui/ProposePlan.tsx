@@ -9,8 +9,9 @@ import { startBlock } from '../../../domain/plan-edit';
 import { buildRulesPlan, type TemplateKind } from '../../../domain/plan-builder';
 import { repRangeFor } from '../../../domain/reps';
 import type { Settings } from '../../../domain/types';
-import { BLOCK, TEMPLATE } from '../../../config/thresholds';
+import { BLOCK, SESSION_TIME } from '../../../config/thresholds';
 import { buildPlanRequest } from '../domain/request';
+import { restForEstimate, sessionMinutesEstimate } from '../../../domain/session-time';
 import { planFromProposal } from '../domain/apply';
 import { getRepo } from '../../training/data';
 import { latestBodyweightKg, requestProposal, saveChosenPlan } from '../actions';
@@ -54,11 +55,15 @@ const repRange = (id: string) => {
 
 const range = (t: { repMin: number; repMax: number }) => (t.repMin === t.repMax ? `${t.repMin}` : `${t.repMin}–${t.repMax}`);
 
-function PlanDays({ plan }: { plan: Plan }) {
+function PlanDays({ plan, restSec }: { plan: Plan; restSec: number }) {
   return (
     <>
       {plan.days.map((d) => (
-        <Card key={d.index} title={d.label ?? `Day ${d.index + 1}`}>
+        <Card
+          key={d.index}
+          title={d.label ?? `Day ${d.index + 1}`}
+          action={d.kind === 'cardio' ? undefined : <span className="muted small">≈ {sessionMinutesEstimate(d, getExercise, restSec)} min</span>}
+        >
           <ol className="ui-list ui-list--numbered">
             {d.exerciseIds.map((id) => (
               <li key={id} className="ui-list-stack">
@@ -108,7 +113,7 @@ export function ProposePlan(props: { settings: Settings; onSaved: () => void }) 
     };
   }, []);
   // The copy-paste prompt carries the same summary the Worker gets, body stats included.
-  const request = buildPlanRequest(props.settings, listExercises(), TEMPLATE.exercisesPerDay, bodyweight, supersets > 0, readRanks(), supersets || undefined);
+  const request = buildPlanRequest(props.settings, listExercises(), SESSION_TIME.maxExercises, bodyweight, supersets > 0, readRanks(), supersets || undefined);
 
   const fromAi = (v: ValidPlan, corrections: Correction[], now: number): Candidate => ({
     plan: planFromProposal(v, props.settings, weeks, repRange, now),
@@ -219,7 +224,7 @@ export function ProposePlan(props: { settings: Settings; onSaved: () => void }) 
               {candidate.detail && <span className="muted small"> ({candidate.detail})</span>}
             </p>
           )}
-          <PlanDays plan={candidate.plan} />
+          <PlanDays plan={candidate.plan} restSec={restForEstimate(props.settings)} />
           {candidate.corrections.length > 0 && (
             <div className="muted small">
               <p>Corrected to fit your setup:</p>
@@ -236,7 +241,7 @@ export function ProposePlan(props: { settings: Settings; onSaved: () => void }) 
           {current && (
             <details>
               <summary>Compare with your current plan</summary>
-              <PlanDays plan={current} />
+              <PlanDays plan={current} restSec={restForEstimate(props.settings)} />
             </details>
           )}
           <p className="muted small">

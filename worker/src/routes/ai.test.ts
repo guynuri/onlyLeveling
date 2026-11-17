@@ -106,3 +106,22 @@ describe('parsePlanRequest (shape only)', () => {
     expect(parsePlanRequest({ ...req, candidates: many })).toBeNull();
   });
 });
+
+describe('parsePlanRequest: time budget and focus (owner decision 2026-11-17)', () => {
+  const timed = { ...req, dayBudgetSec: [1800, 1800], restSec: 90, summary: { ...req.summary, focus: ['core', 'bogus'] } };
+  it('keeps the day budgets, rest, focus from the summary and candidate flags', () => {
+    const body = { ...timed, candidates: { a: { name: 'Plank', repMin: 20, repMax: 60, groups: ['core'], timed: true, unilateral: false } } };
+    const r = parsePlanRequest(body);
+    expect(r?.dayBudgetSec).toEqual([1800, 1800]);
+    expect(r?.restSec).toBe(90);
+    expect(r?.focus).toEqual(['core']);
+    expect(r?.candidates.a).toEqual({ name: 'Plank', repMin: 20, repMax: 60, groups: ['core'], timed: true });
+  });
+  it('rejects a budget list of the wrong length or with bad numbers, a bad rest, and unknown groups', () => {
+    expect(parsePlanRequest({ ...timed, dayBudgetSec: [1800] })).toBeNull();
+    expect(parsePlanRequest({ ...timed, dayBudgetSec: [1800, -1] })).toBeNull();
+    expect(parsePlanRequest({ ...timed, restSec: 9999 })).toBeNull();
+    expect(parsePlanRequest({ ...req, candidates: { a: { name: 'x', repMin: 8, repMax: 12, groups: ['<b>'] } } })).toBeNull();
+    expect(parsePlanRequest({ ...req, candidates: { a: { name: 'x', repMin: 20, repMax: 60 } } })).toBeNull(); // 60 reps: only a hold may
+  });
+});

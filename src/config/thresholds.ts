@@ -23,6 +23,7 @@ export const REP_RANGES = {
   compound: { min: 6, max: 10 },
   isolation: { min: 10, max: 15 },
   calvesAndCore: { min: 10, max: 20 },
+  hold: { min: 20, max: 45 }, // seconds, for timed exercises (owner decision 2026-11-17); within AI_PLAN_LIMITS.repsMax
 } as const;
 
 // Double progression policy (SPEC §3.3). "double" is the only policy in Phase 3.
@@ -78,9 +79,17 @@ export const AUTO_TEMPLATE = { fullBodyMaxDays: 3, upperLowerMaxDays: 4 } as con
 // Goals shift the rep range (both ends): strength heavier, endurance lighter. Never below the floor.
 export const REP_BIAS = { heavier: -2, lighter: 3, floor: 3 } as const;
 
-// Template plans (PLAN Phase 3). Session length limits exercises per day.
-export const TEMPLATE = {
-  exercisesPerDay: 4,
+// Session time budget (owner decision 2026-11-17): a day is filled by estimated minutes, not a fixed count of
+// exercises. Estimates are a guide for planning; the athlete runs the session as they like. Numbers are a proposal,
+// to tune with real use.
+export const SESSION_TIME = {
+  defaultMinutes: 45, // SPEC §2 default session length, when onboarding left it unset
+  secondsPerRep: 4, // one rep of a reps exercise, both directions
+  changeoverSec: 90, // per exercise (or superset): set up, change weights, move on. Generous on purpose.
+  supersetSwitchSec: 20, // moving from one exercise to the next inside a superset round
+  overTolerance: 0.1, // an AI day may run this share over its budget before exercises are dropped
+  minExercises: 3, // never drop below, never fill fewer than this (when the pool allows)
+  maxExercises: 8, // hard ceiling per day, whatever the time
 } as const;
 
 // Warm-up and cool-down are separate blocks of every session, never part of the exercise list and never
@@ -171,7 +180,10 @@ export const AI_REQUEST = { maxCandidates: 90, maxRoutine: 30, clientTimeoutMs: 
 export const DIFFICULTY_LOCK = { intermediate: 'D', expert: 'B' } as const;
 
 // Focus muscles (owner decision 2026-11-07): up to 5; a rules plan adds one exercise and one set for each.
-export const FOCUS = { max: 5, extraSets: 1, maxExtraPerDay: 2 } as const;
+// The AI's exercise list starts with up to focusCandidates exercises for the focus muscles, so it has more of them to
+// pick from.
+// The AI plan check wants each focus muscle at least aheadSets weekly sets above the other groups' average.
+export const FOCUS = { max: 5, extraSets: 1, maxExtraPerDay: 2, focusCandidates: 24, aheadSets: 1 } as const;
 
 // Supersets (owner decision 2026-11-07): 2 to 3 exercises done in turn, rest after the round.
 export const SUPERSET = { minSize: 2, maxSize: 3 } as const;

@@ -5,12 +5,25 @@ import { loadKind, movementPattern, usableWith, type Exercise } from '../../../d
 import { repRangeFor } from '../../../domain/reps';
 import type { Settings } from '../../../domain/types';
 import { blockedIds, equipmentOf, goalsOf } from '../../../domain/profile';
-import { AI_REQUEST, PROFILE, ROUTINE } from '../../../config/thresholds';
+import { AI_REQUEST, FOCUS, PROFILE, ROUTINE, SESSION_TIME, TRAINING } from '../../../config/thresholds';
+import { daySeconds } from '../../../../shared/session-time';
 import type { Candidate } from '../../../../shared/ai-plan';
 import type { PlanRequest } from '../../../../shared/ai-prompt';
-import type { Group } from '../../xp/domain/muscles';
+import { groupOf, type Group } from '../../xp/domain/muscles';
 import type { Rank } from '../../xp/domain/rank';
-import { focusOf } from '../../../domain/plan-builder';
+import { dayBudgetsSec, focusOf } from '../../../domain/plan-builder';
+import { restForEstimate } from '../../../domain/session-time';
+
+// Exercises a day of this many seconds could hold: a typical 3 × 10 exercise each, plus one for supersets and short
+// isolation work, within SESSION_TIME's min and max.
+export function exerciseCapFor(budgets: readonly number[]): number {
+  const typical = daySeconds([{ id: 'x', sets: TRAINING.defaultSets, reps: 10 }], [], TRAINING.restSec);
+  const n = Math.ceil(Math.max(0, ...budgets) / typical) + 1;
+  return Math.min(SESSION_TIME.maxExercises, Math.max(SESSION_TIME.minExercises, n));
+}
+
+// The XP groups an exercise mainly trains, from its primary muscles.
+const groupsOf = (ex: Exercise): Group[] => [...new Set(ex.primaryMuscles.map(groupOf).filter((g): g is Group => g !== null))];
 
 // Body stats (sex, age, height, latest bodyweight) are sent so the AI can fit the plan (owner decision 2026-11-06,
 // replacing SPEC §5.3's "no bodyweight"). The limits note is the one free-text field (UX design §4), capped.
@@ -49,7 +62,8 @@ export function spread<T>(items: readonly T[], groupOf: (t: T) => string, n: num
 
 // Library exercises usable with the owned equipment, with a known movement pattern, minus the avoid list. Only these
 // reach the AI, at most AI_REQUEST.maxCandidates, spread over muscles, easier and compound ones first: a small model
-// must fit the whole list and its answer in its context.
+// must fit the whole list and its answer in its context. Exercises for the focus muscles come first (up to
+// FOCUS.focusCandidates, spread over the focus groups), so the AI has more of them to choose from.
 export function candidatesOf(catalogue: readonly Exercise[], avoid: readonly string[], s: Settings): Record<string, Candidate> {
   const skip = new Set(avoid);
   const equipment = equipmentOf(s);
@@ -62,12 +76,26 @@ export function candidatesOf(catalogue: readonly Exercise[], avoid: readonly str
         (a.mechanic === 'compound' ? 0 : 1) - (b.mechanic === 'compound' ? 0 : 1) ||
         a.id.localeCompare(b.id),
     );
-  for (const ex of spread(usable, (e) => e.primaryMuscles[0] ?? '', AI_REQUEST.maxCandidates)) {
+  const focus = focusOf(s);
+  const forFocus = (e: Exercise) => groupsOf(e).find((g) => focus.includes(g));
+  const first = spread(usable.filter((e) => forFocus(e) !== undefined), (e) => forFocus(e) ?? '', Math.min(FOCUS.focusCandidates, AI_REQUEST.maxCandidates));
+  const taken = new Set(first.map((e) => e.id));
+  const rest = spread(usable.filter((e) => !taken.has(e.id)), (e) => e.primaryMuscles[0] ?? '', AI_REQUEST.maxCandidates - first.length);
+  for (const ex of [...first, ...rest]) {
     const r = repRangeFor(ex);
     const kind = loadKind(ex);
     // Dumbbell work leaves `loads` out: the validator then uses the plan's owned list, and the prompt stays short.
     const loads = kind === 'dumbbell' ? undefined : kind === 'kettlebell' ? [...(s.ownedKettlebells ?? [])].sort((a, b) => a - b) : null;
-    out[ex.id] = { name: ex.name, repMin: r.min, repMax: r.max, ...(loads === undefined ? {} : { loads }) };
+    const groups = groupsOf(ex);
+    out[ex.id] = {
+      name: ex.name,
+      repMin: r.min,
+      repMax: r.max,
+      ...(loads === undefined ? {} : { loads }),
+      ...(groups.length > 0 ? { groups } : {}),
+      ...(ex.mode === 'time' ? { timed: true } : {}),
+      ...(ex.unilateral ? { unilateral: true } : {}),
+    };
   }
   return out;
 }
@@ -91,16 +119,22 @@ export function buildPlanRequest(
 ): PlanRequest {
   const avoid = s.avoid ?? [];
   const owned = [...s.owned].sort((a, b) => a - b);
+  const budgets = dayBudgetsSec(s);
   return {
     summary: summaryOf(s, bodyweightKg),
     // Limits remove candidates here too: the AI never sees an exercise the rules would refuse.
     candidates: candidatesOf(catalogue, [...blockedIds(s, catalogue, ranks)], s),
     daysPerWeek: s.daysPerWeek,
-    exercisesPerDay,
+    // Never more than the longest day could hold. Also the only limit a Worker older than the time budget applies.
+    exercisesPerDay: Math.min(exercisesPerDay, exerciseCapFor(budgets)),
     owned,
     avoid,
     supersets,
     ...(supersets && supersetSize ? { supersetSize } : {}),
     routine: routineChoices(catalogue),
+    // Time budget and focus (owner decision 2026-11-17): the validator trims long days and tops up focus muscles.
+    dayBudgetSec: budgets,
+    restSec: restForEstimate(s),
+    ...(focusOf(s).length > 0 ? { focus: focusOf(s) } : {}),
   };
 }

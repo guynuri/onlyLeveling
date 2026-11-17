@@ -10,6 +10,7 @@ import { readLimitedText, TooLargeError } from '../request';
 import { validateAiPlan, type Candidate, type Correction, type PlanInput, type ValidPlan } from '../../../shared/ai-plan';
 import { buildPrompt, type PlanRequest } from '../../../shared/ai-prompt';
 import { runChain, workersAiProvider, type Provider } from '../ai/chain';
+import { GROUPS } from '../../../src/modules/xp/domain/muscles';
 
 const MAX_CANDIDATES = 400;
 
@@ -26,7 +27,8 @@ export type ProposeResult =
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const MAX_ROUTINE = 150;
-const FOCUS_GROUP = /^(chest|back|shoulders|biceps|triceps|quads|hamstrings|glutes|calves|core)$/;
+// Muscle group names: the app's XP groups, one list for both sides.
+const FOCUS_GROUP = new RegExp(`^(${GROUPS.join('|')})$`);
 const ROUTINE_ID = /^(fx|rp|og)_[A-Za-z0-9_.()'-]{1,90}$/;
 const intIn = (v: unknown, lo: number, hi: number) => typeof v === 'number' && Number.isInteger(v) && v >= lo && v <= hi;
 
@@ -40,13 +42,25 @@ export function parsePlanRequest(body: unknown): PlanRequest | null {
   if (entries.length === 0 || entries.length > MAX_CANDIDATES) return null;
   const candidates: Record<string, Candidate> = {};
   for (const [id, c] of entries) {
-    if (!isObj(c) || typeof c.name !== 'string' || c.name.length > 100 || !intIn(c.repMin, 1, 50) || !intIn(c.repMax, 1, 50)) return null;
+    // A hold's range is seconds (up to 10 minutes); a reps range up to 50.
+    const top = isObj(c) && c.timed === true ? 600 : 50;
+    if (!isObj(c) || typeof c.name !== 'string' || c.name.length > 100 || !intIn(c.repMin, 1, top) || !intIn(c.repMax, 1, top)) return null;
     // `loads` is optional (older apps omit it): null = no weight, a list = snap to it.
     let loads: Candidate['loads'];
     if (c.loads === null) loads = null;
     else if (Array.isArray(c.loads) && c.loads.length <= 100 && c.loads.every((n) => typeof n === 'number' && n > 0)) loads = c.loads as number[];
     else if (c.loads !== undefined) return null;
-    candidates[id] = { name: c.name, repMin: c.repMin as number, repMax: c.repMax as number, ...(loads === undefined ? {} : { loads }) };
+    // Optional time and focus fields (owner decision 2026-11-17): known group names only, flags only when true.
+    if (c.groups !== undefined && !(Array.isArray(c.groups) && c.groups.length <= 5 && c.groups.every((g) => typeof g === 'string' && FOCUS_GROUP.test(g)))) return null;
+    candidates[id] = {
+      name: c.name,
+      repMin: c.repMin as number,
+      repMax: c.repMax as number,
+      ...(loads === undefined ? {} : { loads }),
+      ...(Array.isArray(c.groups) && c.groups.length > 0 ? { groups: c.groups as string[] } : {}),
+      ...(c.timed === true ? { timed: true } : {}),
+      ...(c.unilateral === true ? { unilateral: true } : {}),
+    };
   }
   // Optional warm-up and cool-down choices: id → short name, bounded.
   let routine: Record<string, string> | undefined;
@@ -60,6 +74,13 @@ export function parsePlanRequest(body: unknown): PlanRequest | null {
   // Focus muscles reach the prompt: only known group names, at most 5.
   const summary = { ...body.summary };
   if ('focus' in summary) summary.focus = Array.isArray(summary.focus) ? summary.focus.filter((g) => typeof g === 'string' && FOCUS_GROUP.test(g)).slice(0, 5) : [];
+  // Time budget (owner decision 2026-11-17): optional, one number of lifting seconds per day.
+  let dayBudgetSec: number[] | undefined;
+  if (body.dayBudgetSec !== undefined) {
+    if (!Array.isArray(body.dayBudgetSec) || body.dayBudgetSec.length !== body.daysPerWeek || !body.dayBudgetSec.every((n) => intIn(n, 0, 4 * 3600))) return null;
+    dayBudgetSec = body.dayBudgetSec as number[];
+  }
+  if (body.restSec !== undefined && !intIn(body.restSec, 0, 600)) return null;
   return {
     summary,
     candidates,
@@ -70,6 +91,9 @@ export function parsePlanRequest(body: unknown): PlanRequest | null {
     supersets: body.supersets === true,
     ...(body.supersetSize === 2 || body.supersetSize === 3 ? { supersetSize: body.supersetSize } : {}),
     ...(routine ? { routine } : {}),
+    ...(dayBudgetSec ? { dayBudgetSec } : {}),
+    ...(typeof body.restSec === 'number' ? { restSec: body.restSec } : {}),
+    ...(Array.isArray(summary.focus) && summary.focus.length > 0 ? { focus: summary.focus as string[] } : {}),
   };
 }
 
@@ -91,6 +115,9 @@ export async function proposePlan(db: D1Database, userId: string, req: PlanReque
     supersets: req.supersets === true,
     ...(req.supersetSize ? { supersetSize: req.supersetSize } : {}),
     ...(req.routine ? { routine: req.routine } : {}),
+    ...(req.dayBudgetSec ? { dayBudgetSec: req.dayBudgetSec } : {}),
+    ...(req.restSec !== undefined ? { restSec: req.restSec } : {}),
+    ...(req.focus ? { focus: req.focus } : {}),
   };
   const out = await runChain(
     deps.providers,
