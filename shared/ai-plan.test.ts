@@ -161,3 +161,81 @@ describe('validateAiPlan: per-exercise loads (equipment)', () => {
     expect(r.ok && r.plan.days[0].exercises[0].w).toBe(12);
   });
 });
+
+describe('validateAiPlan: time budget and focus (owner decision 2026-11-17)', () => {
+  const ids = ['fx_a', 'fx_b', 'fx_c', 'fx_d', 'fx_e', 'fx_f'];
+  const timeInput: PlanInput = {
+    daysPerWeek: 1,
+    exercisesPerDay: 8,
+    owned: [4, 6, 8, 10],
+    avoid: [],
+    candidates: {
+      fx_a: { name: 'A', repMin: 8, repMax: 12, groups: ['chest'] },
+      fx_b: { name: 'B', repMin: 8, repMax: 12, groups: ['back'] },
+      fx_c: { name: 'C', repMin: 8, repMax: 12, groups: ['shoulders'] },
+      fx_d: { name: 'D', repMin: 8, repMax: 12, groups: ['quads'] },
+      fx_e: { name: 'E', repMin: 8, repMax: 12, groups: ['core'] },
+      fx_f: { name: 'F', repMin: 8, repMax: 12, groups: ['hamstrings'] },
+      fx_plank: { name: 'Plank', repMin: 20, repMax: 60, groups: ['core'], timed: true, loads: null },
+    },
+    restSec: 90,
+  };
+  const oneDay = (list: string[], over: Record<string, unknown> = {}) => plan([{ label: 'Day A', exercises: list.map((id) => ex({ exerciseId: id, ...over })) }]);
+  // 3 × 10 reps, 90 s rest: 3×40 + 2×90 + 90 = 390 s an exercise.
+  const per = 390;
+
+  it('a day over budget drops exercises from the end and reports each drop', () => {
+    const r = validateAiPlan(oneDay(ids), { ...timeInput, dayBudgetSec: [per * 4] });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.plan.days[0].exercises.map((e) => e.exerciseId)).toEqual(['fx_a', 'fx_b', 'fx_c', 'fx_d']);
+    expect(r.corrections.filter((c) => c.to === 0).map((c) => c.why)).toEqual([expect.stringMatching(/dropped F/), expect.stringMatching(/dropped E/)]);
+  });
+
+  it('a day a little over (within the tolerance) is kept', () => {
+    const r = validateAiPlan(oneDay(ids.slice(0, 4)), { ...timeInput, dayBudgetSec: [Math.ceil((per * 4) / 1.09)] });
+    expect(r.ok && r.plan.days[0].exercises).toHaveLength(4);
+  });
+
+  it('focus exercises are dropped last', () => {
+    const r = validateAiPlan(oneDay(ids), { ...timeInput, dayBudgetSec: [per * 4], focus: ['hamstrings'] });
+    expect(r.ok && r.plan.days[0].exercises.map((e) => e.exerciseId)).toEqual(['fx_a', 'fx_b', 'fx_c', 'fx_f']);
+  });
+
+  it('never trims below the minimum', () => {
+    const r = validateAiPlan(oneDay(ids), { ...timeInput, dayBudgetSec: [60] });
+    expect(r.ok && r.plan.days[0].exercises).toHaveLength(3);
+  });
+
+  it('no budget (an older app): no trimming', () => {
+    const r = validateAiPlan(oneDay(ids), timeInput);
+    expect(r.ok && r.plan.days[0].exercises).toHaveLength(6);
+  });
+
+  it('a focus muscle with no more sets than the others gets sets added', () => {
+    const r = validateAiPlan(oneDay(['fx_a', 'fx_b', 'fx_e']), { ...timeInput, focus: ['core'] });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.plan.days[0].exercises.find((e) => e.exerciseId === 'fx_e')?.sets).toBe(4);
+    expect(r.corrections).toContainEqual(expect.objectContaining({ from: 3, to: 4, why: 'more sets for your focus on core' }));
+  });
+
+  it('a focus muscle the plan leaves out gets an exercise added', () => {
+    const r = validateAiPlan(oneDay(['fx_a', 'fx_b', 'fx_c']), { ...timeInput, focus: ['core'] });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const added = r.plan.days[0].exercises.find((e) => e.exerciseId === 'fx_e');
+    expect(added).toMatchObject({ sets: 4, reps: 8, w: 6 }); // added at 3 sets, then one more to beat the others' 3
+    expect(r.corrections[0]).toMatchObject({ from: 0, to: 3, why: 'added E for your focus on core' });
+  });
+
+  it('a focus muscle already ahead is left alone', () => {
+    const r = validateAiPlan(oneDay(['fx_a', 'fx_e']).replace('"sets":3}]', '"sets":5}]'), { ...timeInput, focus: ['core'] });
+    expect(r.ok && r.corrections).toEqual([]);
+  });
+
+  it('more exercises than the ceiling is still an error', () => {
+    const r = validateAiPlan(oneDay(ids), { ...timeInput, exercisesPerDay: 5 });
+    expect(r.ok).toBe(false);
+  });
+});

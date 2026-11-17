@@ -4,7 +4,7 @@ import { listExercises } from '../../data/exercises';
 import { readSyncState } from '../sync/actions';
 import type { Plan } from '../../domain/plan';
 import type { Settings } from '../../domain/types';
-import { TEMPLATE } from '../../config/thresholds';
+import { SESSION_TIME } from '../../config/thresholds';
 import type { Correction, ValidPlan } from '../../../shared/ai-plan';
 import { buildPlanRequest } from './domain/request';
 import { getRepo, defaultSettings } from '../training/data';
@@ -37,7 +37,7 @@ export async function requestProposal(s: Settings, fetchImpl: typeof fetch = fet
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.token}` },
       // The Worker gives up after two tries of AI.timeoutMs; past that the rules plan stands in.
       signal: AbortSignal.timeout(AI_REQUEST.clientTimeoutMs),
-      body: JSON.stringify(buildPlanRequest(s, listExercises(), TEMPLATE.exercisesPerDay, latest, supersets, readRanks(), supersetSize)),
+      body: JSON.stringify(buildPlanRequest(s, listExercises(), SESSION_TIME.maxExercises, latest, supersets, readRanks(), supersetSize)),
     });
   } catch {
     return { status: 'fallback', reason: 'unreachable', detail: 'no answer in time' };

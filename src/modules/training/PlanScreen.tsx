@@ -10,6 +10,7 @@ import { CardioDayEditor } from './CardioDayEditor';
 import { Sheet } from '../../ui/controls';
 import { PLAN_CHANGED_EVENT } from '../library/labels';
 import { equipmentOf } from '../../domain/profile';
+import { restForEstimate, sessionMinutesEstimate } from '../../domain/session-time';
 import type { EquipmentChoice, Settings } from '../../domain/types';
 import { ProposePlan } from '../ai/ui/ProposePlan';
 import { PlanHeader } from './PlanHeader';
@@ -114,7 +115,11 @@ export default function PlanScreen() {
         <Card
           key={day.index}
           title={day.label ?? `Day ${day.index + 1}`}
-          action={<span className="muted small">{day.exerciseIds.length} exercises</span>}
+          action={
+            <span className="muted small">
+              {day.exerciseIds.length} exercises · ≈ {sessionMinutesEstimate(day, getExercise, restForEstimate(settings))} min
+            </span>
+          }
         >
           <DayMuscles ids={day.exerciseIds} sex={settings.about?.sex} />
           <details className="pe-routine">

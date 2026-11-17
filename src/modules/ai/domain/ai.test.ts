@@ -100,8 +100,8 @@ describe('what leaves the device (SPEC §5.3)', () => {
   it('the prompt lists each exercise weights, or says it carries none', () => {
     const s: Settings = { ...settings, equipment: ['dumbbell'] };
     const prompt = buildPrompt({ ...buildPlanRequest(s, [...catalogue, push], 4), });
-    expect(prompt).toContain('bw_push | Push-up | reps 6-10 | no weight (w 0)');
-    expect(prompt).toContain('fx_press | Press | reps 6-10\n'); // dumbbell work: the owned list applies
+    expect(prompt).toMatch(/bw_push \| Push-up \| chest \| reps 6-10 \| no weight \(w 0\) \| ~\d+ min for 3 sets/);
+    expect(prompt).toMatch(/fx_press \| Press \| chest \| reps 6-10 \| ~\d+ min/); // dumbbell work: the owned list applies
     expect(prompt).toContain('owned list: 4, 8, 10');
     expect(prompt).not.toContain('dumbbells only');
   });
@@ -123,12 +123,13 @@ describe('what leaves the device (SPEC §5.3)', () => {
   it('only dumbbell exercises with a known pattern, and not avoided ones, reach the AI', () => {
     const c = candidatesOf(catalogue, ['fx_avoid'], settings);
     expect(Object.keys(c).sort()).toEqual(['fx_iso', 'fx_press']);
-    expect(c.fx_iso).toEqual({ name: 'Curl', repMin: 10, repMax: 15 });
+    expect(c.fx_iso).toEqual({ name: 'Curl', repMin: 10, repMax: 15, groups: ['chest'] });
   });
 
   it('the request carries the settings and candidates, nothing else', () => {
     const r = buildPlanRequest(settings, catalogue, 4);
-    expect(Object.keys(r).sort()).toEqual(['avoid', 'candidates', 'daysPerWeek', 'exercisesPerDay', 'owned', 'routine', 'summary', 'supersets']);
+    expect(Object.keys(r).sort()).toEqual(['avoid', 'candidates', 'dayBudgetSec', 'daysPerWeek', 'exercisesPerDay', 'owned', 'restSec', 'routine', 'summary', 'supersets']);
+    expect(r.dayBudgetSec).toHaveLength(settings.daysPerWeek);
     expect(r.exercisesPerDay).toBe(4);
   });
 });
@@ -220,5 +221,43 @@ describe('spread (short varied lists for the AI)', () => {
     const items = ['a1', 'a2', 'a3', 'b1', 'c1', 'c2'];
     expect(spread(items, (s) => s[0], 4)).toEqual(['a1', 'b1', 'c1', 'a2']);
     expect(spread(items, (s) => s[0], 99)).toEqual(['a1', 'b1', 'c1', 'a2', 'c2', 'a3']);
+  });
+});
+
+describe('time budget, focus and recovery in the request and prompt (owner decision 2026-11-17)', () => {
+  const many = [
+    ...Array.from({ length: 10 }, (_, i) => ex({ id: `fx_chest${i}`, name: `Chest ${i}` })),
+    ex({ id: 'fx_crunch', name: 'Crunch', primaryMuscles: ['abdominals'], muscles: { primary: ['abs'], secondary: [] } }),
+    ex({ id: 'fx_plank', name: 'Hold', mode: 'time', primaryMuscles: ['abdominals'], muscles: { primary: ['abs'], secondary: [] } }),
+    ex({ id: 'fx_lunge', name: 'One-leg', unilateral: true, primaryMuscles: ['quadriceps'], muscles: { primary: ['quadriceps'], secondary: [] } }),
+  ];
+  it('exercises for focus muscles are listed first', () => {
+    const plain = Object.keys(candidatesOf(many, [], settings));
+    const focused = Object.keys(candidatesOf(many, [], { ...settings, focusMuscles: ['core'] }));
+    expect(plain.slice(0, 2)).not.toEqual(['fx_crunch', 'fx_plank']);
+    expect(focused.slice(0, 2).sort()).toEqual(['fx_crunch', 'fx_plank']);
+  });
+  it('candidates carry their groups, holds and one-side flags', () => {
+    const c = candidatesOf(many, [], settings);
+    expect(c.fx_plank).toMatchObject({ groups: ['core'], timed: true });
+    expect(c.fx_lunge).toMatchObject({ groups: ['quads'], unilateral: true });
+    expect(c.fx_crunch.timed).toBeUndefined();
+  });
+  it('the request carries the day budgets, rest and focus', () => {
+    const r = buildPlanRequest({ ...settings, focusMuscles: ['core'], sessionMinutes: 60 }, many, 8);
+    expect(r.dayBudgetSec).toHaveLength(3);
+    expect(r.dayBudgetSec![0]).toBeGreaterThan(buildPlanRequest(settings, many, 8).dayBudgetSec![0]);
+    expect(r.restSec).toBe(90);
+    expect(r.focus).toEqual(['core']);
+  });
+  it('the prompt gives the minutes per day, each exercise time, the recovery rule and the focus rule', () => {
+    const prompt = buildPrompt(buildPlanRequest({ ...settings, focusMuscles: ['core'] }, many, 8));
+    expect(prompt).toMatch(/Day 1: \d+ min, Day 2: \d+ min, Day 3: \d+ min/);
+    expect(prompt).not.toContain('At most 4 exercises');
+    expect(prompt).toContain('at most 8 exercises per day');
+    expect(prompt).toMatch(/fx_plank \| Hold \| core \| seconds 6-10/);
+    expect(prompt).toMatch(/Core \(abs\) and calves recover fast/);
+    expect(prompt).toMatch(/48 to 72 hours/);
+    expect(prompt).toMatch(/focus.*more weekly sets/);
   });
 });

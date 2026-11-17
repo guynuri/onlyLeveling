@@ -2,7 +2,8 @@
 // (copy-paste fallback). The AI is never trusted for numbers: every value is checked here, and out-of-range numbers are
 // corrected and reported, never silently passed on.
 import { ownedFloor } from '../src/domain/dumbbells';
-import { ROUTINE, SUPERSET } from '../src/config/thresholds';
+import { ROUTINE, SESSION_TIME, SUPERSET, TRAINING } from '../src/config/thresholds';
+import { daySeconds, minutesOf, trimToBudget, type TimedItem } from './session-time';
 
 export const AI_PLAN_LIMITS = {
   nameMax: 60,
@@ -21,6 +22,11 @@ export interface Candidate {
   // The weights this exercise can be loaded with. Omitted: the plan's `owned` dumbbells (older apps). null: no weight
   // (bands, bodyweight), so `w` must be 0. A list: snap to it.
   loads?: readonly number[] | null;
+  // Optional (older apps omit them). groups: the muscle groups it mainly trains, for focus checks and the prompt.
+  // timed: a hold, reps are seconds. unilateral: one side at a time. Both feed the time estimate.
+  groups?: readonly string[];
+  timed?: boolean;
+  unilateral?: boolean;
 }
 
 export interface PlanInput {
@@ -32,6 +38,10 @@ export interface PlanInput {
   supersets?: boolean; // the athlete asked for supersets; otherwise any superset letters are ignored
   supersetSize?: 2 | 3; // the largest superset asked for; default SUPERSET.maxSize
   routine?: Record<string, string>; // stretches and pulse raisers the AI may pick for warm-ups and cool-downs, id → name
+  // Owner decision 2026-11-17, all optional (older apps omit them):
+  dayBudgetSec?: readonly number[]; // lifting seconds per day; a day running over by SESSION_TIME.overTolerance is trimmed
+  restSec?: number; // rest between sets, for the time estimate
+  focus?: readonly string[]; // focus muscle groups: each must get more weekly sets than the other groups' average
 }
 
 export interface ValidExercise {
@@ -91,6 +101,7 @@ export function validateAiPlan(raw: unknown, input: PlanInput): ValidationResult
 
   const days = Array.isArray(plan.days) ? plan.days : [];
   const outDays: ValidPlan['days'] = [];
+  const dayLetters: (string | null)[][] = [];
 
   // Step 5 first (day count) so a wrong count is reported even when a day has other problems.
   if (days.length !== input.daysPerWeek) {
@@ -110,6 +121,7 @@ export function validateAiPlan(raw: unknown, input: PlanInput): ValidationResult
     }
     const exOut: ValidExercise[] = [];
     const letters: (string | null)[] = []; // superset letter per kept exercise
+    dayLetters.push(letters);
     day.exercises.forEach((ex, ei) => {
       const p = `${at}.exercises[${ei}]`;
       if (!isObj(ex) || typeof ex.exerciseId !== 'string' || typeof ex.reason !== 'string') {
@@ -188,7 +200,129 @@ export function validateAiPlan(raw: unknown, input: PlanInput): ValidationResult
   });
 
   if (errors.length > 0) return { ok: false, errors };
+  // Corrections that need the whole plan: focus muscles first (they may add work), then the time budget.
+  topUpFocus(outDays, dayLetters, input, corrections);
+  fitToBudget(outDays, dayLetters, input, corrections);
   return { ok: true, plan: { name: plan.name as string, note: data.note, days: outDays }, corrections };
+}
+
+type Days = ValidPlan['days'];
+
+const timedItem = (e: ValidExercise, c: Candidate | undefined): TimedItem => ({
+  id: e.exerciseId,
+  sets: e.sets,
+  reps: e.reps,
+  ...(c?.timed ? { timed: true } : {}),
+  ...(c?.unilateral ? { unilateral: true } : {}),
+});
+
+const daySecs = (d: Days[number], input: PlanInput) =>
+  daySeconds(
+    d.exercises.map((e) => timedItem(e, input.candidates[e.exerciseId])),
+    d.supersets ?? [],
+    input.restSec ?? TRAINING.restSec,
+  );
+
+// Weekly working sets per muscle group (each exercise counts for its main groups).
+function groupSets(days: Days, input: PlanInput): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const d of days) {
+    for (const e of d.exercises) {
+      for (const g of new Set(input.candidates[e.exerciseId]?.groups ?? [])) out.set(g, (out.get(g) ?? 0) + e.sets);
+    }
+  }
+  return out;
+}
+
+// Focus muscles (owner decision 2026-11-17): each needs more weekly sets than the average of the other groups the plan
+// trains. Short ones get one more set at a time on their lightest exercise (up to setsMax); one with no exercise, or
+// whose exercises are all at setsMax, gets a candidate added on the day with the most time left. Every change is a
+// correction.
+function topUpFocus(days: Days, letters: (string | null)[][], input: PlanInput, corrections: Correction[]): void {
+  const focus = [...new Set(input.focus ?? [])];
+  if (focus.length === 0 || days.length === 0) return;
+  const trains = (id: string, g: string) => input.candidates[id]?.groups?.includes(g) ?? false;
+  const target = () => {
+    const others = [...groupSets(days, input).entries()].filter(([g, n]) => n > 0 && !focus.includes(g)).map(([, n]) => n);
+    return others.length === 0 ? 1 : Math.floor(others.reduce((a, b) => a + b, 0) / others.length) + 1;
+  };
+  const addExercise = (g: string): boolean => {
+    const free = (d: Days[number], i: number) => (input.dayBudgetSec?.[i] ?? 0) - daySecs(d, input) - d.exercises.length; // fewer exercises breaks ties
+    const order = days
+      .map((d, i) => ({ d, i }))
+      .filter(({ d }) => d.exercises.length < input.exercisesPerDay)
+      .sort((a, b) => free(b.d, b.i) - free(a.d, a.i) || a.i - b.i);
+    const used = new Set(days.flatMap((d) => d.exercises.map((e) => e.exerciseId)));
+    for (const { d, i } of order) {
+      const ids = Object.keys(input.candidates).filter((id) => trains(id, g) && !input.avoid.includes(id) && !d.exercises.some((e) => e.exerciseId === id));
+      const id = ids.find((x) => !used.has(x)) ?? ids[0];
+      if (!id) continue;
+      const c = input.candidates[id];
+      const loads = c.loads === undefined ? input.owned : c.loads;
+      const w = loads === null ? 0 : loads.length > 0 ? ownedFloor(loads, TRAINING.startWeightKg) : TRAINING.startWeightKg;
+      const sets = Math.min(AI_PLAN_LIMITS.setsMax, TRAINING.defaultSets);
+      d.exercises.push({ exerciseId: id, reason: `Added for your focus on ${g}.`, w, reps: c.repMin, sets });
+      letters[i].push(null);
+      corrections.push({ path: `days[${i}].exercises[${d.exercises.length - 1}].sets`, from: 0, to: sets, why: `added ${c.name} for your focus on ${g}` });
+      return true;
+    }
+    return false;
+  };
+  for (const g of focus) {
+    let added = false;
+    for (let guard = 0; guard < 40; guard++) {
+      const have = groupSets(days, input).get(g) ?? 0;
+      if (have >= target()) break;
+      let best: { d: number; e: number } | null = null;
+      days.forEach((d, di) =>
+        d.exercises.forEach((e, ei) => {
+          if (trains(e.exerciseId, g) && e.sets < AI_PLAN_LIMITS.setsMax && (!best || e.sets < days[best.d].exercises[best.e].sets)) best = { d: di, e: ei };
+        }),
+      );
+      if (have > 0 && best) {
+        const { d, e } = best as { d: number; e: number };
+        const ex = days[d].exercises[e];
+        corrections.push({ path: `days[${d}].exercises[${e}].sets`, from: ex.sets, to: ex.sets + 1, why: `more sets for your focus on ${g}` });
+        ex.sets += 1;
+      } else if (added || !addExercise(g)) {
+        break;
+      } else {
+        added = true;
+      }
+    }
+  }
+}
+
+// Time budget (owner decision 2026-11-17): a day estimated more than SESSION_TIME.overTolerance over its budget drops
+// exercises from the end, the ones for focus muscles last, never below SESSION_TIME.minExercises. Supersets are rebuilt
+// from what is left. Every drop is a correction.
+function fitToBudget(days: Days, letters: (string | null)[][], input: PlanInput, corrections: Correction[]): void {
+  if (!input.dayBudgetSec) return;
+  const focus = input.focus ?? [];
+  days.forEach((d, i) => {
+    const budget = input.dayBudgetSec?.[i];
+    if (budget === undefined) return;
+    const items = d.exercises.map((e) => timedItem(e, input.candidates[e.exerciseId]));
+    const isFocus = (t: TimedItem) => focus.some((g) => input.candidates[t.id]?.groups?.includes(g));
+    const { kept, dropped } = trimToBudget(items, d.supersets ?? [], input.restSec ?? TRAINING.restSec, budget * (1 + SESSION_TIME.overTolerance), isFocus, SESSION_TIME.minExercises);
+    if (dropped.length === 0) return;
+    for (const t of dropped) {
+      const at = d.exercises.findIndex((e) => e.exerciseId === t.id);
+      corrections.push({
+        path: `days[${i}].exercises[${at}].sets`,
+        from: t.sets,
+        to: 0,
+        why: `dropped ${input.candidates[t.id]?.name ?? t.id}: the day ran past about ${minutesOf(budget)} min of lifting`,
+      });
+    }
+    const keep = new Set(kept.map((t) => t.id));
+    const nextLetters = letters[i].filter((_, k) => keep.has(d.exercises[k].exerciseId));
+    d.exercises = d.exercises.filter((e) => keep.has(e.exerciseId));
+    letters[i] = nextLetters;
+    const runs = supersetRuns(d.exercises.map((e) => e.exerciseId), nextLetters, input.supersetSize);
+    if (runs.length > 0) d.supersets = runs;
+    else delete d.supersets;
+  });
 }
 
 // Supersets from the AI's letters: each run of adjacent exercises with the same letter, SUPERSET.minSize to maxSize long, the first run of a
